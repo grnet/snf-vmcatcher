@@ -17,9 +17,9 @@
 
 package gr.grnet.egi.vmcatcher.cmdline
 
-import com.beust.jcommander.{IStringConverter, JCommander, Parameters, Parameter}
+import com.beust.jcommander.{JCommander, Parameters, Parameter}
 import java.util.Locale
-import gr.grnet.egi.vmcatcher.handler.{ThrowingHandler, VMRegistrationHandler, JustLogHandler, DequeueHandler}
+import gr.grnet.egi.vmcatcher.handler.{JustLogHandler, DequeueHandler}
 
 /**
  *
