@@ -1,0 +1,9 @@
+rabbitmq {
+  servers = ["localhost:5672"]
+  username = "vmcatcher"
+  password = "*****"
+  queue = "vmcatcher"
+  exchange = "vmcatcher"
+  routingKey = "vmcatcher"
+  vhost = "/"
+}
