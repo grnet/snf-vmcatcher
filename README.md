@@ -85,6 +85,26 @@ $ vmcatcher_image -vv -a -u 91b05287-c42c-4777-ae40-e5f956d63131
 $ vmcatcher_cache -vv
 ```
 
+# Shell configuration
+
+`vmcatcher` can be configured via a number of environment variables. We rely on them for the operation of our automatic
+image registration to ~okeanos. For the following, we assume that
+
+* `vmcatcher` is installed in `/root/vmcatcher`
+* `snf-vmcatcher` is installed in `/root/snf-vmcatcher/snf-vmcatcher.jar`
+
+The environement variables we use are as 
+
+```
+export VMCATCHER_RDBMS="sqlite:////var/lib/vmcatcher/vmcatcher.db"
+export VMCATCHER_CACHE_DIR_CACHE=/root/vmcatcher/cache
+export VMCATHCER_CACHE_DIR_DOWNLOAD=/root/vmcatcher/cache/partial
+export VMCATCHER_CACHE_DIR_EXPIRE=/root/vmcatcher/cache/expired
+export VMCATCHER_CACHE_EVENT="python /root/vmcatcher/vmcatcher_eventHndlExpl --output_file=/root/vmcatcher_event.log --datetime"
+export VMCATCHER_CACHE_EVENT="java -jar /root/snf-vmcatcher/snf-vmcatcher.jar -v -conf /root/snf-vmcatcher/application.conf enqueue"
+```
+
+
 # External documentation
 [Extra docs for images, vmcatcher etc](
 http://www.yokel.org/pub/software/yokel.org/docbook/release/pdf/a4/)
