@@ -69,10 +69,10 @@ object Main extends {
 
   lazy val config: Config = {
     val config =
-      Args.Cmd.conf.conf match {
+      Args.Cmd.globalOptions.conf match {
         case "" ⇒
-          Log.info(s"Load default conf")
-          ConfigFactory.parseResources("application.conf")
+          val msg = "No application.conf specified"
+          throw new ParameterException(msg)
 
         case path ⇒
           Log.info(s"Load conf from $path")
@@ -182,7 +182,7 @@ object Main extends {
     }
     catch {
       case e: ParameterException ⇒
-        System.err.println(e.toString)
+        System.err.println(e.getMessage)
         jc.usage()
         System.exit(1)
 

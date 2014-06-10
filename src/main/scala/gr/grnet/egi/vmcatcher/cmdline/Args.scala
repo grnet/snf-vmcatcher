@@ -32,16 +32,16 @@ object Args {
 
     @Parameter(names = Array("-v"))
     val verbose = false
+
+    @Parameter(names = Array("-conf"), description = "The configuration file the application uses", required = true)
+    val conf = null: String
   }
 
   @Parameters(commandDescription = "Show environment variables")
   class EnvCommand
 
   @Parameters(commandDescription = "Show the contents of the configuration file")
-  class ConfCommand {
-    @Parameter(names = Array("-conf"), description = "The configuration file the application uses")
-    val conf = ""
-  }
+  class ConfCommand
 
   @Parameters(commandDescription = "Use environment variables to enqueue a VM instance message to RabbitMQ")
   class EnqueueCommand
