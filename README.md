@@ -71,6 +71,25 @@ This is for debugging, not needed for the `vmcatcher` system
 $ aptitude install sqlite3
 ```
 
+In order to upgrade the `qemu-utils` package, you first need to
+
+```
+$ aptitude install libglib2.0-dev dh-autoreconf
+$ aptitude install flex bison
+```
+
+This will also grab a ton of other dependencies. Then get the latest version `2.0.0` of `qemu`
+ 
+ ```
+ $ wget http://wiki.qemu-project.org/download/qemu-2.0.0.tar.bz2
+ ```
+ 
+ unpack it and then, inside the created folder, run 
+ 
+ ```
+ $ ./configure && ./make install
+ ```
+ 
 
 # Using vmcatcher
 
@@ -108,3 +127,16 @@ export VMCATCHER_CACHE_EVENT="java -jar /root/snf-vmcatcher/snf-vmcatcher.jar -v
 # External documentation
 [Extra docs for images, vmcatcher etc](
 http://www.yokel.org/pub/software/yokel.org/docbook/release/pdf/a4/)
+
+# Problems encountered during development and testing
+##### qemu-img: error while reading sector 131072: Invalid argument
+This first appeared when trying to convert a `vmdk` image to `raw` using `qemu-img`.
+The command line was something like this:
+
+```
+$ qemu-img convert -f vmdk -O raw SL-6.5-x86_64-minimal-disk1.vmdk SL-6.5-x86_64-minimal-disk1.vmdk.raw
+```
+
+The problem seems to be with the version of `qemu-img` being old on Ubuntu 12.04.4 LTS;
+see this [SO question](http://askubuntu.com/questions/406365/qemu-img-error-while-reading-sector-327680-invalid-argument).
+The problem has been resolved by manually installing the latest version of `qemu`, as described above.
