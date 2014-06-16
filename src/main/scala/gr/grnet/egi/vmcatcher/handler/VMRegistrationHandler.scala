@@ -17,11 +17,12 @@
 
 package gr.grnet.egi.vmcatcher.handler
 
-import java.util.Locale
 import java.io.File
+import java.util.Locale
+
+import gr.grnet.egi.vmcatcher.Sys
+import gr.grnet.egi.vmcatcher.image.extract.ImageExtractor
 import org.slf4j.Logger
-import org.zeroturnaround.exec.ProcessExecutor
-import org.zeroturnaround.exec.stream.slf4j.Slf4jStream
 
 /**
  *
@@ -31,61 +32,6 @@ class VMRegistrationHandler extends DequeueHandler {
   def expireVM(log: Logger, map: Map[String, String]): Unit = {
     // vmcatcher moves the image file to the $VMCATCHER_CACHE_DIR_EXPIRE folder
     log.info("Expiring VM (nothing to do)")
-  }
-
-  def exec(log: Logger, args: String*): Int = {
-    val pe = new ProcessExecutor().
-      command(args:_*).
-      exitValueAny().
-      readOutput(true).
-      redirectErrorStream(true).
-      redirectOutput(System.out).
-      redirectOutputAlsoTo(Slf4jStream.of(log).asInfo())
-
-    val pr = pe.execute()
-    val exitCode = pr.getExitValue
-
-    exitCode
-  }
-
-  def bunzip2(log: Logger, from: File, to: File): Int =
-    exec(
-      log,
-      "/bin/sh",
-      "-c",
-      s"""bunzip2 < "${from.getAbsolutePath}" > "${to.getAbsolutePath}""""
-    )
-
-  def snf_mkimage(log: Logger, image: File): Int = {
-    val exe = "snf-mkimage"
-    log.info(s"Running $exe on $image")
-    exec(
-      log,
-      exe,
-      "--print-syspreps",
-      "--no-sysprep",
-      "--no-shrink",
-      "--public",
-      image.getAbsolutePath
-    )
-  }
-
-  def undoBz2(log: Logger, imageFile: File, format: String, map: Map[String, String]): File = {
-    val tmpFile =  File.createTempFile(imageFile.getName, ".bunzip2").getAbsoluteFile
-
-    val exitCode = bunzip2(log, imageFile, tmpFile)
-
-    if(exitCode != 0) {
-      log.error(s"EXEC exit code $exitCode")
-      log.warn(s"IGNORE $imageFile $map")
-      throw new Exception(s"EXEC exit code $exitCode. IGNORE $imageFile $map")
-    }
-
-    tmpFile
-  }
-
-  def undoGz(log: Logger, imageFile: File, format: String, map: Map[String, String]): File = {
-    throw new Exception(".gz format for image not supported yet")
   }
 
   def availableVM(log: Logger, map: Map[String, String]): Unit = {
@@ -123,30 +69,29 @@ class VMRegistrationHandler extends DequeueHandler {
       log.warn("VMCATCHER_EVENT_HV_FORMAT is empty. Aborting")
       return
     }
-    val formatL = format.toLowerCase(Locale.ENGLISH)
 
-    val readyImageFileOpt =
-      if(formatL.endsWith(".bz2"))
-        Some(undoBz2(log, imageFile, format, map))
-      else if(format.endsWith(".gz"))
-        Some(undoGz(log, imageFile, format, map))
-      else
-        None
-
-    readyImageFileOpt match {
+    val imageExtractorOpt = ImageExtractor.findExtractor(format)
+    imageExtractorOpt match {
       case None ⇒
         log.error(s"Image $imageFile has unknown format $format. Aborting")
         return
 
-      case Some(readyImageFile) ⇒
+      case Some(imageExtractor) ⇒
+        val readyImageFile = imageExtractor.extract(log, map, format, imageFile)
         log.info(s"Transformed $imageFile to $readyImageFile")
-        val mkimageExitCode = snf_mkimage(log, readyImageFile)
-        if(mkimageExitCode != 0) {
-          log.warn(s"Could not register image $imageFile to ~okeanos")
+
+        try {
+          // FIXME Read cloud from properties or environment
+          val mkimageExitCode = Sys.snfMkimage(log, "occi-test", readyImageFile.getName, readyImageFile)
+          if(mkimageExitCode != 0) {
+            log.warn(s"Could not register image $imageFile to ~okeanos")
+          }
         }
-        if(imageFile != readyImageFile) {
-          log.info(s"Deleting temporary $readyImageFile")
-          readyImageFile.delete()
+        finally {
+          if(imageFile.getAbsolutePath != readyImageFile.getAbsolutePath) {
+            log.info(s"Deleting temporary $readyImageFile")
+            readyImageFile.delete()
+          }
         }
     }
   }
@@ -155,7 +100,7 @@ class VMRegistrationHandler extends DequeueHandler {
     log.info(s"verb = $verb (nothing to do)")
   }
 
-  def handle0(log: Logger, json: String, map: Map[String, String]): Unit = {
+  def handle(log: Logger, json: String, map: Map[String, String]): Unit = {
     val sh = new JustLogHandler
     sh.handle(log, json, map)
 
@@ -176,9 +121,5 @@ class VMRegistrationHandler extends DequeueHandler {
       case other ⇒
         handleOther(log, other, map)
     }
-  }
-
-  def handle(log: Logger, json: String, map: Map[String, String]): Unit = {
-    handle0(log, json, map)
   }
 }
