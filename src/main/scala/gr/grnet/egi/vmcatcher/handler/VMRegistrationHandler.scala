@@ -21,6 +21,7 @@ import java.io.File
 import java.util.Locale
 
 import gr.grnet.egi.vmcatcher.Sys
+import gr.grnet.egi.vmcatcher.cmdline.Args.Cmd
 import gr.grnet.egi.vmcatcher.image.extract.ImageExtractor
 import org.slf4j.Logger
 
@@ -81,10 +82,10 @@ class VMRegistrationHandler extends DequeueHandler {
         log.info(s"Transformed $imageFile to $readyImageFile")
 
         try {
-          // FIXME Read cloud from properties or environment
-          val mkimageExitCode = Sys.snfMkimage(log, "occi-test", readyImageFile.getName, readyImageFile)
+          val rcCloudName = Cmd.globalOptions.kamakiCloud
+          val mkimageExitCode = Sys.snfMkimage(log, rcCloudName, readyImageFile.getName, readyImageFile)
           if(mkimageExitCode != 0) {
-            log.warn(s"Could not register image $imageFile to ~okeanos")
+            log.warn(s"Could not register image $imageFile to $rcCloudName")
           }
         }
         finally {

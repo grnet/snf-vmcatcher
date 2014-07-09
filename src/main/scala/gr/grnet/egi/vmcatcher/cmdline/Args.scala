@@ -35,6 +35,12 @@ object Args {
 
     @Parameter(names = Array("-conf"), description = "The configuration file the application uses", required = true)
     val conf = null: String
+
+    @Parameter(
+      names = Array("-kamakiCloud"),
+      description = "The name of the cloud from ~/.kamakirc that will be used by kamaki for VM upload"
+    )
+    val kamakiCloud = "occi-test"
   }
 
   @Parameters(commandDescription = "Show environment variables")
@@ -62,13 +68,15 @@ object Args {
     val handler: DequeueHandler = new JustLogHandler
   }
 
-  object Cmd {
+  class Cmd {
     val globalOptions = new GlobalOptions
     val env = new EnvCommand
     val conf = new ConfCommand
     val enqueue = new EnqueueCommand
     val dequeue = new DequeueCommand
   }
+
+  object Cmd extends Cmd
 
   val jc = new JCommander()
 

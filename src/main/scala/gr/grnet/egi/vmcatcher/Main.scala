@@ -177,8 +177,13 @@ object Main extends {
 
       val command = jc.getParsedCommand
       val isNoCommand = command eq null
-      if(isHelp || isNoCommand) jc.usage()
-      else                      commandMap(command)()
+      val kamakiCloud = Cmd.globalOptions.kamakiCloud
+      val haveNoCloud = (kamakiCloud eq null) || kamakiCloud.isEmpty
+
+      if(isHelp || isNoCommand || haveNoCloud)
+        jc.usage()
+      else
+        commandMap(command)()
     }
     catch {
       case e: ParameterException ⇒
