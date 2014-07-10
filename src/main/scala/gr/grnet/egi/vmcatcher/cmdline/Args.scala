@@ -35,12 +35,6 @@ object Args {
 
     @Parameter(names = Array("-conf"), description = "The configuration file the application uses", required = true)
     val conf = null: String
-
-    @Parameter(
-      names = Array("-kamakiCloud"),
-      description = "The name of the cloud from ~/.kamakirc that will be used by kamaki for VM upload"
-    )
-    val kamakiCloud = "occi-test"
   }
 
   @Parameters(commandDescription = "Show environment variables")
@@ -66,6 +60,12 @@ object Args {
       converter = classOf[DequeueHandlerClassConverter]
     )
     val handler: DequeueHandler = new JustLogHandler
+
+    @Parameter(
+      names = Array("-kamakiCloud"),
+      description = "The name of the cloud from ~/.kamakirc that will be used by kamaki for VM upload"
+    )
+    val kamakiCloud = "occi-test"
   }
 
   class Cmd {

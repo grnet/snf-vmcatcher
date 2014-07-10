@@ -177,7 +177,7 @@ object Main extends {
 
       val command = jc.getParsedCommand
       val isNoCommand = command eq null
-      val kamakiCloud = Cmd.globalOptions.kamakiCloud
+      val kamakiCloud = Cmd.dequeue.kamakiCloud
       val haveNoCloud = (kamakiCloud eq null) || kamakiCloud.isEmpty
 
       if(isHelp || isNoCommand || haveNoCloud)

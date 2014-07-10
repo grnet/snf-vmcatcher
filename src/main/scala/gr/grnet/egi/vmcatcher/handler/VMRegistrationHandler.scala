@@ -78,20 +78,20 @@ class VMRegistrationHandler extends DequeueHandler {
         return
 
       case Some(imageExtractor) ⇒
-        val readyImageFile = imageExtractor.extract(log, map, format, imageFile)
-        log.info(s"Transformed $imageFile to $readyImageFile")
+        val extractedImageFile = imageExtractor.extract(log, map, format, imageFile)
+        log.info(s"Transformed $imageFile to $extractedImageFile")
 
         try {
-          val rcCloudName = Cmd.globalOptions.kamakiCloud
-          val mkimageExitCode = Sys.snfMkimage(log, rcCloudName, readyImageFile.getName, readyImageFile)
+          val rcCloudName = Cmd.dequeue.kamakiCloud
+          val mkimageExitCode = Sys.snfMkimage(log, rcCloudName, extractedImageFile.getName, extractedImageFile)
           if(mkimageExitCode != 0) {
             log.warn(s"Could not register image $imageFile to $rcCloudName")
           }
         }
         finally {
-          if(imageFile.getAbsolutePath != readyImageFile.getAbsolutePath) {
-            log.info(s"Deleting temporary $readyImageFile")
-            readyImageFile.delete()
+          if(imageFile.getAbsolutePath != extractedImageFile.getAbsolutePath) {
+            log.info(s"Deleting temporary $extractedImageFile")
+            extractedImageFile.delete()
           }
         }
     }

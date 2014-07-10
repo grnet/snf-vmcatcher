@@ -12,5 +12,6 @@ nohup java -jar ${HERE}/snf-vmcatcher.jar \
   dequeue \
   -server \
   -handler gr.grnet.egi.vmcatcher.handler.VMRegistrationHandler \
+  -kamakiCloud occi-test \
   "$@" >> $LOG &
 
