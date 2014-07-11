@@ -15,19 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.handler
+package gr.grnet.egi.vmcatcher.cmdline
 
-import org.slf4j.Logger
+import com.beust.jcommander.{ParameterException, IValueValidator}
 
 /**
  *
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
-class JustLogHandler extends DequeueHandler {
-  def handle(log: Logger, json: String, map: Map[String, String]): Unit = {
-    log.info(s"json =\n$json")
-    if(map.isEmpty) { log.warn("map of json is empty") }
-  }
-
-  override def toString: String = getClass.getName
+class NotNullValueValidator[T <: AnyRef] extends IValueValidator[T] {
+  def validate(name: String, value: T): Unit =
+    value match {
+      case null ⇒ throw new ParameterException(s"Parameter $name is null")
+      case _    ⇒
+    }
 }

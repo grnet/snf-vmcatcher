@@ -18,14 +18,17 @@
 package gr.grnet.egi.vmcatcher
 
 import java.io.File
-import com.typesafe.config.{ConfigRenderOptions, Config, ConfigFactory}
 import java.nio.charset.StandardCharsets
+import java.util.Scanner
+
 import com.beust.jcommander.ParameterException
+import com.typesafe.config.{Config, ConfigFactory, ConfigRenderOptions}
 import gr.grnet.egi.vmcatcher.cmdline.Args
-import Args.Cmd
-import scala.annotation.tailrec
-import gr.grnet.egi.vmcatcher.rabbit.{RabbitConnector, Rabbit}
+import gr.grnet.egi.vmcatcher.cmdline.Args.ParsedCmdLine
+import gr.grnet.egi.vmcatcher.rabbit.{Rabbit, RabbitConnector}
 import org.slf4j.LoggerFactory
+
+import scala.annotation.tailrec
 
 /**
  *
@@ -43,10 +46,12 @@ object Main extends {
       setJson(true)
 
   val commandMap = Map(
-    Args.name( Cmd.env     ) → DEFER { do_env()     },
-    Args.name( Cmd.conf    ) → DEFER { do_conf()    },
-    Args.name( Cmd.enqueue ) → DEFER { do_enqueue() },
-    Args.name( Cmd.dequeue ) → DEFER { do_dequeue() }
+    Args.nameOf( ParsedCmdLine.usage                ) → DEFER { do_usage                  ( ParsedCmdLine.usage                ) },
+    Args.nameOf( ParsedCmdLine.showEnv              ) → DEFER { do_show_env               ( ParsedCmdLine.showEnv              ) },
+    Args.nameOf( ParsedCmdLine.showConf             ) → DEFER { do_show_conf              ( ParsedCmdLine.showConf             ) },
+    Args.nameOf( ParsedCmdLine.enqueueFromEnv       ) → DEFER { do_enqueue_from_env       ( ParsedCmdLine.enqueueFromEnv       ) },
+    Args.nameOf( ParsedCmdLine.enqueueFromImageList ) → DEFER { do_enqueue_from_image_list( ParsedCmdLine.enqueueFromImageList ) },
+    Args.nameOf( ParsedCmdLine.dequeue              ) → DEFER { do_dequeue                ( ParsedCmdLine.dequeue              ) }
   )
 
   def stringOfConfig(config: Config) = config.root().render(configRenderOptions)
@@ -61,15 +66,15 @@ object Main extends {
    */
   def vmCatcherSysEnv: Map[String, String] = env.filter { case (k, _) ⇒ VMCatcherFilter(k) }
 
-  def isVerbose = Cmd.globalOptions.verbose
-  def isHelp    = Cmd.globalOptions.help
-  def isServer  = Cmd.dequeue.server
-  def serverSleepMillis = Cmd.dequeue.sleepMillis max 0L min 1000L
-  def dequeueHandler = Cmd.dequeue.handler
+  def isVerbose = ParsedCmdLine.globalOptions.verbose
+  def isHelp    = ParsedCmdLine.globalOptions.help
+  def isServer  = ParsedCmdLine.dequeue.server
+  def serverSleepMillis = ParsedCmdLine.dequeue.sleepMillis max 0L min 1000L
+  def dequeueHandler = ParsedCmdLine.dequeue.handler
 
-  lazy val config: Config = {
+  def configOfParam(confFile: String) = {
     val config =
-      Args.Cmd.globalOptions.conf match {
+      confFile match {
         case "" ⇒
           val msg = "No application.conf specified"
           throw new ParameterException(msg)
@@ -83,9 +88,11 @@ object Main extends {
     config.resolve()
   }
 
-  def do_env(): Unit = println(envAsPrettyJson)
+  def do_usage(usage: Args.Usage): Unit = Args.jc.usage()
 
-  def do_conf(): Unit = println(stringOfConfig(config))
+  def do_show_env(showEnv: Args.ShowEnv): Unit = println(envAsPrettyJson)
+
+  def do_show_conf(showConf: Args.ShowConf): Unit = println(stringOfConfig(configOfParam(showConf.confDelegate.conf)))
 
   def do_enqueue(connector: RabbitConnector): Unit = {
     val map = vmCatcherSysEnv
@@ -97,9 +104,51 @@ object Main extends {
     rabbit.close()
   }
   
-  def do_enqueue(): Unit = {
-    val connector = RabbitConnector(config)
+  def do_enqueue_from_env(enqueueFromEnv: Args.EnqueueFromEnv): Unit = {
+    val connector = RabbitConnector(configOfParam(enqueueFromEnv.confDelegate.conf))
     do_enqueue(connector)
+  }
+
+  def do_enqueue_from_image_list(enqueueFromImageList: Args.EnqueueFromImageList): Unit = {
+    val url = ParsedCmdLine.enqueueFromImageList.imageListUrl
+    val dcIdentifier = ParsedCmdLine.enqueueFromImageList.imageIdentifier
+
+    val response = Http.GET(url)
+    response.handshake()
+    if(!response.isSuccessful) {
+      Log.error(s"Could not fetch $url. GET returned ${response.code()} ${response.message()}")
+      if(!isServer) { sys.exit(1) }
+      return
+    }
+
+    val imageListStr = response.body().string()
+    Log.info(imageListStr)
+    val scanner = new Scanner(imageListStr)
+    scanner.nextLine() // Ignore "MIME-Version: 1.0" first line
+    scanner.useDelimiter("boundary=\"")
+    val boundaryPart = scanner.findInLine("boundary=\"(.+?)\"")
+    val boundary = "--" + boundaryPart.substring("boundary=\"".length, boundaryPart.length - 1)
+    Log.info(s"Found boundary $boundary")
+
+    val buffer = new java.lang.StringBuilder
+
+    @tailrec def scanUntilFirstBoundary(): Unit = {
+      val nextLine = scanner.nextLine()
+      if(nextLine != boundary) scanUntilFirstBoundary()
+    }
+
+    @tailrec def scanUntilLastBoundary(): Unit = {
+      val nextLine = scanner.nextLine()
+      if(nextLine != boundary) {
+        buffer.append(nextLine + System.getProperty("line.separator"))
+        scanUntilLastBoundary()
+      }
+    }
+
+    scanUntilFirstBoundary()
+    scanUntilLastBoundary()
+    val jsonImageList = buffer.toString
+
   }
 
   def do_dequeue(connector: RabbitConnector): Unit = {
@@ -155,12 +204,14 @@ object Main extends {
     } while(isServer)
   }
 
-  def do_dequeue(): Unit = {
-    val connector = RabbitConnector(config)
+  def do_dequeue(dequeue: Args.Dequeue): Unit = {
+    val connector = RabbitConnector(configOfParam(dequeue.confDelegate.conf))
     do_dequeue(connector)
   }
 
   def main(args: Array[String]): Unit = {
+    val t0 = System.currentTimeMillis()
+    Log.info("BEGIN snf-vmcatcher")
     val jc = Args.jc
     try {
       jc.parse(args:_*)
@@ -170,17 +221,15 @@ object Main extends {
         ("-h", isHelp),
         ("-server", isServer),
         ("-sleepMillis", serverSleepMillis),
-        ("-handler", dequeueHandler.getClass.getName)
+        ("-handler", dequeueHandler)
       )
 
       Log.info(map.mkString(", "))
 
       val command = jc.getParsedCommand
       val isNoCommand = command eq null
-      val kamakiCloud = Cmd.dequeue.kamakiCloud
-      val haveNoCloud = (kamakiCloud eq null) || kamakiCloud.isEmpty
 
-      if(isHelp || isNoCommand || haveNoCloud)
+      if(isHelp || isNoCommand)
         jc.usage()
       else
         commandMap(command)()
@@ -188,12 +237,16 @@ object Main extends {
     catch {
       case e: ParameterException ⇒
         System.err.println(e.getMessage)
-        jc.usage()
         System.exit(1)
 
       case e: Exception ⇒
         e.printStackTrace(System.err)
         System.exit(2)
+    }
+    finally {
+      val t1 = System.currentTimeMillis()
+      val dtms = t1 - t0
+      Log.info(s"END snf-vmcatcher ($dtms ms)")
     }
   }
 }

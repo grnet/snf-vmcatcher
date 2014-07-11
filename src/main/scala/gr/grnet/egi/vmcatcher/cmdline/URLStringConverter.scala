@@ -15,19 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.handler
+package gr.grnet.egi.vmcatcher.cmdline
 
-import org.slf4j.Logger
+import java.net.URL
+
+import com.beust.jcommander.IStringConverter
 
 /**
  *
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
-class JustLogHandler extends DequeueHandler {
-  def handle(log: Logger, json: String, map: Map[String, String]): Unit = {
-    log.info(s"json =\n$json")
-    if(map.isEmpty) { log.warn("map of json is empty") }
-  }
-
-  override def toString: String = getClass.getName
+class URLStringConverter extends IStringConverter[URL] {
+  def convert(value: String): URL = new URL(value)
 }

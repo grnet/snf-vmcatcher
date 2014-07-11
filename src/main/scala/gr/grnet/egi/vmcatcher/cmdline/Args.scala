@@ -17,37 +17,111 @@
 
 package gr.grnet.egi.vmcatcher.cmdline
 
-import com.beust.jcommander.{JCommander, Parameters, Parameter}
-import java.util.Locale
-import gr.grnet.egi.vmcatcher.handler.{JustLogHandler, DequeueHandler}
+import java.net.URL
+
+import com.beust.jcommander.{ParametersDelegate, JCommander, Parameter, Parameters}
+import gr.grnet.egi.vmcatcher.Main
+import gr.grnet.egi.vmcatcher.handler.DequeueHandler
 
 /**
  *
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 object Args {
+  def nameOf(cmd: AnyRef): String = {
+    val p = cmd.getClass.getAnnotation(classOf[Parameters])
+    p.commandNames()(0)
+  }
+
+  class ConfDelegate {
+    @Parameter(
+      names = Array("-conf"),
+      description = "The configuration file the application uses",
+      required = true
+    )
+    val conf: String = null
+  }
+
   class GlobalOptions {
     @Parameter(names = Array("-h", "-help", "--help"), help = true)
     val help = false
 
-    @Parameter(names = Array("-v"))
+    @Parameter(names = Array("-v"), description = "Be verbose")
     val verbose = false
-
-    @Parameter(names = Array("-conf"), description = "The configuration file the application uses", required = true)
-    val conf = null: String
   }
 
-  @Parameters(commandDescription = "Show environment variables")
-  class EnvCommand
+  @Parameters(
+    commandNames = Array("usage"),
+    commandDescription = "Show usage"
+  )
+  class Usage
 
-  @Parameters(commandDescription = "Show the contents of the configuration file")
-  class ConfCommand
+  @Parameters(
+    commandNames = Array("show-env"),
+    commandDescription = "Show environment variables"
+  )
+  class ShowEnv
 
-  @Parameters(commandDescription = "Use environment variables to enqueue a VM instance message to RabbitMQ")
-  class EnqueueCommand
+  @Parameters(
+    commandNames = Array("show-conf"),
+    commandDescription = """Show the contents of the configuration file. Its contents must be JSON-encoded of the form:
+                    rabbitmq {
+                      servers = ["localhost:5672"]
+                      username = "vmcatcher"
+                      password = "*****"
+                      queue = "vmcatcher"
+                      exchange = "vmcatcher"
+                      routingKey = "vmcatcher"
+                      vhost = "/"
+                    }"""
+  )
+  class ShowConf {
+    @ParametersDelegate
+    val confDelegate = new ConfDelegate
+  }
 
-  @Parameters(commandDescription = "Dequeue one message from RabbitMQ and register the corresponding VM instance")
-  class DequeueCommand {
+  @Parameters(
+    commandNames = Array("enqueue-from-env"),
+    commandDescription = "Use environment variables to enqueue a VM instance message to RabbitMQ"
+  )
+  class EnqueueFromEnv {
+    @ParametersDelegate
+    val confDelegate = new ConfDelegate
+  }
+
+  @Parameters(
+    commandNames = Array("enqueue-from-image-list"),
+    commandDescription = "Use a vmcatcher-compatible, JSON-encoded image list to enqueue a VM instance message to RabbitMQ"
+  )
+  class EnqueueFromImageList {
+    @ParametersDelegate
+    val confDelegate = new ConfDelegate
+
+    @Parameter(
+      names = Array("-image-list-url"),
+      description = "The URL of the image list. Use an http(s):// or a file:// URL.",
+      required = true,
+      validateValueWith = classOf[NotNullValueValidator[_]],
+      converter = classOf[URLStringConverter]
+    )
+    val imageListUrl: URL = null
+
+    @Parameter(
+      names = Array("-image-identifier"),
+      description = "The 'dc:identifier' of the specific VM image you want to enqueue. If not given, then all VM images given in the list are enqueued.",
+      validateWith = classOf[NotEmptyStringValidator]
+    )
+    val imageIdentifier: String = null
+  }
+
+  @Parameters(
+    commandNames = Array("dequeue"),
+    commandDescription = "Dequeue one message from RabbitMQ and register the corresponding VM instance"
+  )
+  class Dequeue {
+    @ParametersDelegate
+    val confDelegate = new ConfDelegate
+
     @Parameter(names = Array("-server"), description = "Run in server mode and dequeue a message at a time")
     val server = false
 
@@ -56,44 +130,48 @@ object Args {
 
     @Parameter(
       names = Array("-handler"),
-      description = "JavaBean class that will handle on message from RabbitMQ. The default is gr.grnet.egi.vmcatcher.handler.JustLogHandler but you can specify gr.grnet.egi.vmcatcher.handler.VMRegistrationHandler for the real deal or even gr.grnet.egi.vmcatcher.handler.ThrowingHandler for debugging fun",
+      description = "The Java class that will handle a message from RabbitMQ. Use gr.grnet.egi.vmcatcher.handler.VMRegistrationHandler for the standard behavior. Other values are gr.grnet.egi.vmcatcher.handler.JustLogHandler and gr.grnet.egi.vmcatcher.handler.ThrowingHandler",
+      required = true,
       converter = classOf[DequeueHandlerClassConverter]
     )
-    val handler: DequeueHandler = new JustLogHandler
+    val handler: DequeueHandler = null
 
     @Parameter(
-      names = Array("-kamakiCloud"),
-      description = "The name of the cloud from ~/.kamakirc that will be used by kamaki for VM upload"
+      names = Array("-kamaki-cloud"),
+      description = "The name of the cloud from ~/.kamakirc that will be used by kamaki for VM upload",
+      required = true,
+      validateWith = classOf[NotEmptyStringValidator]
     )
-    val kamakiCloud = "occi-test"
+    val kamakiCloud: String = null
   }
 
-  class Cmd {
+  class ParsedCmdLine {
     val globalOptions = new GlobalOptions
-    val env = new EnvCommand
-    val conf = new ConfCommand
-    val enqueue = new EnqueueCommand
-    val dequeue = new DequeueCommand
+    val usage = new Usage
+    val showEnv = new ShowEnv
+    val showConf = new ShowConf
+    val enqueueFromEnv = new EnqueueFromEnv
+    val enqueueFromImageList = new EnqueueFromImageList
+    val dequeue = new Dequeue
   }
 
-  object Cmd extends Cmd
+  object ParsedCmdLine extends ParsedCmdLine
 
-  val jc = new JCommander()
+  private def makeJCommander: JCommander = {
+    val jc = new JCommander()
 
-  def name(ref: AnyRef) = {
-    val name = ref.getClass.getName
-    val nodot = name.substring(name.lastIndexOf('.') + 1)
-    val nodollar = nodot.substring(nodot.lastIndexOf('$') + 1)
-    val stripped = nodollar.stripSuffix("Command")
-    val lower = stripped.toLowerCase(Locale.ENGLISH)
-    lower
+    jc.setProgramName(Main.getClass.getName.dropRight(1))
+
+    jc.addObject(ParsedCmdLine.globalOptions)
+    jc.addCommand(ParsedCmdLine.usage)
+    jc.addCommand(ParsedCmdLine.showEnv)
+    jc.addCommand(ParsedCmdLine.showConf)
+    jc.addCommand(ParsedCmdLine.enqueueFromEnv)
+    jc.addCommand(ParsedCmdLine.enqueueFromImageList)
+    jc.addCommand(ParsedCmdLine.dequeue)
+
+    jc
   }
 
-  def add(ref: AnyRef): Unit = jc.addCommand(name(ref), ref)
-
-  jc.addObject(Cmd.globalOptions)
-  add(Cmd.env)
-  add(Cmd.conf)
-  add(Cmd.enqueue)
-  add(Cmd.dequeue)
+  val jc = makeJCommander
 }

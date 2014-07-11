@@ -73,11 +73,11 @@ class Sys {
    * @param imageFile The raw image file that is the input to `snf-mkimage`
    */
   def snfMkimage(log: Logger, rcCloudName: String, name: String, imageFile: File): Int = {
-    val exe = ""
+    val exe = "snf-mkimage"
     log.info(s"Running $exe on $imageFile")
     exec(
       log,
-      "snf-mkimage",
+      exe,
       "-c", rcCloudName,
       "-u", name,
       "-r", name,

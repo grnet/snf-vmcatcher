@@ -15,19 +15,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.handler
+package gr.grnet.egi.vmcatcher
 
-import org.slf4j.Logger
+import java.io.File
+import java.net.URL
+import java.nio.file.Files
+
+import com.squareup.okhttp.{OkHttpClient, Request, Response}
 
 /**
  *
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
-class JustLogHandler extends DequeueHandler {
-  def handle(log: Logger, json: String, map: Map[String, String]): Unit = {
-    log.info(s"json =\n$json")
-    if(map.isEmpty) { log.warn("map of json is empty") }
+object Http {
+  val OkHttpClient = new OkHttpClient
+
+  def GET(url: URL): Response = {
+    val builder = new Request.Builder().url(url).get()
+    val request = builder.build()
+    val call = OkHttpClient.newCall(request)
+    val response = call.execute()
+    response
   }
 
-  override def toString: String = getClass.getName
+  def downloadToFile(url: URL, file: File): Unit = {
+    val response = GET(url)
+    val input = response.body().byteStream()
+    Files.copy(input, file.toPath)
+  }
 }
