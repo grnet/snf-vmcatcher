@@ -24,6 +24,6 @@ import org.slf4j.Logger
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class ThrowingHandler extends DequeueHandler {
-  def handle(log: Logger, json: String, map: Map[String, String]): Unit =
+  def handle(log: Logger, json: String, map: Map[String, String], kamakiCloud: String): Unit =
     throw new Exception(s"json = $json")
 }

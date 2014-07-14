@@ -20,6 +20,7 @@ package gr.grnet.egi.vmcatcher
 import java.io.File
 import java.nio.file.Files
 
+import gr.grnet.egi.vmcatcher.image.extract.ImageExtractor
 import org.slf4j.Logger
 import org.zeroturnaround.exec.ProcessExecutor
 import org.zeroturnaround.exec.stream.slf4j.Slf4jStream

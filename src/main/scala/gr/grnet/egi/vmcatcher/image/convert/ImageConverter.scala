@@ -26,7 +26,7 @@ import org.slf4j.Logger
  */
 trait ImageConverter {
   def canConvert(imageFile: File): Boolean
-  def convert(log: Logger, imageFile: File): File
+  def convert(log: Logger, imageFile: File): Option[File]
 }
 
 object ImageConverter {

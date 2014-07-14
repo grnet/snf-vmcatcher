@@ -30,15 +30,21 @@ class VmdkConverter extends ImageConverter {
   def canConvert(imageFile: File): Boolean =
     imageFile.getName.toLowerCase(Locale.ENGLISH).endsWith(".vmdk")
 
-  def convert(log: Logger, imageFile: File): File = {
+  def convert(log: Logger, imageFile: File): Option[File] = {
+    if(!canConvert(imageFile)) {
+      return None
+    }
+
     val tmpFile = Sys.createTempFile("." + imageFile.getName + ".raw")
+    log.info(s"Converting $imageFile from vmdk to raw at $tmpFile")
     Sys.qemuImgConvert(log, "vmdk", "raw", imageFile, tmpFile) match {
       case n if n != 0 ⇒
         val msg = s"Could not convert image $imageFile to raw format"
-        throw new Exception(msg)
+        log.error(msg)
+        None
 
       case _ ⇒
-        tmpFile
+        Some(tmpFile)
     }
   }
 }

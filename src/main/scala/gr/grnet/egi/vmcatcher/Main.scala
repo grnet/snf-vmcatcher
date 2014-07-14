@@ -17,14 +17,14 @@
 
 package gr.grnet.egi.vmcatcher
 
-import java.io.File
 import java.nio.charset.StandardCharsets
 import java.util.Scanner
 
 import com.beust.jcommander.ParameterException
-import com.typesafe.config.{Config, ConfigFactory, ConfigRenderOptions}
+import com.typesafe.config.{Config, ConfigRenderOptions}
 import gr.grnet.egi.vmcatcher.cmdline.Args
 import gr.grnet.egi.vmcatcher.cmdline.Args.ParsedCmdLine
+import gr.grnet.egi.vmcatcher.message.ImageListConfig
 import gr.grnet.egi.vmcatcher.rabbit.{Rabbit, RabbitConnector}
 import org.slf4j.LoggerFactory
 
@@ -37,6 +37,11 @@ import scala.annotation.tailrec
 object Main extends {
   final val ProgName = getClass.getName.stripSuffix("$")
   final val Log = LoggerFactory.getLogger(getClass)
+  
+  def EXIT(status: Int): Nothing = {
+    Log.warn(s"Exiting with $status")
+    sys.exit(status)
+  }
 
   val configRenderOptions =
     ConfigRenderOptions.defaults().
@@ -72,27 +77,16 @@ object Main extends {
   def serverSleepMillis = ParsedCmdLine.dequeue.sleepMillis max 0L min 1000L
   def dequeueHandler = ParsedCmdLine.dequeue.handler
 
-  def configOfParam(confFile: String) = {
-    val config =
-      confFile match {
-        case "" ⇒
-          val msg = "No application.conf specified"
-          throw new ParameterException(msg)
-
-        case path ⇒
-          Log.info(s"Load conf from $path")
-          val file = new File(path)
-          ConfigFactory.parseFile(file)
-      }
-
-    config.resolve()
+  def configOfPath(path: String) = {
+    Log.info(s"Load conf from $path")
+    Config.ofFilePath(path)
   }
 
-  def do_usage(usage: Args.Usage): Unit = Args.jc.usage()
+  def do_usage(args: Args.Usage): Unit = Args.jc.usage()
 
-  def do_show_env(showEnv: Args.ShowEnv): Unit = println(envAsPrettyJson)
+  def do_show_env(args: Args.ShowEnv): Unit = println(envAsPrettyJson)
 
-  def do_show_conf(showConf: Args.ShowConf): Unit = println(stringOfConfig(configOfParam(showConf.confDelegate.conf)))
+  def do_show_conf(args: Args.ShowConf): Unit = println(stringOfConfig(configOfPath(args.conf)))
 
   def do_enqueue(connector: RabbitConnector): Unit = {
     val map = vmCatcherSysEnv
@@ -104,19 +98,19 @@ object Main extends {
     rabbit.close()
   }
   
-  def do_enqueue_from_env(enqueueFromEnv: Args.EnqueueFromEnv): Unit = {
-    val connector = RabbitConnector(configOfParam(enqueueFromEnv.confDelegate.conf))
+  def do_enqueue_from_env(args: Args.EnqueueFromEnv): Unit = {
+    val connector = RabbitConnector(configOfPath(args.conf))
     do_enqueue(connector)
   }
 
-  def do_enqueue_from_image_list(enqueueFromImageList: Args.EnqueueFromImageList): Unit = {
-    val url = ParsedCmdLine.enqueueFromImageList.imageListUrl
-    val dcIdentifier = ParsedCmdLine.enqueueFromImageList.imageIdentifier
+  def do_enqueue_from_image_list(args: Args.EnqueueFromImageList): Unit = {
+    val imageListURL = args.imageListUrl
+    val imageIdentifier = args.imageIdentifier
 
-    val response = Http.GET(url)
+    val response = Http.GET(imageListURL)
     response.handshake()
     if(!response.isSuccessful) {
-      Log.error(s"Could not fetch $url. GET returned ${response.code()} ${response.message()}")
+      Log.error(s"Could not fetch $imageListURL. GET returned ${response.code()} ${response.message()}")
       if(!isServer) { sys.exit(1) }
       return
     }
@@ -148,10 +142,33 @@ object Main extends {
     scanUntilFirstBoundary()
     scanUntilLastBoundary()
     val jsonImageList = buffer.toString
+    val imageListConfig = ImageListConfig.ofString(jsonImageList)
+    Log.info(s"Parsed image list dc:identifier = ${imageListConfig.dcIdentifier}")
+    Log.info(s"                         hv:uri = ${imageListConfig.hvURI}")
+    val projectedForIdent = imageListConfig.projectImageDcIdentifier(imageIdentifier)
+    if(projectedForIdent.size == 0) {
+      Log.error(s"Image identifier $imageIdentifier not found in image list hv:uri = ${imageListConfig.hvURI}")
+      Log.info(s"Available identifiers are: ${imageListConfig.images.map(_.dcIdentifier).mkString(", ")}")
+      EXIT(3)
+    }
 
+    val connector = RabbitConnector(configOfPath(args.confDelegate.conf))
+    val rabbit = connector.connect()
+
+    for {
+      imageConfig ← projectedForIdent
+    } {
+      val imageIdent = imageConfig.dcIdentifier
+      val imageURI = imageConfig.hvURI
+      Log.info(s"Enqueueing dc:identifier = $imageIdent, hv:uri = $imageURI")
+
+      rabbit.publish(imageConfig.toJson)
+    }
+
+    rabbit.close()
   }
 
-  def do_dequeue(connector: RabbitConnector): Unit = {
+  def do_dequeue(connector: RabbitConnector, kamakiCloud: String): Unit = {
     @tailrec
     def loop(rabbit: Rabbit, isEmpty: Boolean): Unit = {
       val newIsEmpty =
@@ -164,7 +181,7 @@ object Main extends {
           val map = Json.mapOfJson(jsonMsg)
 
           Log.info(s"dequeueHandler = ${dequeueHandler.getClass.getName}")
-          dequeueHandler.handle(Log, jsonMsg, map)
+          dequeueHandler.handle(Log, jsonMsg, map, kamakiCloud)
           false
         }
 
@@ -204,14 +221,16 @@ object Main extends {
     } while(isServer)
   }
 
-  def do_dequeue(dequeue: Args.Dequeue): Unit = {
-    val connector = RabbitConnector(configOfParam(dequeue.confDelegate.conf))
-    do_dequeue(connector)
+  def do_dequeue(args: Args.Dequeue): Unit = {
+    val kamakiCloud = args.kamakiCloud
+    val connector = RabbitConnector(configOfPath(args.conf))
+    do_dequeue(connector, kamakiCloud)
   }
 
   def main(args: Array[String]): Unit = {
     val t0 = System.currentTimeMillis()
-    Log.info("BEGIN snf-vmcatcher")
+    val argsDebugStr = args.mkString(" ")
+    Log.info(s"BEGIN snf-vmcatcher [$argsDebugStr]")
     val jc = Args.jc
     try {
       jc.parse(args:_*)
@@ -237,16 +256,16 @@ object Main extends {
     catch {
       case e: ParameterException ⇒
         System.err.println(e.getMessage)
-        System.exit(1)
+        EXIT(1)
 
       case e: Exception ⇒
         e.printStackTrace(System.err)
-        System.exit(2)
+        EXIT(2)
     }
     finally {
       val t1 = System.currentTimeMillis()
       val dtms = t1 - t0
-      Log.info(s"END snf-vmcatcher ($dtms ms)")
+      Log.info(s"END snf-vmcatcher ($dtms ms) [$argsDebugStr]")
     }
   }
 }

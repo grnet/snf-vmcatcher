@@ -41,7 +41,11 @@ class CpioBz2Extractor extends ImageExtractor {
       s"""bunzip2 < "${from.getAbsolutePath}" > "${to.getAbsolutePath}""""
     )
 
-  def extract(log: Logger, map: Map[String, String], format: String, imageFile: File): File = {
+  def extract(log: Logger, map: Map[String, String], format: String, imageFile: File): Option[File] = {
+    if(!canExtract(format)) {
+      return None
+    }
+
     val tmpFile =  Sys.createTempFile(imageFile.getName+".bunzip2")
     val exitCode = bunzip2(log, imageFile, tmpFile)
 
@@ -51,6 +55,6 @@ class CpioBz2Extractor extends ImageExtractor {
       throw new Exception(s"EXEC exit code $exitCode. IGNORE $imageFile $map")
     }
 
-    tmpFile
+    Some(tmpFile)
   }
 }

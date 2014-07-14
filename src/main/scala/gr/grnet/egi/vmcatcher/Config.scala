@@ -15,28 +15,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.cmdline
+package gr.grnet.egi.vmcatcher
 
-import com.beust.jcommander.IStringConverter
-import gr.grnet.egi.vmcatcher.Main
-import gr.grnet.egi.vmcatcher.handler.DequeueHandler
+import java.io.File
+
+import com.typesafe.config.ConfigFactory
 
 /**
  *
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
-class DequeueHandlerClassConverter extends IStringConverter[DequeueHandler] {
-  def convert(className: String): DequeueHandler = {
-    try {
-      val cl = Class.forName(className)
-      cl.newInstance().asInstanceOf[DequeueHandler]
-    }
-    catch {
-      case e: Exception ⇒
-        val typeName = classOf[DequeueHandler].getSimpleName
-        val error = s"Could not instantiate $typeName class $className"
-        Main.Log.error(error, e)
-        throw e
-    }
+object Config {
+  // Fix the Key.
+  // _       _
+  // the Config library does not like the ':' token inside keys, unless it is quoted.
+  def fk(key: String) = key.replaceAll(":", "\":\"")
+
+  def ofFilePath(path: String): com.typesafe.config.Config = {
+    val file = new File(path)
+    ConfigFactory.parseFile(file).resolve()
   }
+
+  def ofString(s: String): com.typesafe.config.Config = ConfigFactory.parseString(s).resolve()
 }

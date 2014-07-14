@@ -19,7 +19,7 @@ package gr.grnet.egi.vmcatcher
 
 import java.io.File
 import java.net.URL
-import java.nio.file.Files
+import java.nio.file.{StandardCopyOption, Files}
 
 import com.squareup.okhttp.{OkHttpClient, Request, Response}
 
@@ -28,12 +28,12 @@ import com.squareup.okhttp.{OkHttpClient, Request, Response}
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 object Http {
-  val OkHttpClient = new OkHttpClient
+  val StdOkHttpClient = new OkHttpClient
 
   def GET(url: URL): Response = {
     val builder = new Request.Builder().url(url).get()
     val request = builder.build()
-    val call = OkHttpClient.newCall(request)
+    val call = StdOkHttpClient.newCall(request)
     val response = call.execute()
     response
   }
@@ -41,6 +41,6 @@ object Http {
   def downloadToFile(url: URL, file: File): Unit = {
     val response = GET(url)
     val input = response.body().byteStream()
-    Files.copy(input, file.toPath)
+    Files.copy(input, file.toPath, StandardCopyOption.REPLACE_EXISTING)
   }
 }

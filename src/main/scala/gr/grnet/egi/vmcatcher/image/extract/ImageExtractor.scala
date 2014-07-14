@@ -28,7 +28,7 @@ import org.slf4j.Logger
  */
 trait ImageExtractor {
   def canExtract(format: String): Boolean
-  def extract(log: Logger, map: Map[String, String], format: String, imageFile: File): File
+  def extract(log: Logger, map: Map[String, String], format: String, imageFile: File): Option[File]
 }
 
 object ImageExtractor {
@@ -37,7 +37,8 @@ object ImageExtractor {
    */
   val AllKnown: List[ImageExtractor] = List(
     new CpioBz2Extractor,
-    new CpioGzExtractor
+    new CpioGzExtractor,
+    new OvaExtractor
   )
 
   def findExtractor(format: String): Option[ImageExtractor] = AllKnown.find(_.canExtract(format))

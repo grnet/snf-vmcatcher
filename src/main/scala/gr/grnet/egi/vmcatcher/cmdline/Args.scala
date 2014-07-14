@@ -78,6 +78,8 @@ object Args {
   class ShowConf {
     @ParametersDelegate
     val confDelegate = new ConfDelegate
+
+    def conf = confDelegate.conf
   }
 
   @Parameters(
@@ -87,6 +89,8 @@ object Args {
   class EnqueueFromEnv {
     @ParametersDelegate
     val confDelegate = new ConfDelegate
+
+    def conf = confDelegate.conf
   }
 
   @Parameters(
@@ -96,6 +100,8 @@ object Args {
   class EnqueueFromImageList {
     @ParametersDelegate
     val confDelegate = new ConfDelegate
+
+    def conf = confDelegate.conf
 
     @Parameter(
       names = Array("-image-list-url"),
@@ -122,6 +128,8 @@ object Args {
     @ParametersDelegate
     val confDelegate = new ConfDelegate
 
+    def conf = confDelegate.conf
+
     @Parameter(names = Array("-server"), description = "Run in server mode and dequeue a message at a time")
     val server = false
 
@@ -131,10 +139,10 @@ object Args {
     @Parameter(
       names = Array("-handler"),
       description = "The Java class that will handle a message from RabbitMQ. Use gr.grnet.egi.vmcatcher.handler.VMRegistrationHandler for the standard behavior. Other values are gr.grnet.egi.vmcatcher.handler.JustLogHandler and gr.grnet.egi.vmcatcher.handler.ThrowingHandler",
-      required = true,
+      validateValueWith = classOf[NotNullValueValidator[_]],
       converter = classOf[DequeueHandlerClassConverter]
     )
-    val handler: DequeueHandler = null
+    val handler: DequeueHandler = new gr.grnet.egi.vmcatcher.handler.VMRegistrationHandler
 
     @Parameter(
       names = Array("-kamaki-cloud"),
