@@ -173,7 +173,9 @@ class VMRegistrationHandler extends DequeueHandler {
     log.info("#> handleImageJSON")
 
     val url = new URL(imageConfig.hvURI)
-    val imageFile = Sys.createTempFile(".image")
+    // We want to preserve the remote filename
+    val filename = new File(url.getFile).getName
+    val imageFile = Sys.createTempFile("." + filename)
     log.info(s"Downloading $url to $imageFile")
 
     try {
@@ -186,6 +188,7 @@ class VMRegistrationHandler extends DequeueHandler {
         throw e
     }
     finally {
+      log.info(s"Deleting temporary $imageFile")
       imageFile.delete()
     }
 

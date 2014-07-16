@@ -28,5 +28,8 @@ import org.slf4j.Logger
 class IdentityTransformer extends ImageTransformer {
   def canTransform(formatOpt: Option[String], file: File): Boolean = true
 
-  def transform(log: Logger, registry: ImageTransformers, formatOpt: Option[String], file: File): Option[File] = Some(file)
+  def transform(log: Logger, registry: ImageTransformers, formatOpt: Option[String], file: File): Option[File] = {
+    log.info(s"Assume $file is a raw image file")
+    Some(file)
+  }
 }
