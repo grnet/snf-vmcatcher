@@ -15,14 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.image.extract
+package gr.grnet.egi.vmcatcher.image
 
 import java.io.File
-import java.nio.file.Files
 import java.util.Locale
 
 import gr.grnet.egi.vmcatcher.Sys
-import gr.grnet.egi.vmcatcher.image.convert.ImageConverter
 import org.slf4j.Logger
 
 /**
@@ -30,37 +28,29 @@ import org.slf4j.Logger
  * In the OVA archive we assume a) no directory structure and b) only two files present.
  * One of the present files is an .ovf metadata file and the other one is the image itself.
  *
+ * @author Christos KK Loverdos <loverdos@gmail.com>
  */
-class OvaExtractor extends ImageExtractor {
-  def canExtract(format: String): Boolean = {
-    val formatL = format.toLowerCase(Locale.ENGLISH)
-    formatL.endsWith(".ova") || formatL == "ova"
-  }
+class OvaTransformer extends ImageTransformerSkeleton {
+  protected def canTransformImpl(
+    formatOpt: Option[String],
+    extension: String,
+    file: File
+  ): Boolean = extension == ".ova"
 
-
-  def untar(log: Logger, imageFile: File, tmpDir: File): Int = {
-    Sys.exec(
-      log,
-      "tar",
-     "xf",
-      imageFile.getAbsolutePath,
-      "-C",
-      tmpDir.getAbsolutePath
-    )
-  }
-
-  def extract(log: Logger, map: Map[String, String], format: String, ovaFile: File): Option[File] = {
-    if(!canExtract(format)) {
-      return None
-    }
-
+  protected def transformImpl(
+    log: Logger,
+    registry: ImageTransformers,
+    formatOpt: Option[String],
+    extension: String,
+    ovaFile: File
+  ): Option[File] = {
     val tmpDir =  Sys.createTempDirectory()
-    val untarCode = untar(log, ovaFile, tmpDir)
+    val untarCode = Sys.untar(log, ovaFile, tmpDir)
 
     if(untarCode != 0) {
       log.error(s"EXEC exit code $untarCode")
-      log.warn(s"IGNORE $ovaFile $map")
-      throw new Exception(s"EXEC exit code $untarCode. IGNORE $ovaFile $map")
+      log.error(s"IGNORE $ovaFile")
+      None
     }
 
     // For now, assume a simple structure:
@@ -81,13 +71,18 @@ class OvaExtractor extends ImageExtractor {
           throw new Exception(msg)
 
         case Some(imageFile) ⇒
-          ImageConverter.findConverter(imageFile) match {
+          registry.findForFile(imageFile) match {
             case None ⇒
-              log.error(s"Unknown converter for $imageFile from OVA archive $ovaFile")
+              log.error(s"Unknown transformer for $imageFile from OVA archive $ovaFile")
               None
 
-            case Some(imageConverter) ⇒
-              imageConverter.convert(log, imageFile)
+            case Some(imageimageTransformer) ⇒
+              imageimageTransformer.transform(
+                log,
+                registry,
+                None,
+                imageFile
+              )
           }
       }
     }

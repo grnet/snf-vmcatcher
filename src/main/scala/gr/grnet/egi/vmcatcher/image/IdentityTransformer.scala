@@ -15,24 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.image.convert
+package gr.grnet.egi.vmcatcher.image
 
 import java.io.File
 
 import org.slf4j.Logger
 
 /**
- * Converts an image to raw format, as required by `kamaki`
+ *
+ * @author Christos KK Loverdos <loverdos@gmail.com>
  */
-trait ImageConverter {
-  def canConvert(imageFile: File): Boolean
-  def convert(log: Logger, imageFile: File): Option[File]
-}
+class IdentityTransformer extends ImageTransformer {
+  def canTransform(formatOpt: Option[String], file: File): Boolean = true
 
-object ImageConverter {
-  val AllKnown: List[ImageConverter] = List(
-    new VmdkConverter
-  )
-
-  def findConverter(imageFile: File): Option[ImageConverter] = AllKnown.find(_.canConvert(imageFile))
+  def transform(log: Logger, registry: ImageTransformers, formatOpt: Option[String], file: File): Option[File] = Some(file)
 }

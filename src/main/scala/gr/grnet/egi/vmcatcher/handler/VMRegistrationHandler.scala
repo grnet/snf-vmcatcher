@@ -21,9 +21,9 @@ import java.io.File
 import java.net.URL
 import java.util.Locale
 
-import gr.grnet.egi.vmcatcher.{Http, Sys}
-import gr.grnet.egi.vmcatcher.image.extract.ImageExtractor
+import gr.grnet.egi.vmcatcher.image.ImageTransformers
 import gr.grnet.egi.vmcatcher.message._
+import gr.grnet.egi.vmcatcher.{Http, Sys}
 import org.slf4j.Logger
 
 /**
@@ -31,44 +31,67 @@ import org.slf4j.Logger
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class VMRegistrationHandler extends DequeueHandler {
-  def publishVmImageFile(log: Logger, map: Map[String, String], format: String, imageFile: File, kamakiCloud: String): Unit = {
-    val imageExtractorOpt = ImageExtractor.findExtractor(format)
-    imageExtractorOpt match {
+  def publishVmImageFile(
+    log: Logger,
+    map: Map[String, String],
+    format: String,
+    imageFile: File,
+    kamakiCloud: String,
+    imageTransformers: ImageTransformers
+  ): Unit = {
+    val imageTransformerOpt = imageTransformers.findForFormat(format, imageFile)
+    imageTransformerOpt match {
       case None ⇒
-        log.error(s"Image $imageFile has unknown format $format. Could not find extractor. Aborting")
+        log.error(s"Image $imageFile has unknown format $format. Could not find transformer. Aborting")
         return
 
-      case Some(imageExtractor) ⇒
-        val extractedImageFileOpt = imageExtractor.extract(log, map, format, imageFile)
-        extractedImageFileOpt match {
+      case Some(imageTransformer) ⇒
+        val transformedImageFileOpt = imageTransformer.transform(log, imageTransformers, Some(format), imageFile)
+        transformedImageFileOpt match {
           case None ⇒
             log.error(s"Unknown (unexpected) extractor for $imageFile")
 
-          case Some(extractedImageFile) ⇒
-            log.info(s"Transformed $imageFile to $extractedImageFile")
+          case Some(transformedImageFile) ⇒
+            log.info(s"Transformed $imageFile to $transformedImageFile")
 
             try {
-              val mkimageExitCode = Sys.snfMkimage(log, kamakiCloud, extractedImageFile.getName, extractedImageFile)
+              val mkimageExitCode = Sys.snfMkimage(
+                log,
+                kamakiCloud,
+                transformedImageFile.getName,
+                transformedImageFile
+              )
+
               if(mkimageExitCode != 0) {
                 log.warn(s"Could not register image $imageFile to $kamakiCloud")
               }
             }
             finally {
-              if(imageFile.getAbsolutePath != extractedImageFile.getAbsolutePath) {
-                log.info(s"Deleting temporary $extractedImageFile")
-                extractedImageFile.delete()
+              if(imageFile.getAbsolutePath != transformedImageFile.getAbsolutePath) {
+                log.info(s"Deleting temporary $transformedImageFile")
+                transformedImageFile.delete()
               }
             }
         }
     }
   }
 
-  def expireVM(log: Logger, map: Map[String, String], kamakiCloud: String): Unit = {
+  def expireVM(
+    log: Logger,
+    map: Map[String, String],
+    kamakiCloud: String,
+    imageTransformers: ImageTransformers
+  ): Unit = {
     // vmcatcher moves the image file to the $VMCATCHER_CACHE_DIR_EXPIRE folder
     log.info("Expiring VM (nothing to do)")
   }
 
-  def availableVM(log: Logger, map: Map[String, String], kamakiCloud: String): Unit = {
+  def availableVM(
+    log: Logger,
+    map: Map[String, String],
+    kamakiCloud: String,
+    imageTransformers: ImageTransformers
+  ): Unit = {
     // vmcatcher has downloaded the image in $VMCATCHER_CACHE_DIR_CACHE.
     // the image filename is $VMCATCHER_EVENT_FILENAME
     // the full path to the image file is $VMCATCHER_CACHE_DIR_CACHE/$VMCATCHER_EVENT_FILENAME
@@ -104,14 +127,20 @@ class VMRegistrationHandler extends DequeueHandler {
       return
     }
 
-    publishVmImageFile(log, map, format, imageFile, kamakiCloud)
+    publishVmImageFile(log, map, format, imageFile, kamakiCloud, imageTransformers)
   }
 
   def handleOther(log: Logger, verb: String, map: Map[String, String], kamakiCloud: String): Unit = {
     log.info(s"verb = $verb (nothing to do)")
   }
 
-  def handleVmCatcherScriptJSON(log: Logger, json: String, map: Map[String, String], kamakiCloud: String): Unit = {
+  def handleVmCatcherScriptJSON(
+    log: Logger,
+    json: String,
+    map: Map[String, String],
+    kamakiCloud: String,
+    imageTransformers: ImageTransformers
+  ): Unit = {
     log.info("#> handleVmCatcherScriptJSON")
     val eventType = map.getOrElse("VMCATCHER_EVENT_TYPE", "")
     val eventTypeL = eventType.toLowerCase(Locale.ENGLISH)
@@ -122,10 +151,10 @@ class VMRegistrationHandler extends DequeueHandler {
 
     eventTypeL.stripSuffix("postfix") match {
       case "expire" ⇒
-        expireVM(log, map, kamakiCloud)
+        expireVM(log, map, kamakiCloud, imageTransformers)
 
       case "available" ⇒
-        availableVM(log, map, kamakiCloud)
+        availableVM(log, map, kamakiCloud, imageTransformers)
 
       case other ⇒
         handleOther(log, other, map, kamakiCloud)
@@ -133,7 +162,14 @@ class VMRegistrationHandler extends DequeueHandler {
     log.info("#< handleVmCatcherScriptJSON")
   }
 
-  def handleImageJSON(log: Logger, imageConfig: ImageConfig, json: String, map: Map[String, String], kamakiCloud: String): Unit = {
+  def handleImageJSON(
+    log: Logger,
+    imageConfig: ImageConfig,
+    json: String,
+    map: Map[String, String],
+    kamakiCloud: String,
+    imageTransformers: ImageTransformers
+  ): Unit = {
     log.info("#> handleImageJSON")
 
     val url = new URL(imageConfig.hvURI)
@@ -142,7 +178,7 @@ class VMRegistrationHandler extends DequeueHandler {
 
     try {
       Http.downloadToFile(url, imageFile)
-      publishVmImageFile(log, map, imageConfig.hvFormat, imageFile, kamakiCloud)
+      publishVmImageFile(log, map, imageConfig.hvFormat, imageFile, kamakiCloud, imageTransformers)
     }
     catch {
       case e: Exception ⇒
@@ -156,9 +192,15 @@ class VMRegistrationHandler extends DequeueHandler {
     log.info("#< handleImageJSON")
   }
 
-  def handle(log: Logger, json: String, map: Map[String, String], kamakiCloud: String): Unit = {
+  def handle(
+    log: Logger,
+    json: String,
+    map: Map[String, String],
+    kamakiCloud: String,
+    imageTransformers: ImageTransformers
+  ): Unit = {
     val sh = new JustLogHandler
-    sh.handle(log, json, map, kamakiCloud)
+    sh.handle(log, json, map, kamakiCloud, imageTransformers)
 
     // There are two types of JSON messages going in the queue:
     //  1) The JSON vmcatcher creates
@@ -175,11 +217,11 @@ class VMRegistrationHandler extends DequeueHandler {
 
       case m @ VmCatcherScriptJSON(_) ⇒
         log.info(s"Message is ${m.getClass.getSimpleName}")
-        handleVmCatcherScriptJSON(log, json, map, kamakiCloud)
+        handleVmCatcherScriptJSON(log, json, map, kamakiCloud, imageTransformers)
 
       case m @ ImageJSON(imageConfig) ⇒
         log.info(s"Message is ${m.getClass.getSimpleName}")
-        handleImageJSON(log, imageConfig, json, map, kamakiCloud)
+        handleImageJSON(log, imageConfig, json, map, kamakiCloud, imageTransformers)
     }
   }
 }

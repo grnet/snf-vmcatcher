@@ -15,22 +15,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.handler
+package gr.grnet.egi.vmcatcher
 
-import gr.grnet.egi.vmcatcher.image.ImageTransformers
-import org.slf4j.Logger
+import org.junit.{Assert, Test}
 
 /**
  *
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
-class ThrowingHandler extends DequeueHandler {
-  def handle(
-    log: Logger,
-    json: String,
-    map: Map[String, String],
-    kamakiCloud: String,
-    imageTransformers: ImageTransformers
-  ): Unit =
-    throw new Exception(s"json = $json")
+class SysTest {
+  @Test def fileExt(): Unit = {
+    val ext = ".bar"
+    val name = s"foo$ext"
+
+    Assert.assertEquals(ext, Sys.fileExtension(name))
+  }
+
+  @Test def filePreExt(): Unit = {
+    val pre = ".pre"
+    val ext = ".ext"
+    val name = s"foo${pre}$ext"
+    Assert.assertEquals(pre, Sys.filePreExtension(name))
+  }
+
+  @Test def dropExt(): Unit = {
+    val ext = ".bar"
+    val foo = "foo"
+    val name = s"$foo$ext"
+
+    Assert.assertEquals(foo, Sys.dropFileExtension(name))
+  }
 }

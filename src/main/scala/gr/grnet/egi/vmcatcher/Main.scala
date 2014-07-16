@@ -24,6 +24,7 @@ import com.beust.jcommander.ParameterException
 import com.typesafe.config.{Config, ConfigRenderOptions}
 import gr.grnet.egi.vmcatcher.cmdline.Args
 import gr.grnet.egi.vmcatcher.cmdline.Args.ParsedCmdLine
+import gr.grnet.egi.vmcatcher.image.ImageTransformers
 import gr.grnet.egi.vmcatcher.message.ImageListConfig
 import gr.grnet.egi.vmcatcher.rabbit.{Rabbit, RabbitConnector}
 import org.slf4j.LoggerFactory
@@ -181,7 +182,13 @@ object Main extends {
           val map = Json.mapOfJson(jsonMsg)
 
           Log.info(s"dequeueHandler = ${dequeueHandler.getClass.getName}")
-          dequeueHandler.handle(Log, jsonMsg, map, kamakiCloud)
+          dequeueHandler.handle(
+            Log,
+            jsonMsg,
+            map,
+            kamakiCloud,
+            ImageTransformers
+          )
           false
         }
 

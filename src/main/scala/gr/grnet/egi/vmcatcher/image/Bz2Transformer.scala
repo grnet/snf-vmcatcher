@@ -15,10 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.image.extract
+package gr.grnet.egi.vmcatcher.image
 
 import java.io.File
-import java.util.Locale
 
 import gr.grnet.egi.vmcatcher.Sys
 import org.slf4j.Logger
@@ -27,32 +26,28 @@ import org.slf4j.Logger
  *
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
-class CpioBz2Extractor extends ImageExtractor {
-  val exec = new Sys
+class Bz2Transformer extends ImageTransformerSkeleton {
+  protected def canTransformImpl(
+    formatOpt: Option[String],
+    extension: String,
+    file: File
+  ): Boolean = extension == ".bz2"
 
-  def canExtract(format: String): Boolean =
-    format.toLowerCase(Locale.ENGLISH).endsWith(".cpio.bz2")
-
-  def bunzip2(log: Logger, from: File, to: File): Int =
-    exec.exec(
-      log,
-      "/bin/sh",
-      "-c",
-      s"""bunzip2 < "${from.getAbsolutePath}" > "${to.getAbsolutePath}""""
-    )
-
-  def extract(log: Logger, map: Map[String, String], format: String, imageFile: File): Option[File] = {
-    if(!canExtract(format)) {
-      return None
-    }
-
-    val tmpFile =  Sys.createTempFile(imageFile.getName+".bunzip2")
-    val exitCode = bunzip2(log, imageFile, tmpFile)
+  protected def transformImpl(
+    log: Logger,
+    registry: ImageTransformers,
+    formatOpt: Option[String],
+    extension: String,
+    bz2File: File
+  ): Option[File] = {
+    val dropBz2 = Sys.dropFileExtension(bz2File)
+    val tmpFile =  Sys.createTempFile("." + dropBz2)
+    val exitCode = Sys.bunzip2(log, bz2File, tmpFile)
 
     if(exitCode != 0) {
       log.error(s"EXEC exit code $exitCode")
-      log.warn(s"IGNORE $imageFile $map")
-      throw new Exception(s"EXEC exit code $exitCode. IGNORE $imageFile $map")
+      log.error(s"IGNORE $bz2File")
+      return None
     }
 
     Some(tmpFile)

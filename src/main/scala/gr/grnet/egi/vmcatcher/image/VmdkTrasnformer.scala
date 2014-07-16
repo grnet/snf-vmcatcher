@@ -15,26 +15,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.image.convert
+package gr.grnet.egi.vmcatcher.image
 
 import java.io.File
-import java.util.Locale
 
 import gr.grnet.egi.vmcatcher.Sys
 import org.slf4j.Logger
 
 /**
- * Converts a `vmdk` image to `raw` using `qemu` utilities.
+ *
+ * @author Christos KK Loverdos <loverdos@gmail.com>
  */
-class VmdkConverter extends ImageConverter {
-  def canConvert(imageFile: File): Boolean =
-    imageFile.getName.toLowerCase(Locale.ENGLISH).endsWith(".vmdk")
+class VmdkTrasnformer extends ImageTransformerSkeleton {
+  protected def canTransformImpl(
+    formatOpt: Option[String],
+    extension: String,
+    file: File
+  ): Boolean = extension == ".vmdk"
 
-  def convert(log: Logger, imageFile: File): Option[File] = {
-    if(!canConvert(imageFile)) {
-      return None
-    }
 
+  protected def transformImpl(
+    log: Logger,
+    registry: ImageTransformers,
+    formatOpt: Option[String],
+    extension: String,
+    imageFile: File
+  ): Option[File] = {
     val tmpFile = Sys.createTempFile("." + imageFile.getName + ".raw")
     log.info(s"Converting $imageFile from vmdk to raw at $tmpFile")
     Sys.qemuImgConvert(log, "vmdk", "raw", imageFile, tmpFile) match {

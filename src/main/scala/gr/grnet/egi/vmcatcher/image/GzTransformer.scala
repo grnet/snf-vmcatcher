@@ -15,31 +15,41 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.image.extract
+package gr.grnet.egi.vmcatcher.image
 
 import java.io.File
 
+import gr.grnet.egi.vmcatcher.Sys
 import org.slf4j.Logger
 
 /**
- * Extract an image to the format supported by `kamaki`, that is raw.
  *
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
-trait ImageExtractor {
-  def canExtract(format: String): Boolean
-  def extract(log: Logger, map: Map[String, String], format: String, imageFile: File): Option[File]
-}
+class GzTransformer extends ImageTransformerSkeleton {
+  protected def canTransformImpl(
+    formatOpt: Option[String],
+    extension: String,
+    file: File
+  ): Boolean = extension == ".gz"
 
-object ImageExtractor {
-  /**
-   * A list of all known image extractors.
-   */
-  val AllKnown: List[ImageExtractor] = List(
-    new CpioBz2Extractor,
-    new CpioGzExtractor,
-    new OvaExtractor
-  )
+  protected def transformImpl(
+    log: Logger,
+    registry: ImageTransformers,
+    formatOpt: Option[String],
+    extension: String,
+    gzFile: File
+  ): Option[File] = {
+    val dropGz = Sys.dropFileExtension(gzFile)
+    val tmpFile =  Sys.createTempFile("." + dropGz)
+    val exitCode = Sys.gunzip(log, gzFile, tmpFile)
 
-  def findExtractor(format: String): Option[ImageExtractor] = AllKnown.find(_.canExtract(format))
+    if(exitCode != 0) {
+      log.error(s"EXEC exit code $exitCode")
+      log.error(s"IGNORE $gzFile")
+      return None
+    }
+
+    Some(tmpFile)
+  }
 }

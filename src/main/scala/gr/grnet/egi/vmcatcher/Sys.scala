@@ -20,7 +20,6 @@ package gr.grnet.egi.vmcatcher
 import java.io.File
 import java.nio.file.Files
 
-import gr.grnet.egi.vmcatcher.image.extract.ImageExtractor
 import org.slf4j.Logger
 import org.zeroturnaround.exec.ProcessExecutor
 import org.zeroturnaround.exec.stream.slf4j.Slf4jStream
@@ -88,6 +87,75 @@ class Sys {
       imageFile.getAbsolutePath
     )
   }
+
+  def untar(log: Logger, tarFile: File, where: File): Int = {
+    Sys.exec(
+      log,
+      "tar",
+      "xf",
+      tarFile.getAbsolutePath,
+      "-C",
+      where.getAbsolutePath
+    )
+  }
+
+  def gunzip(log: Logger, from: File, to: File): Int =
+    exec(
+      log,
+      "/bin/sh",
+      "-c",
+      s"""gunzip < "${from.getAbsolutePath}" > "${to.getAbsolutePath}""""
+    )
+
+  def bunzip2(log: Logger, from: File, to: File): Int =
+    exec(
+      log,
+      "/bin/sh",
+      "-c",
+      s"""bunzip2 < "${from.getAbsolutePath}" > "${to.getAbsolutePath}""""
+    )
+
+  /**
+   * Computes the file extension (dot `.` included).
+   */
+  def fileExtension(name: String): String = {
+    val i = name.lastIndexOf('.')
+    i match {
+      case -1 | 0 ⇒ ""
+      case _ ⇒ name.substring(i)
+    }
+  }
+
+  /**
+   * Computes the file extension (dot `.` included).
+   */
+  def fileExtension(file: File): String = fileExtension(file.getName)
+
+  /**
+   * Computes the filename without the extension
+   */
+  def dropFileExtension(name: String): String = {
+    val i = name.lastIndexOf('.')
+    i match {
+      case 0 | -1 ⇒ name
+      case _ ⇒ name.substring(0, i)
+    }
+  }
+
+  def dropFileExtension(file: File): String = dropFileExtension(file.getName)
+
+
+  def filePreExtension(name: String): String = {
+    val i = name.lastIndexOf('.')
+    i match {
+      case -1 | 0 ⇒ ""
+      case _ ⇒
+        val newName = name.substring(0, i)
+        fileExtension(newName)
+    }
+  }
+
+  def filePreExtension(file: File): String = filePreExtension(file.getName)
 }
 
 object Sys extends Sys
