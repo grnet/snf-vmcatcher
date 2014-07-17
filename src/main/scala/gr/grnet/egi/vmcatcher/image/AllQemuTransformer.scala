@@ -32,7 +32,14 @@ class AllQemuTransformer extends ImageTransformerSkeleton {
     formatOpt: Option[String],
     extension: String,
     file: File
-  ): Boolean = AllQemuTransformer.SupportedExtensions(extension)
+  ): Boolean =
+    formatOpt match {
+      case Some(format) if AllQemuTransformer.SupportedExtensions(format) ⇒
+        true
+
+      case _ ⇒
+        AllQemuTransformer.SupportedExtensions(extension)
+    }
 
 
   protected def transformImpl(

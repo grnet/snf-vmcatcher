@@ -34,11 +34,11 @@ class Bz2Transformer extends ImageTransformerSkeleton {
     file: File
   ): Boolean =
     formatOpt match {
-      case Some(format) ⇒
-        Sys.fileExtension(format).toLowerCase(Locale.ENGLISH) == ".bz2"
+      case Some(format) if Sys.fileExtension(format).toLowerCase(Locale.ENGLISH) == ".bz2" ⇒
+        true
 
       case _ ⇒
-        extension == ".bz"
+        extension == ".bz2"
     }
 
   protected def transformImpl(

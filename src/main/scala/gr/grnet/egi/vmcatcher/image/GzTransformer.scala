@@ -34,8 +34,8 @@ class GzTransformer extends ImageTransformerSkeleton {
     file: File
   ): Boolean =
     formatOpt match {
-      case Some(format) ⇒
-        Sys.fileExtension(format).toLowerCase(Locale.ENGLISH) == ".gz"
+      case Some(format) if Sys.fileExtension(format).toLowerCase(Locale.ENGLISH) == ".gz" ⇒
+        true
 
       case _ ⇒
         extension == ".gz"
