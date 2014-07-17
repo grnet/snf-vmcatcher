@@ -30,12 +30,16 @@ import org.slf4j.Logger
  *
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
-class OvaTransformer extends ImageTransformerSkeleton {
+class OvaSimpleTransformer extends ImageTransformerSkeleton {
   protected def canTransformImpl(
     formatOpt: Option[String],
     extension: String,
     file: File
-  ): Boolean = extension == ".ova"
+  ): Boolean =
+    formatOpt match {
+      case Some("ova") ⇒ true
+      case _ ⇒ extension == ".ova"
+    }
 
   protected def transformImpl(
     log: Logger,
@@ -57,7 +61,6 @@ class OvaTransformer extends ImageTransformerSkeleton {
     //  1) One .OVF file (metadata) and another one that is the VM image
     //  2) We do not parse the OVF.
     //  3) The image does not need some "extraction"
-    // TODO In the future, combine ImageExtractor and ImageConverter
 
     // Now, inside the dir, get the file that is not .OVF
     val imageFileOpt = tmpDir.
@@ -68,21 +71,18 @@ class OvaTransformer extends ImageTransformerSkeleton {
       imageFileOpt match {
         case None ⇒
           val msg = s"Could not find image in archive $ovaFile"
-          throw new Exception(msg)
+          log.error(msg)
+          None
 
         case Some(imageFile) ⇒
-          registry.findForFile(imageFile) match {
+          log.info(s"Found image $imageFile")
+          registry.pipelineTransform(log, None, imageFile, true)  match {
             case None ⇒
               log.error(s"Unknown transformer for $imageFile from OVA archive $ovaFile")
               None
 
-            case Some(imageimageTransformer) ⇒
-              imageimageTransformer.transform(
-                log,
-                registry,
-                None,
-                imageFile
-              )
+            case some ⇒
+              some
           }
       }
     }

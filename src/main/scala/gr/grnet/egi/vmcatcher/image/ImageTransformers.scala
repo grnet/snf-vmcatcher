@@ -19,34 +19,133 @@ package gr.grnet.egi.vmcatcher.image
 
 import java.io.File
 
+import org.slf4j.Logger
+
+import scala.annotation.tailrec
+
 /**
  *
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 trait ImageTransformers {
+  def lastResortTransformerOption: Option[ImageTransformer]
+  
   def transformers: List[ImageTransformer]
 
-  def findForFile(file: File): Option[ImageTransformer] =
+  def findForFile(log: Logger, file: File): Option[ImageTransformer] = {
+    def logit(imageTransformer: ImageTransformer) =
+      log.info(s"Found ${imageTransformer.getClass.getSimpleName} for $file")
+
     transformers.find(_.canTransform(None, file)) match {
-      case some @ Some(_) ⇒ some
-      case None ⇒ ImageTransformers.LastResortTransformerOption
+      case some @ Some(imageTransformer) ⇒
+        logit(imageTransformer)
+        some
+
+      case None ⇒
+        ImageTransformers.lastResortTransformerOption match {
+          case None ⇒ None
+          case some @ Some(imageTransformer) ⇒
+            logit(imageTransformer)
+            some
+        }
+    }
+  }
+
+  def findForFormat(log: Logger, format: String, file: File): Option[ImageTransformer] = {
+    def logit(imageTransformer: ImageTransformer) =
+      log.info(s"Found ${imageTransformer.getClass.getSimpleName} for $file of format $format")
+
+    transformers.find(_.canTransform(Some(format), file)) match {
+      case some @ Some(imageTransformer) ⇒
+        logit(imageTransformer)
+        some
+
+      case None ⇒
+        ImageTransformers.lastResortTransformerOption match {
+          case None ⇒ None
+          case some @ Some(imageTransformer) ⇒
+            logit(imageTransformer)
+            some
+        }
+    }
+  }
+
+  def find(log: Logger, formatOpt: Option[String], file: File): Option[ImageTransformer] =
+    formatOpt match {
+      case Some(format) ⇒ findForFormat(log, format, file)
+      case None ⇒ findForFile(log, file)
     }
 
-  def findForFormat(format: String, file: File): Option[ImageTransformer] =
-    transformers.find(_.canTransform(Some(format), file)) match {
-      case some @ Some(_) ⇒ some
-      case None ⇒ ImageTransformers.LastResortTransformerOption
+  def pipelineTransform(
+    log: Logger,
+    originalFormatOpt: Option[String],
+    originalFile: File,
+    deleteOriginalFile: Boolean
+  ): Option[File] = {
+
+    @tailrec
+    def runTransformationRound(
+      formatOpt: Option[String],
+      file: File,
+      deleteFileAfterTransform: Boolean
+    ): Option[File] = {
+      def fileInfo =
+        formatOpt match {
+          case None ⇒ s"$file"
+          case Some(format) ⇒ s"$file of format $format"
+        }
+
+      def checkDelete() =
+        if(deleteFileAfterTransform) {
+          log.info(s"Deleting intermediate file $file")
+          file.delete()
+        }
+
+      find(log, formatOpt, file) match {
+        case None ⇒
+          Some(file) // either we transformed or we just return the original
+
+        case Some(imageTransformer) ⇒
+          val (newFormatOpt, suggestedFilename) = imageTransformer.suggestTransformedFilename(formatOpt, file)
+          log.info(s"Transforming $fileInfo (new suggestion is $suggestedFilename) ...")
+          imageTransformer.transform(log, this, formatOpt, file) match {
+            case None ⇒
+              log.error(s"Could not transform $fileInfo using $imageTransformer")
+              checkDelete()
+              None
+
+            case Some(transformedFile) ⇒
+              log.info(s"Transformed $fileInfo to $transformedFile")
+              checkDelete()
+              runTransformationRound(newFormatOpt, transformedFile, true)
+          }
+      }
     }
+
+    val result =
+      runTransformationRound(originalFormatOpt, originalFile, false) match {
+        case None ⇒ None
+        case Some(transformedFile) if originalFile.getAbsolutePath == transformedFile.getAbsolutePath ⇒ None
+        case some ⇒ some
+      }
+
+    if(deleteOriginalFile) {
+      log.info(s"Deleting original file $originalFile")
+      originalFile.delete()
+    }
+
+    result
+  }
 }
 
 object ImageTransformers extends ImageTransformers {
-  final val LastResortTransformerOption: Option[ImageTransformer] =
-    Some(new IdentityTransformer)
+  final val lastResortTransformerOption: Option[ImageTransformer] =
+    None
 
   final val transformers = List(
-    new VmdkTrasnformer,
+    new AllQemuTransformer,
     new GzTransformer,
     new Bz2Transformer,
-    new OvaTransformer
+    new OvaSimpleTransformer
   )
 }

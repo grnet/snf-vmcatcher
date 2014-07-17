@@ -23,15 +23,16 @@ import gr.grnet.egi.vmcatcher.Sys
 import org.slf4j.Logger
 
 /**
+ * Transforms the majority of qemu-supported formats to `raw` by using `qemu-img`.
  *
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
-class VmdkTrasnformer extends ImageTransformerSkeleton {
+class AllQemuTransformer extends ImageTransformerSkeleton {
   protected def canTransformImpl(
     formatOpt: Option[String],
     extension: String,
     file: File
-  ): Boolean = extension == ".vmdk"
+  ): Boolean = AllQemuTransformer.SupportedExtensions(extension)
 
 
   protected def transformImpl(
@@ -41,11 +42,13 @@ class VmdkTrasnformer extends ImageTransformerSkeleton {
     extension: String,
     imageFile: File
   ): Option[File] = {
-    val tmpFile = Sys.createTempFile("." + imageFile.getName + ".raw")
-    log.info(s"Converting $imageFile from vmdk to raw at $tmpFile")
-    Sys.qemuImgConvert(log, "vmdk", "raw", imageFile, tmpFile) match {
+    val inFormat = extension.drop(1) // remove '.'
+    val outFormat = "raw"
+    val tmpFile = Sys.createTempFile("." + Sys.dropFileExtension(imageFile) + "." + outFormat)
+    log.info(s"Transforming $imageFile from $inFormat to $outFormat at $tmpFile")
+    Sys.qemuImgConvert(log, inFormat, outFormat, imageFile, tmpFile) match {
       case n if n != 0 ⇒
-        val msg = s"Could not convert image $imageFile to raw format"
+        val msg = s"Could not transform image $imageFile from $inFormat to $outFormat"
         log.error(msg)
         None
 
@@ -53,4 +56,23 @@ class VmdkTrasnformer extends ImageTransformerSkeleton {
         Some(tmpFile)
     }
   }
+}
+
+object AllQemuTransformer {
+  final val SupportedExtensions = Set(
+    ".vvfat",
+    ".vpc",
+    ".vmdk",
+    ".vdi",
+    ".host_cdrom",
+    ".qed",
+    ".qcow2",
+    ".qcow",
+    ".cow",
+    ".parallels",
+    ".nbd",
+    ".dmg",
+    ".cloop",
+    ".bochs"
+  )
 }

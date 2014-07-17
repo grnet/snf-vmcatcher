@@ -31,51 +31,6 @@ import org.slf4j.Logger
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class VMRegistrationHandler extends DequeueHandler {
-  def publishVmImageFile(
-    log: Logger,
-    map: Map[String, String],
-    format: String,
-    imageFile: File,
-    kamakiCloud: String,
-    imageTransformers: ImageTransformers
-  ): Unit = {
-    val imageTransformerOpt = imageTransformers.findForFormat(format, imageFile)
-    imageTransformerOpt match {
-      case None ⇒
-        log.error(s"Image $imageFile has unknown format $format. Could not find transformer. Aborting")
-        return
-
-      case Some(imageTransformer) ⇒
-        val transformedImageFileOpt = imageTransformer.transform(log, imageTransformers, Some(format), imageFile)
-        transformedImageFileOpt match {
-          case None ⇒
-            log.error(s"Unknown (unexpected) extractor for $imageFile")
-
-          case Some(transformedImageFile) ⇒
-            log.info(s"Transformed $imageFile to $transformedImageFile")
-
-            try {
-              val mkimageExitCode = Sys.snfMkimage(
-                log,
-                kamakiCloud,
-                transformedImageFile.getName,
-                transformedImageFile
-              )
-
-              if(mkimageExitCode != 0) {
-                log.warn(s"Could not register image $imageFile to $kamakiCloud")
-              }
-            }
-            finally {
-              if(imageFile.getAbsolutePath != transformedImageFile.getAbsolutePath) {
-                log.info(s"Deleting temporary $transformedImageFile")
-                transformedImageFile.delete()
-              }
-            }
-        }
-    }
-  }
-
   def expireVM(
     log: Logger,
     map: Map[String, String],
@@ -127,7 +82,7 @@ class VMRegistrationHandler extends DequeueHandler {
       return
     }
 
-    publishVmImageFile(log, map, format, imageFile, kamakiCloud, imageTransformers)
+    Sys.publishVmImageFile(log, Some(format), imageFile, kamakiCloud, imageTransformers, false)
   }
 
   def handleOther(log: Logger, verb: String, map: Map[String, String], kamakiCloud: String): Unit = {
@@ -173,24 +128,14 @@ class VMRegistrationHandler extends DequeueHandler {
     log.info("#> handleImageJSON")
 
     val url = new URL(imageConfig.hvURI)
-    // We want to preserve the remote filename
-    val filename = new File(url.getFile).getName
-    val imageFile = Sys.createTempFile("." + filename)
-    log.info(s"Downloading $url to $imageFile")
-
-    try {
-      Http.downloadToFile(url, imageFile)
-      publishVmImageFile(log, map, imageConfig.hvFormat, imageFile, kamakiCloud, imageTransformers)
-    }
-    catch {
-      case e: Exception ⇒
-        log.error(e.toString, e)
-        throw e
-    }
-    finally {
-      log.info(s"Deleting temporary $imageFile")
-      imageFile.delete()
-    }
+    val formatOpt = Some(imageConfig.hvFormat)
+    Sys.downloadAndPublishImageFile(
+      log,
+      formatOpt,
+      kamakiCloud,
+      url,
+      imageTransformers
+    )
 
     log.info("#< handleImageJSON")
   }

@@ -24,25 +24,53 @@ import org.junit.{Assert, Test}
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class SysTest {
-  @Test def fileExt(): Unit = {
+  @Test
+  def fileExt0(): Unit = {
+    val ext = ".bar"
+
+    Assert.assertEquals(ext, Sys.fileExtension(ext))
+  }
+
+  @Test
+  def fileExt(): Unit = {
     val ext = ".bar"
     val name = s"foo$ext"
 
     Assert.assertEquals(ext, Sys.fileExtension(name))
   }
 
-  @Test def filePreExt(): Unit = {
+  @Test
+  def filePreExt(): Unit = {
     val pre = ".pre"
     val ext = ".ext"
     val name = s"foo${pre}$ext"
     Assert.assertEquals(pre, Sys.filePreExtension(name))
   }
 
-  @Test def dropExt(): Unit = {
+  @Test
+  def dropExt0(): Unit = {
+    val ext = ".bar"
+    val foo = ""
+    val name = s"$foo$ext"
+
+    Assert.assertEquals(foo, Sys.dropFileExtension(name))
+  }
+
+  @Test
+  def dropExt(): Unit = {
     val ext = ".bar"
     val foo = "foo"
     val name = s"$foo$ext"
 
     Assert.assertEquals(foo, Sys.dropFileExtension(name))
+  }
+
+  @Test
+  def dropExts(): Unit = {
+    val exts = ".foo.bar.z"
+    val game = "game"
+    val name = s"$game$exts"
+
+    Assert.assertEquals(game, Sys.dropFileExtensions(name))
   }
 }

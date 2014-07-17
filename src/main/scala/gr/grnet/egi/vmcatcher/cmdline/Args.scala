@@ -19,7 +19,7 @@ package gr.grnet.egi.vmcatcher.cmdline
 
 import java.net.URL
 
-import com.beust.jcommander.{ParametersDelegate, JCommander, Parameter, Parameters}
+import com.beust.jcommander._
 import gr.grnet.egi.vmcatcher.Main
 import gr.grnet.egi.vmcatcher.handler.DequeueHandler
 
@@ -40,6 +40,16 @@ object Args {
       required = true
     )
     val conf: String = null
+  }
+
+  class KamakiCloudDelegate {
+    @Parameter(
+      names = Array("-kamaki-cloud"),
+      description = "The name of the cloud from ~/.kamakirc that will be used by kamaki for VM upload",
+      required = true,
+      validateWith = classOf[NotEmptyStringValidator]
+    )
+    val kamakiCloud: String = null
   }
 
   class GlobalOptions {
@@ -107,6 +117,7 @@ object Args {
       names = Array("-image-list-url"),
       description = "The URL of the image list. Use an http(s):// or a file:// URL.",
       required = true,
+      validateWith = classOf[NotEmptyStringValidator],
       validateValueWith = classOf[NotNullValueValidator[_]],
       converter = classOf[URLStringConverter]
     )
@@ -144,13 +155,31 @@ object Args {
     )
     val handler: DequeueHandler = new gr.grnet.egi.vmcatcher.handler.VMRegistrationHandler
 
+    @ParametersDelegate
+    val kamakiCloudDelegate = new KamakiCloudDelegate
+
+    def kamakiCloud = kamakiCloudDelegate.kamakiCloud
+  }
+
+  @Parameters(
+    commandNames = Array("register-now"),
+    commandDescription = "Directly register the corresponding VM instance. This is helpful in debugging"
+  )
+  class RegisterNow {
     @Parameter(
-      names = Array("-kamaki-cloud"),
-      description = "The name of the cloud from ~/.kamakirc that will be used by kamaki for VM upload",
+      names = Array("-url"),
+      description = "The http(s) URL from where to fetch the VM",
       required = true,
-      validateWith = classOf[NotEmptyStringValidator]
+      validateWith = classOf[NotEmptyStringValidator],
+      validateValueWith = classOf[NotNullValueValidator[_]],
+      converter = classOf[URLStringConverter]
     )
-    val kamakiCloud: String = null
+    val url: URL = null
+
+    @ParametersDelegate
+    val kamakiCloudDelegate = new KamakiCloudDelegate
+
+    def kamakiCloud = kamakiCloudDelegate.kamakiCloud
   }
 
   class ParsedCmdLine {
@@ -161,6 +190,7 @@ object Args {
     val enqueueFromEnv = new EnqueueFromEnv
     val enqueueFromImageList = new EnqueueFromImageList
     val dequeue = new Dequeue
+    val registerNow = new RegisterNow
   }
 
   object ParsedCmdLine extends ParsedCmdLine
@@ -177,6 +207,7 @@ object Args {
     jc.addCommand(ParsedCmdLine.enqueueFromEnv)
     jc.addCommand(ParsedCmdLine.enqueueFromImageList)
     jc.addCommand(ParsedCmdLine.dequeue)
+    jc.addCommand(ParsedCmdLine.registerNow)
 
     jc
   }

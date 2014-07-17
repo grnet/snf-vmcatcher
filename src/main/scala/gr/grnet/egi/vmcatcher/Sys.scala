@@ -18,11 +18,15 @@
 package gr.grnet.egi.vmcatcher
 
 import java.io.File
+import java.net.URL
 import java.nio.file.Files
 
+import gr.grnet.egi.vmcatcher.image.ImageTransformers
 import org.slf4j.Logger
 import org.zeroturnaround.exec.ProcessExecutor
 import org.zeroturnaround.exec.stream.slf4j.Slf4jStream
+
+import scala.annotation.tailrec
 
 class Sys {
   def exec(log: Logger, args: String*): Int = {
@@ -40,9 +44,9 @@ class Sys {
     exitCode
   }
 
-  def createTempFile(suffix: String): File = Files.createTempFile("snf-vmcatcher.", suffix).toFile.getAbsoluteFile
+  def createTempFile(suffix: String): File = Files.createTempFile("snf", suffix).toFile.getAbsoluteFile
 
-  def createTempDirectory(): File = Files.createTempDirectory("snf-vmcatcher").toFile.getAbsoluteFile
+  def createTempDirectory(): File = Files.createTempDirectory("snf").toFile.getAbsoluteFile
 
   def rmrf(log: Logger, dir: File): Unit = {
     if(dir.isDirectory && dir.isAbsolute) {
@@ -116,15 +120,13 @@ class Sys {
     )
 
   /**
-   * Computes the file extension (dot `.` included).
+   * Computes the file extension (dot (`.`) included).
    */
-  def fileExtension(name: String): String = {
-    val i = name.lastIndexOf('.')
-    i match {
-      case -1 | 0 ⇒ ""
-      case _ ⇒ name.substring(i)
+  def fileExtension(name: String): String =
+    name.lastIndexOf('.') match {
+      case -1 ⇒ ""
+      case  i ⇒ name.substring(i)
     }
-  }
 
   /**
    * Computes the file extension (dot `.` included).
@@ -134,28 +136,137 @@ class Sys {
   /**
    * Computes the filename without the extension
    */
-  def dropFileExtension(name: String): String = {
-    val i = name.lastIndexOf('.')
-    i match {
-      case 0 | -1 ⇒ name
-      case _ ⇒ name.substring(0, i)
+  def dropFileExtension(filename: String): String = {
+    filename.lastIndexOf('.') match {
+      case -1 ⇒ filename
+      case  i ⇒ filename.substring(0, i)
     }
   }
 
   def dropFileExtension(file: File): String = dropFileExtension(file.getName)
 
+  def dropFileExtensions(filename: String): String = {
+    @tailrec
+    def drop(filename: String): String = {
+      val dropped = dropFileExtension(filename)
+      if(dropped == filename)
+        filename
+      else
+        drop(dropped)
+    }
+
+    drop(filename)
+  }
+
+  def dropFileExtensions(file: File): String = dropFileExtensions(file.getName)
 
   def filePreExtension(name: String): String = {
-    val i = name.lastIndexOf('.')
-    i match {
-      case -1 | 0 ⇒ ""
-      case _ ⇒
+    name.lastIndexOf('.') match {
+      case -1 ⇒ ""
+      case  i ⇒
         val newName = name.substring(0, i)
         fileExtension(newName)
     }
   }
 
   def filePreExtension(file: File): String = filePreExtension(file.getName)
+
+  def publishVmImageFile_old(
+    log: Logger,
+    formatOpt: Option[String],
+    imageFile: File,
+    kamakiCloud: String,
+    imageTransformers: ImageTransformers
+  ): Unit = {
+    val imageTransformerOpt = imageTransformers.find(log, formatOpt, imageFile)
+    imageTransformerOpt match {
+      case None ⇒
+        log.error(s"Image $imageFile has unknown type. Could not find transformer. Aborting")
+        return
+
+      case Some(imageTransformer) ⇒
+        val transformedImageFileOpt = imageTransformer.transform(log, imageTransformers, formatOpt, imageFile)
+        transformedImageFileOpt match {
+          case None ⇒
+            log.error(s"Unknown (unexpected) extractor for $imageFile")
+
+          case Some(transformedImageFile) ⇒
+            log.info(s"Transformed $imageFile to $transformedImageFile")
+
+            try {
+              val mkimageExitCode = Sys.snfMkimage(
+                log,
+                kamakiCloud,
+                transformedImageFile.getName,
+                transformedImageFile
+              )
+
+              if(mkimageExitCode != 0) {
+                log.error(s"Could not register image $imageFile to $kamakiCloud")
+              }
+            }
+            finally {
+              if(imageFile.getAbsolutePath != transformedImageFile.getAbsolutePath) {
+                log.info(s"Deleting temporary $transformedImageFile")
+                transformedImageFile.delete()
+              }
+            }
+        }
+    }
+  }
+
+  def publishVmImageFile(
+    log: Logger,
+    formatOpt: Option[String],
+    imageFile: File,
+    kamakiCloud: String,
+    imageTransformers: ImageTransformers,
+    deleteImageAfterTransform: Boolean
+  ): Unit = {
+
+    val transformedImageFileOpt = imageTransformers.pipelineTransform(log, formatOpt, imageFile, deleteImageAfterTransform)
+    transformedImageFileOpt match {
+      case None ⇒
+        log.error(s"Unknown (unexpected) transformer for $imageFile")
+
+      case Some(transformedImageFile) ⇒
+        log.info(s"Transformed $imageFile to $transformedImageFile")
+
+        try {
+          val mkimageExitCode = Sys.snfMkimage(
+            log,
+            kamakiCloud,
+            transformedImageFile.getName,
+            transformedImageFile
+          )
+
+          if(mkimageExitCode != 0) {
+            log.error(s"Could not register image $imageFile to $kamakiCloud")
+          }
+        }
+        finally {
+          if(imageFile.getAbsolutePath != transformedImageFile.getAbsolutePath) {
+            log.info(s"Deleting temporary $transformedImageFile")
+            transformedImageFile.delete()
+          }
+        }
+    }
+  }
+
+  def downloadAndPublishImageFile(
+    log: Logger,
+    formatOpt: Option[String],
+    kamakiCloud: String,
+    url: URL,
+    imageTransformers: ImageTransformers
+  ) = {
+    // We want to preserve the remote filename
+    val filename = new File(url.getFile).getName
+    val imageFile = Sys.createTempFile("." + filename)
+    log.info(s"Downloading $url to $imageFile")
+    Http.downloadToFile(url, imageFile)
+    Sys.publishVmImageFile(log, formatOpt, imageFile, kamakiCloud, imageTransformers, true)
+  }
 }
 
 object Sys extends Sys

@@ -17,6 +17,8 @@
 
 package gr.grnet.egi.vmcatcher
 
+import java.io.File
+import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.util.Scanner
 
@@ -57,7 +59,8 @@ object Main extends {
     Args.nameOf( ParsedCmdLine.showConf             ) → DEFER { do_show_conf              ( ParsedCmdLine.showConf             ) },
     Args.nameOf( ParsedCmdLine.enqueueFromEnv       ) → DEFER { do_enqueue_from_env       ( ParsedCmdLine.enqueueFromEnv       ) },
     Args.nameOf( ParsedCmdLine.enqueueFromImageList ) → DEFER { do_enqueue_from_image_list( ParsedCmdLine.enqueueFromImageList ) },
-    Args.nameOf( ParsedCmdLine.dequeue              ) → DEFER { do_dequeue                ( ParsedCmdLine.dequeue              ) }
+    Args.nameOf( ParsedCmdLine.dequeue              ) → DEFER { do_dequeue                ( ParsedCmdLine.dequeue              ) },
+    Args.nameOf( ParsedCmdLine.registerNow          ) → DEFER { do_register_now           ( ParsedCmdLine.registerNow          ) }
   )
 
   def stringOfConfig(config: Config) = config.root().render(configRenderOptions)
@@ -232,6 +235,19 @@ object Main extends {
     val kamakiCloud = args.kamakiCloud
     val connector = RabbitConnector(configOfPath(args.conf))
     do_dequeue(connector, kamakiCloud)
+  }
+
+  def do_register_now(args: Args.RegisterNow): Unit = {
+    val url = args.url
+    val kamakiCloud = args.kamakiCloud
+
+    Sys.downloadAndPublishImageFile(
+      Log,
+      None,
+      kamakiCloud,
+      url,
+      ImageTransformers
+    )
   }
 
   def main(args: Array[String]): Unit = {
