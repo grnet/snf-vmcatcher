@@ -171,50 +171,6 @@ class Sys {
 
   def filePreExtension(file: File): String = filePreExtension(file.getName)
 
-  def publishVmImageFile_old(
-    log: Logger,
-    formatOpt: Option[String],
-    imageFile: File,
-    kamakiCloud: String,
-    imageTransformers: ImageTransformers
-  ): Unit = {
-    val imageTransformerOpt = imageTransformers.find(log, formatOpt, imageFile)
-    imageTransformerOpt match {
-      case None ⇒
-        log.error(s"Image $imageFile has unknown type. Could not find transformer. Aborting")
-        return
-
-      case Some(imageTransformer) ⇒
-        val transformedImageFileOpt = imageTransformer.transform(log, imageTransformers, formatOpt, imageFile)
-        transformedImageFileOpt match {
-          case None ⇒
-            log.error(s"Unknown (unexpected) extractor for $imageFile")
-
-          case Some(transformedImageFile) ⇒
-            log.info(s"Transformed $imageFile to $transformedImageFile")
-
-            try {
-              val mkimageExitCode = Sys.snfMkimage(
-                log,
-                kamakiCloud,
-                transformedImageFile.getName,
-                transformedImageFile
-              )
-
-              if(mkimageExitCode != 0) {
-                log.error(s"Could not register image $imageFile to $kamakiCloud")
-              }
-            }
-            finally {
-              if(imageFile.getAbsolutePath != transformedImageFile.getAbsolutePath) {
-                log.info(s"Deleting temporary $transformedImageFile")
-                transformedImageFile.delete()
-              }
-            }
-        }
-    }
-  }
-
   def publishVmImageFile(
     log: Logger,
     formatOpt: Option[String],
