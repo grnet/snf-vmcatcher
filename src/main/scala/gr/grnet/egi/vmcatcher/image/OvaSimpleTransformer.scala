@@ -37,7 +37,7 @@ class OvaSimpleTransformer extends ImageTransformerSkeleton {
     file: File
   ): Boolean =
     formatOpt match {
-      case Some("ova") ⇒ true
+      case Some(".ova") ⇒ true
       case _ ⇒ extension == ".ova"
     }
 
