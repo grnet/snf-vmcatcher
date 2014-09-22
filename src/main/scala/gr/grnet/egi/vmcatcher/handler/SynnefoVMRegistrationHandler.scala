@@ -27,6 +27,7 @@ import gr.grnet.egi.vmcatcher.{Http, Sys}
 import org.slf4j.Logger
 
 /**
+ * Registers a VM to Synnefo, using `snf-mkimage`
  *
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
@@ -105,11 +106,12 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     }
 
     eventTypeL.stripSuffix("postfix") match {
+      case "available" ⇒
+        // "available" is the interesting message
+        availableVM(log, map, kamakiCloud, imageTransformers)
+
       case "expire" ⇒
         expireVM(log, map, kamakiCloud, imageTransformers)
-
-      case "available" ⇒
-        availableVM(log, map, kamakiCloud, imageTransformers)
 
       case other ⇒
         handleOther(log, other, map, kamakiCloud)
@@ -151,8 +153,8 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     sh.handle(log, json, map, kamakiCloud, imageTransformers)
 
     // There are two types of JSON messages going in the queue:
-    //  1) The JSON vmcatcher creates
-    //  2) The JSON snf-vmcatcher creates, especially with the enqueue-from-image-list command
+    //  1) The JSON message that vmcatcher creates
+    //  2) The JSON message that snf-vmcatcher creates, using the enqueue-from-image-list command
     // So, we have to discover which one is it
 
     val msgType = Message.parseJson(json)
