@@ -30,7 +30,7 @@ import org.slf4j.Logger
  *
  * @author Christos KK Loverdos <loverdos@gmail.com>
  */
-class VMRegistrationHandler extends DequeueHandler {
+class SynnefoVMRegistrationHandler extends DequeueHandler {
   def expireVM(
     log: Logger,
     map: Map[String, String],

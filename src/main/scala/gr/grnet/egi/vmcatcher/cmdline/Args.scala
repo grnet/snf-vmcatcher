@@ -149,11 +149,11 @@ object Args {
 
     @Parameter(
       names = Array("-handler"),
-      description = "The Java class that will handle a message from RabbitMQ. Use gr.grnet.egi.vmcatcher.handler.VMRegistrationHandler for the standard behavior. Other values are gr.grnet.egi.vmcatcher.handler.JustLogHandler and gr.grnet.egi.vmcatcher.handler.ThrowingHandler",
+      description = "The Java class that will handle a message from RabbitMQ. Use gr.grnet.egi.vmcatcher.handler.SynnefoVMRegistrationHandler for the standard behavior. Other values are gr.grnet.egi.vmcatcher.handler.JustLogHandler and gr.grnet.egi.vmcatcher.handler.ThrowingHandler",
       validateValueWith = classOf[NotNullValueValidator[_]],
       converter = classOf[DequeueHandlerClassConverter]
     )
-    val handler: DequeueHandler = new gr.grnet.egi.vmcatcher.handler.VMRegistrationHandler
+    val handler: DequeueHandler = new gr.grnet.egi.vmcatcher.handler.SynnefoVMRegistrationHandler
 
     @ParametersDelegate
     val kamakiCloudDelegate = new KamakiCloudDelegate
