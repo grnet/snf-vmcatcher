@@ -158,19 +158,17 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     // So, we have to discover which one is it
 
     val msgType = Message.parseJson(json)
+    log.info(s"Message is ${msgType.getClass.getSimpleName}")
     msgType match {
       case m @ UnparsedMessage(error) ⇒
-        log.info(s"Message is ${m.getClass.getSimpleName}")
         log.error(error)
-        log.info(json)
+        log.error(json)
         return
 
       case m @ VmCatcherScriptJSON(_) ⇒
-        log.info(s"Message is ${m.getClass.getSimpleName}")
         handleVmCatcherScriptJSON(log, json, map, kamakiCloud, imageTransformers)
 
       case m @ ImageJSON(imageConfig) ⇒
-        log.info(s"Message is ${m.getClass.getSimpleName}")
         handleImageJSON(log, imageConfig, json, map, kamakiCloud, imageTransformers)
     }
   }
