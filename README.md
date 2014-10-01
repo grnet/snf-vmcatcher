@@ -75,7 +75,7 @@ Usage: gr.grnet.egi.vmcatcher.Main [options] [command] [command options]
              The 'dc:identifier' of the specific VM image you want to enqueue.
              If not given, then all VM images given in the list are enqueued.
         * -image-list-url
-             The URL of the image list. Use an http(s):// or a file:// URL.
+             The URL of the image list. Use an http(s) URL.
 
     dequeue      Dequeue one message from RabbitMQ and register the corresponding VM instance
       Usage: dequeue [options]

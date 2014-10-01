@@ -115,7 +115,7 @@ object Args {
 
     @Parameter(
       names = Array("-image-list-url"),
-      description = "The URL of the image list. Use an http(s):// or a file:// URL.",
+      description = "The URL of the image list. Use an http(s) URL.",
       required = true,
       validateWith = classOf[NotEmptyStringValidator],
       validateValueWith = classOf[NotNullValueValidator[_]],
