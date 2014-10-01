@@ -1,6 +1,14 @@
 # Server installation
 The software has been installed on an Ubuntu 12.04.4 LTS. I took notes of the procedure, whose steps are given below.
 
+
+### Note
+You should create a new user `vmcatcher` to host the vmcatcher software.
+```
+$ adduser vmcatcher
+```
+
+### Let's go
 First some preliminaries
 
 ```
