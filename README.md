@@ -17,7 +17,7 @@ So, in effect, `snf-vmcatcher` has two roles:
 * To receive the `VMCATCHER_CACHE_EVENT` and post it to `RabbitMQ` for later processing.
 * To receive an event from `RabbitMQ` and use the provided information for image uploading.
 
-The later is achieved by runnning `snf-vmcatcher` in daemon mode.
+The latter is achieved by runnning `snf-vmcatcher` in daemon mode.
 
 For the actual upload to Synnefo, we assume the installation of the relevant command-line tools.
 
