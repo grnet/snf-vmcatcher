@@ -46,7 +46,7 @@
   </developers>
 
   <properties>
-    <scala.version>2.11.1</scala.version>
+    <scala.version>2.11.2</scala.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>${project.build.sourceEncoding}</project.reporting.outputEncoding>
   </properties>
@@ -182,7 +182,7 @@
       <plugin>
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
-        <version>3.1.6</version>
+        <version>3.2.0</version>
         <configuration>
           <useFsc>false</useFsc>
           <useZincServer>false</useZincServer>
