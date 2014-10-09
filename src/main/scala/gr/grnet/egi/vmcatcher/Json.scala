@@ -15,7 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher
+package gr.grnet.egi
+package vmcatcher
 
 import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
@@ -26,7 +27,6 @@ import java.io.StringWriter
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 object Json {
   val mapper = new ObjectMapper()
@@ -41,14 +41,14 @@ object Json {
   jf.configure(JsonGenerator.Feature.QUOTE_FIELD_NAMES, true)
   jf.configure(JsonGenerator.Feature.WRITE_NUMBERS_AS_STRINGS, true)
 
-  def mapOfJson(json: String): Map[String, String] = {
+  def stringMapOfJson(json: String): Map[String, String] = {
     val jmap = mapper.readValue[java.util.Map[String, String]](json, JMapTypeRef)
 
     jmap.asScala.toMap
   }
 
-  def jsonOfMap(map: Map[String, String], pretty: Boolean = true): String = {
-    val jmap = map.asJava
+  def jsonOfMap[T](map: Map[String, T], pretty: Boolean = true): String = {
+    val jmap = deepScalaToJava(map)
     val sw = new StringWriter()
     val jg = jf.createGenerator(sw)
     if(pretty) { jg.setPrettyPrinter(pp) }

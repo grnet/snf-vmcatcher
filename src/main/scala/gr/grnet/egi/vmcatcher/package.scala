@@ -19,8 +19,23 @@ package gr.grnet.egi
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 package object vmcatcher {
   def DEFER(f: ⇒ Unit) = () ⇒ f
+
+  def deepScalaToJava[J](t: J): Any = {
+    import scala.collection.JavaConverters._
+
+    t match {
+      case tMap: Map[_, _] ⇒
+        tMap.map { case (k, v) ⇒ deepScalaToJava(k) → deepScalaToJava(v) }. asJava
+
+      case id ⇒ id
+    }
+  }
+
+
+  implicit class JsonToStringMap(val json: String) extends AnyVal {
+    def jsonToStringMap: Map[String, String] = Json.stringMapOfJson(json)
+  }
 }

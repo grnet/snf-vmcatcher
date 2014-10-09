@@ -115,7 +115,7 @@ object Args {
 
     @Parameter(
       names = Array("-image-list-url"),
-      description = "The URL of the image list. Use an http(s) URL.",
+      description = "The URL of the image list. You can use an http(s) or file URL.",
       required = true,
       validateWith = classOf[NotEmptyStringValidator],
       validateValueWith = classOf[NotNullValueValidator[_]],
@@ -168,7 +168,7 @@ object Args {
   class RegisterNow {
     @Parameter(
       names = Array("-url"),
-      description = "The http(s) URL from where to fetch the VM",
+      description = "The URL from where to fetch the VM.",
       required = true,
       validateWith = classOf[NotEmptyStringValidator],
       validateValueWith = classOf[NotNullValueValidator[_]],
@@ -178,8 +178,25 @@ object Args {
 
     @ParametersDelegate
     val kamakiCloudDelegate = new KamakiCloudDelegate
-
     def kamakiCloud = kamakiCloudDelegate.kamakiCloud
+
+    @Parameter(
+      names = Array("-osfamily"),
+      description = "The OS family, e.g. 'linux' or 'windows'",
+      required = true,
+      validateWith = classOf[NotEmptyStringValidator],
+      validateValueWith = classOf[NotNullValueValidator[_]]
+    )
+    val osfamily = "linux"
+
+    @Parameter(
+      names = Array("-users"),
+      description = "The OS 'users' that will become a field in the metafile properties",
+      required = true,
+      validateWith = classOf[NotEmptyStringValidator],
+      validateValueWith = classOf[NotNullValueValidator[_]]
+    )
+    val users = "root"
   }
 
   class ParsedCmdLine {

@@ -83,7 +83,41 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
       return
     }
 
-    Sys.publishVmImageFile(log, Some(format), imageFile, kamakiCloud, imageTransformers, false)
+    // osfamily
+    val osfamily = map.getOrElse("VMCATCHER_EVENT_SL_OS", "")
+    log.info(s"VMCATCHER_EVENT_SL_OS = $osfamily")
+    if(osfamily.isEmpty) {
+      log.warn("VMCATCHER_EVENT_SL_OS is empty. Aborting")
+      return
+    }
+
+    // user
+    val users = "root"
+    val rootPartition = "1"
+
+    val vmCatcherProperties = map -- List(
+      "VMCATCHER_CACHE_EVENT",
+      "VMCATCHER_HOME",
+      "VMCATCHER_RDBMS",
+      "VMCATCHER_CACHE_DIR_DOWNLOAD",
+      "VMCATCHER_CACHE_DIR_CACHE",
+      "VMCATCHER_CACHE_DIR_EXPIRE",
+      "VMCATCHER_EVENT_TYPE"
+    )
+
+    val synnefoProperties = Sys.minimumImageProperties(osfamily, users, rootPartition)
+
+    val properties = synnefoProperties ++ vmCatcherProperties
+
+    Sys.publishVmImageFile(
+      log,
+      Some(format),
+      properties,
+      imageFile,
+      kamakiCloud,
+      imageTransformers,
+      false
+    )
   }
 
   def handleOther(log: Logger, verb: String, map: Map[String, String], kamakiCloud: String): Unit = {
@@ -131,9 +165,14 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
 
     val url = new URL(imageConfig.hvURI)
     val formatOpt = Some(imageConfig.hvFormat)
+
+
+    val properties = Sys.minimumImageProperties(imageConfig.slOS, "root")
+
     Sys.downloadAndPublishImageFile(
       log,
       formatOpt,
+      properties,
       kamakiCloud,
       url,
       imageTransformers

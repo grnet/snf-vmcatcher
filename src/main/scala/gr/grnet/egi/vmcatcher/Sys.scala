@@ -22,6 +22,7 @@ import java.net.URL
 import java.nio.file.Files
 
 import gr.grnet.egi.vmcatcher.image.ImageTransformers
+import okio.{ByteString, Buffer, Sink, Okio}
 import org.slf4j.Logger
 import org.zeroturnaround.exec.ProcessExecutor
 import org.zeroturnaround.exec.stream.slf4j.Slf4jStream
@@ -66,29 +67,32 @@ class Sys {
     )
   }
 
-  /**
-   * Registers a raw image file with Synnefo, using the `snf-mkimage` command-line tool.
-   *
-   * Please check the documentation for the [[https://www.synnefo.org/docs/snf-image-creator/latest/usage.html snf-mkimage]]
-   * tool of [[http://synnefo.org Synnefo]] for more info.
-   *
-   * @param rcCloudName The cloud section in `~/.kamakirc` that is used by `snf-mkimage`
-   * @param name The name of the image when it is uploaded to Synnefo
-   * @param imageFile The raw image file that is the input to `snf-mkimage`
-   */
-  def snfMkimage(log: Logger, rcCloudName: String, name: String, imageFile: File): Int = {
-    val exe = "snf-mkimage"
-    log.info(s"Running $exe on $imageFile")
+  def kamakiRegisterRawImage(log: Logger, rcCloudName: String, properties: Map[String, String], imageFile: File, name: String): Int = {
+    // Make the file for --metafile parameter
+    log.info(s"Image properties (map ) = $properties")
+    val metaMap = Map("properties" → properties)
+    val metaJson = Json.jsonOfMap(metaMap)
+    log.info(s"Image meta       (json) = $metaJson")
+    val metaFile = createTempFile(".meta")
+    val metaSink = Okio.sink(metaFile)
+    val metaString = ByteString.encodeUtf8(metaJson)
+    val buffer = new Buffer()
+    buffer.write(metaString)
+    metaSink.write(buffer, metaString.size())
+    metaSink.close()
+
+    val kamaki = "kamaki"
+    log.info(s"Registering $imageFile using $kamaki")
     exec(
       log,
-      exe,
-      "-c", rcCloudName,
-      "-u", name,
-      "-r", name,
-      "--no-sysprep",
-      "--no-shrink",
+      kamaki,
+      "image", "register",
+      "--cloud", rcCloudName,
       "--public",
-      imageFile.getAbsolutePath
+      "--metafile", metaFile.getAbsolutePath,
+      "--upload-image-file", imageFile.getAbsolutePath,
+      "--name", name,
+      "--location", s"/images/$name"
     )
   }
 
@@ -171,9 +175,18 @@ class Sys {
 
   def filePreExtension(file: File): String = filePreExtension(file.getName)
 
+  // Constructs the minimum set of image properties (--metafile) and their values.
+  def minimumImageProperties(osfamily: String, users: String, rootPartition: String = "1") =
+    Map(
+      "osfamily" → osfamily,
+      "users" → users,
+      "ROOT_PARTITION" → rootPartition
+    )
+
   def publishVmImageFile(
     log: Logger,
     formatOpt: Option[String],
+    properties: Map[String, String],
     imageFile: File,
     kamakiCloud: String,
     imageTransformers: ImageTransformers,
@@ -189,14 +202,16 @@ class Sys {
         log.info(s"Transformed $imageFile to $transformedImageFile")
 
         try {
-          val mkimageExitCode = Sys.snfMkimage(
-            log,
-            kamakiCloud,
-            transformedImageFile.getName,
-            transformedImageFile
-          )
+          val kamakiExitCode =
+            Sys.kamakiRegisterRawImage(
+              log,
+              kamakiCloud,
+              properties,
+              transformedImageFile,
+              transformedImageFile.getName
+            )
 
-          if(mkimageExitCode != 0) {
+          if(kamakiExitCode != 0) {
             log.error(s"Could not register image $imageFile to $kamakiCloud")
           }
         }
@@ -209,9 +224,22 @@ class Sys {
     }
   }
 
+  def downloadToFile(url: URL, file: File): Unit = {
+    val in = url.openStream()
+    try {
+      val urlSource = Okio.source(in)
+      val urlBuffer = Okio.buffer(urlSource)
+      val fileSink = Okio.sink(file)
+
+      urlBuffer.readAll(fileSink)
+    }
+    finally in.close()
+  }
+
   def downloadAndPublishImageFile(
     log: Logger,
     formatOpt: Option[String],
+    properties: Map[String, String],
     kamakiCloud: String,
     url: URL,
     imageTransformers: ImageTransformers
@@ -221,7 +249,8 @@ class Sys {
     val imageFile = Sys.createTempFile("." + filename)
     log.info(s"Downloading $url to $imageFile")
     Http.downloadToFile(url, imageFile)
-    Sys.publishVmImageFile(log, formatOpt, imageFile, kamakiCloud, imageTransformers, true)
+    Sys.publishVmImageFile(log, formatOpt, properties, imageFile, kamakiCloud, imageTransformers, true)
+    imageFile.delete()
   }
 }
 

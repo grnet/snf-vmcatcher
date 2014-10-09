@@ -17,18 +17,18 @@
 
 package gr.grnet.egi.vmcatcher
 
-import java.io.File
 import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.util.Scanner
 
 import com.beust.jcommander.ParameterException
-import com.typesafe.config.{Config, ConfigRenderOptions}
+import com.typesafe.config.ConfigRenderOptions
 import gr.grnet.egi.vmcatcher.cmdline.Args
 import gr.grnet.egi.vmcatcher.cmdline.Args.ParsedCmdLine
 import gr.grnet.egi.vmcatcher.image.ImageTransformers
 import gr.grnet.egi.vmcatcher.message.ImageListConfig
 import gr.grnet.egi.vmcatcher.rabbit.{Rabbit, RabbitConnector}
+import okio.Okio
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
@@ -63,7 +63,7 @@ object Main extends {
     Args.nameOf( ParsedCmdLine.registerNow          ) → DEFER { do_register_now           ( ParsedCmdLine.registerNow          ) }
   )
 
-  def stringOfConfig(config: Config) = config.root().render(configRenderOptions)
+  def stringOfConfig(config: com.typesafe.config.Config) = config.root().render(configRenderOptions)
 
   def env: Map[String, String] = sys.env
   def envAsJson = Json.jsonOfMap(env)
@@ -107,21 +107,8 @@ object Main extends {
     do_enqueue(connector)
   }
 
-  def do_enqueue_from_image_list(args: Args.EnqueueFromImageList): Unit = {
-    val imageListURL = args.imageListUrl
-    val imageIdentifier = args.imageIdentifier
-
-    val response = Http.GET(imageListURL)
-    response.handshake()
-    if(!response.isSuccessful) {
-      Log.error(s"Could not fetch $imageListURL. GET returned ${response.code()} ${response.message()}")
-      if(!isServer) { sys.exit(1) }
-      return
-    }
-
-    val imageListStr = response.body().string()
-    Log.info(imageListStr)
-    val scanner = new Scanner(imageListStr)
+  def parseImageListJson(rawImageList: String): String = {
+    val scanner = new Scanner(rawImageList)
     scanner.nextLine() // Ignore "MIME-Version: 1.0" first line
     scanner.useDelimiter("boundary=\"")
     val boundaryPart = scanner.findInLine("boundary=\"(.+?)\"")
@@ -145,7 +132,27 @@ object Main extends {
 
     scanUntilFirstBoundary()
     scanUntilLastBoundary()
-    val jsonImageList = buffer.toString
+
+    buffer.toString
+  }
+
+  def urlToUtf8(url: URL): String = {
+    val stream = url.openStream()
+    val source = Okio.source(stream)
+    val buffer = Okio.buffer(source)
+    val str = buffer.readUtf8()
+    stream.close()
+    str
+  }
+
+  def do_enqueue_from_image_list(args: Args.EnqueueFromImageList): Unit = {
+    val imageListURL = args.imageListUrl
+    val imageIdentifier = args.imageIdentifier
+
+    val rawImageList = urlToUtf8(imageListURL)
+    Log.info(rawImageList)
+    val jsonImageList = parseImageListJson(rawImageList)
+
     val imageListConfig = ImageListConfig.ofString(jsonImageList)
     Log.info(s"Parsed image list dc:identifier = ${imageListConfig.dcIdentifier}")
     Log.info(s"                         hv:uri = ${imageListConfig.hvURI}")
@@ -182,7 +189,7 @@ object Main extends {
         } { response ⇒
           val jsonMsgBytes = response.getBody
           val jsonMsg = new String(jsonMsgBytes, StandardCharsets.UTF_8)
-          val map = Json.mapOfJson(jsonMsg)
+          val map = Json.stringMapOfJson(jsonMsg)
 
           Log.info(s"dequeueHandler = ${dequeueHandler.getClass.getName}")
           dequeueHandler.handle(
@@ -240,10 +247,15 @@ object Main extends {
   def do_register_now(args: Args.RegisterNow): Unit = {
     val url = args.url
     val kamakiCloud = args.kamakiCloud
+    val osfamily = args.osfamily
+    val users = args.users
+
+    val properties = Sys.minimumImageProperties(osfamily, users)
 
     Sys.downloadAndPublishImageFile(
       Log,
       None,
+      properties,
       kamakiCloud,
       url,
       ImageTransformers
@@ -283,7 +295,13 @@ object Main extends {
 
       case e: Exception ⇒
         e.printStackTrace(System.err)
+        Log.error("", e)
         EXIT(2)
+
+      case e: Throwable ⇒
+        e.printStackTrace(System.err)
+        Log.error("", e)
+        EXIT(3)
     }
     finally {
       val t1 = System.currentTimeMillis()
