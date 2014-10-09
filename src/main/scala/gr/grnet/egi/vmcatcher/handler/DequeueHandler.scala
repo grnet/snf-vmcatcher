@@ -23,7 +23,6 @@ import org.slf4j.Logger
 /**
  * Handles one message from the queue.
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 trait DequeueHandler {
   def handle(

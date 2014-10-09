@@ -25,7 +25,6 @@ import scala.annotation.tailrec
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 trait ImageTransformers {
   def lastResortTransformerOption: Option[ImageTransformer]

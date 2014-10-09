@@ -23,7 +23,6 @@ import gr.grnet.egi.vmcatcher.handler.DequeueHandler
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class DequeueHandlerClassConverter extends IStringConverter[DequeueHandler] {
   def convert(className: String): DequeueHandler = {

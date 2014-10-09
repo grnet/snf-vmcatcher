@@ -25,7 +25,6 @@ import org.slf4j.Logger
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class GzTransformer extends ImageTransformerSkeleton {
   protected def canTransformImpl(

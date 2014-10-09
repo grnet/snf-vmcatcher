@@ -23,7 +23,6 @@ import com.beust.jcommander.IStringConverter
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class URLStringConverter extends IStringConverter[URL] {
   def convert(value: String): URL = new URL(value)

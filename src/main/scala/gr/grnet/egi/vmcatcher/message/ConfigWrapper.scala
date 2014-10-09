@@ -22,7 +22,6 @@ import scala.collection.JavaConverters._
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 trait ConfigWrapper {
   def config: com.typesafe.config.Config

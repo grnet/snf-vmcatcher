@@ -22,7 +22,6 @@ import org.slf4j.Logger
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class JustLogHandler extends DequeueHandler {
   def handle(

@@ -20,7 +20,6 @@ package message
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class ImageConfig(val config: com.typesafe.config.Config)
   extends ConfigWrapper

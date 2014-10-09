@@ -26,7 +26,6 @@ import scala.util.{Failure, Success, Try}
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 case class Rabbit(
   config: Config,

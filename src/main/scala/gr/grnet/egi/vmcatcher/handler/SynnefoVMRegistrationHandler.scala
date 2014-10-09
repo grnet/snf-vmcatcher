@@ -29,7 +29,6 @@ import org.slf4j.Logger
 /**
  * Registers a VM to Synnefo, using `snf-mkimage`
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class SynnefoVMRegistrationHandler extends DequeueHandler {
   def expireVM(

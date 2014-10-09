@@ -25,7 +25,6 @@ import gr.grnet.egi.vmcatcher.handler.DequeueHandler
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 object Args {
   def nameOf(cmd: AnyRef): String = {

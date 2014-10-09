@@ -35,7 +35,6 @@ import scala.annotation.tailrec
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 object Main extends {
   final val ProgName = getClass.getName.stripSuffix("$")

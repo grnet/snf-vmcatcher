@@ -21,7 +21,6 @@ import com.beust.jcommander.{IParameterValidator, ParameterException}
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class NotEmptyStringValidator extends IParameterValidator {
   def validate(name: String, value: String): Unit =

@@ -21,7 +21,6 @@ import com.beust.jcommander.{ParameterException, IValueValidator}
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class NotNullValueValidator[T <: AnyRef] extends IValueValidator[T] {
   def validate(name: String, value: T): Unit =

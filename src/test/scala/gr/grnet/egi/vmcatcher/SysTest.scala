@@ -21,7 +21,6 @@ import org.junit.{Assert, Test}
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class SysTest {
   @Test

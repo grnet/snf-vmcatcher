@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class ImageTransformerTest {
   final val Log = LoggerFactory.getLogger("test")

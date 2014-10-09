@@ -25,7 +25,6 @@ import com.squareup.okhttp.{OkHttpClient, Request, Response}
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 object Http {
   val StdOkHttpClient = new OkHttpClient

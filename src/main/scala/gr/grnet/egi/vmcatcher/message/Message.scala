@@ -19,7 +19,6 @@ package gr.grnet.egi.vmcatcher.message
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 sealed trait Message
 
@@ -33,7 +32,6 @@ case class UnparsedMessage(error: String) extends Message
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 object Message {
   def parseJson(json: String): Message = {

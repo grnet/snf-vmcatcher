@@ -24,7 +24,6 @@ import scala.collection.JavaConverters._
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 case class RabbitConnector(config: Config) {
   def connect(): Rabbit = {

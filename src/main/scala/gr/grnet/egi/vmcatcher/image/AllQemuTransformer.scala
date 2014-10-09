@@ -25,7 +25,6 @@ import org.slf4j.Logger
 /**
  * Transforms the majority of qemu-supported formats to `raw` by using `qemu-img`.
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class AllQemuTransformer extends ImageTransformerSkeleton {
   protected def canTransformImpl(

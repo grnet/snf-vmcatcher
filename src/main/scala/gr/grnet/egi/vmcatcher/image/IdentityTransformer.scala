@@ -23,7 +23,6 @@ import org.slf4j.Logger
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class IdentityTransformer extends ImageTransformer {
   def canTransform(formatOpt: Option[String], file: File): Boolean = true

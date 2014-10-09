@@ -25,7 +25,6 @@ import org.junit.Test
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class ImageListConfigTest {
 

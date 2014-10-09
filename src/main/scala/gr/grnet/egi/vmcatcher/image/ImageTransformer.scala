@@ -37,7 +37,6 @@ import scala.annotation.tailrec
  * so an implementation can rely on this fact and unify the handling of both `formatOpt` and `file` should
  * the filename extension of `file` be taken into account.
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 trait ImageTransformer {
   def canTransform(formatOpt: Option[String], file: File): Boolean

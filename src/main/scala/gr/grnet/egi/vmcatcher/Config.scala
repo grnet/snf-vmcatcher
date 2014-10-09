@@ -23,7 +23,6 @@ import com.typesafe.config.ConfigFactory
 
 /**
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 object Config {
   // Fix the Key.

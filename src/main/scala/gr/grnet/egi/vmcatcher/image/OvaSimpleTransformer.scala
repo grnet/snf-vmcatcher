@@ -28,7 +28,6 @@ import org.slf4j.Logger
  * In the OVA archive we assume a) no directory structure and b) only two files present.
  * One of the present files is an .ovf metadata file and the other one is the image itself.
  *
- * @author Christos KK Loverdos <loverdos@gmail.com>
  */
 class OvaSimpleTransformer extends ImageTransformerSkeleton {
   protected def canTransformImpl(
