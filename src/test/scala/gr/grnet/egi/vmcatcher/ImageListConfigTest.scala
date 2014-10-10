@@ -80,11 +80,11 @@ class ImageListConfigTest {
       |
     """.stripMargin
   @Test def test(): Unit = {
-    Events.ofImageList(data, Map())
+    Events.ofImageListContainer(data, Map())
   }
 
   @Test def test2(): Unit = {
-    val eventList = Events.ofImageList(data, Map())
+    val eventList = Events.ofImageListContainer(data, Map())
     for {
       event ← eventList
     } {

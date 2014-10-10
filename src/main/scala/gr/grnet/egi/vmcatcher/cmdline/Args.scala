@@ -51,6 +51,18 @@ object Args {
     val kamakiCloud: String = null
   }
 
+  class ImageListUrlDelegate {
+    @Parameter(
+      names = Array("-image-list-url"),
+      description = "The URL of the image list. You can use an http(s) or file URL.",
+      required = true,
+      validateWith = classOf[NotEmptyStringValidator],
+      validateValueWith = classOf[NotNullValueValidator[_]],
+      converter = classOf[URLStringConverter]
+    )
+    val imageListUrl: URL = null
+  }
+
   class GlobalOptions {
     @Parameter(names = Array("-h", "-help", "--help"), help = true)
     val help = false
@@ -109,18 +121,11 @@ object Args {
   class EnqueueFromImageList {
     @ParametersDelegate
     val confDelegate = new ConfDelegate
-
     def conf = confDelegate.conf
-
-    @Parameter(
-      names = Array("-image-list-url"),
-      description = "The URL of the image list. You can use an http(s) or file URL.",
-      required = true,
-      validateWith = classOf[NotEmptyStringValidator],
-      validateValueWith = classOf[NotNullValueValidator[_]],
-      converter = classOf[URLStringConverter]
-    )
-    val imageListUrl: URL = null
+    
+    @ParametersDelegate
+    val imageListUrlDelegate = new ImageListUrlDelegate
+    def imageListUrl = imageListUrlDelegate.imageListUrl
 
     @Parameter(
       names = Array("-image-identifier"),
@@ -128,6 +133,16 @@ object Args {
       validateWith = classOf[NotEmptyStringValidator]
     )
     val imageIdentifier: String = null
+  }
+
+  @Parameters(
+    commandNames = Array("parse-image-list"),
+    commandDescription = "Parses a vmcatcher-compatible, JSON-encoded image list. Helpful for debugging."
+  )
+  class ParseImageList {
+    @ParametersDelegate
+    val imageListUrlDelegate = new ImageListUrlDelegate
+    def imageListUrl = imageListUrlDelegate.imageListUrl
   }
 
   @Parameters(
@@ -207,6 +222,7 @@ object Args {
     val enqueueFromImageList = new EnqueueFromImageList
     val dequeue = new Dequeue
     val registerNow = new RegisterNow
+    val parseImageList = new ParseImageList
   }
 
   object ParsedCmdLine extends ParsedCmdLine
@@ -224,6 +240,7 @@ object Args {
     jc.addCommand(ParsedCmdLine.enqueueFromImageList)
     jc.addCommand(ParsedCmdLine.dequeue)
     jc.addCommand(ParsedCmdLine.registerNow)
+    jc.addCommand(ParsedCmdLine.parseImageList)
 
     jc
   }

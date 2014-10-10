@@ -4,3 +4,4 @@ dependency-reduced-pom.xml
 target/
 application.conf
 *.log
+snf-vmcatcher*.jar

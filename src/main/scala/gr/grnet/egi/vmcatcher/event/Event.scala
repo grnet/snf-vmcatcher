@@ -18,7 +18,8 @@
 package gr.grnet.egi.vmcatcher.event
 
 import com.typesafe.config.{Config ⇒ TConfig}
-import gr.grnet.egi.vmcatcher.{Config, Json}
+import gr.grnet.egi.vmcatcher.event.EventFieldSection.{Image, ImageList}
+import gr.grnet.egi.vmcatcher.{Main, Config, Json}
 
 import scala.collection.JavaConverters._
 
@@ -82,23 +83,68 @@ object Event {
 
 object Events {
   import Event.fk
-  def ofImageList(
+
+  def ofImageListContainer(
     json: String,
     externalFieldsMap: Map[ExternalEventField, String]
   ): List[Event] = {
 
-    val imageListConfig = Config.ofString(json).getConfig(fk("hv:imagelist"))
-    val jconfigList = imageListConfig.getConfigList(fk("hv:images"))
-    val imageConfigList = jconfigList.asScala.map(_.getConfig(fk("hv:image"))).toList
+    /////////////////
+    // `json` goes like this:
+    // {
+    //    "hv:imagelist": {
+    //      "dc:identifier": "302EC38C-4EF8-4C02-96A5-BF8E93D27FEA",
+    //      "dc:source": "https://SOURCE",
+    //      "dc:title": "VO SAMPLE image list.",
+    //      "ad:vo": "VO",
+    //      "hv:endorser": {
+    //      "hv:x509": {...}
+    //    },
+    //      "hv:images": [
+    //    {
+    //      "hv:image": {
+    //      "dc:description": "Image description",
+    //      "dc:identifier": "24910A01-D1AC-49BE-B253-7746ED8F0DC0",
+    //      "ad:mpuri": "https://SOURCE/images/24910A01-D1AC-49BE-B253-7746ED8F0DC0:89/",
+    //      "dc:title": "Basic Ubuntu Server 12.04 LTS OS Disk Image",
+    //      "ad:group": "Basic Ubuntu Server 12.04 LTS OS",
+    // ...
+    // }
+    /////////////////
 
-    imageConfigList.map(
-      new ImageConfigEvent(
-        EventOriginator.image_list_json,
-        imageListConfig,
-        _,
-        externalFieldsMap
-      )
-    )
+    val externalMap = externalFieldsMap.map { case (k, v) ⇒ (k.name(), v) }
+
+    val imageListConfig = Config.ofString(json).getConfig(fk("hv:imagelist"))
+    val imageListMap = {
+      val jsonFieldNames = ImageList.getJsonFieldNames.asScala.toSet
+
+      // Keep only relevant field names as keys
+      // and then translate them to vmcatcher variable names
+      Config.
+        stringMapOfFilteredFields(imageListConfig, jsonFieldNames).
+        map { case (k, v) ⇒ (ImageListEventField.ofJsonField(k).name(), v) }
+    }
+
+    val imagesConfigList = imageListConfig.getConfigList(fk("hv:images"))
+    val imageConfigList = imagesConfigList.asScala.map(_.getConfig(fk("hv:image"))).toList
+
+    for {
+      imageConfig ← imageConfigList
+    } yield {
+      val jsonFieldNames = Image.getJsonFieldNames.asScala.toSet
+
+      // Keep only relevant field names as keys
+      // and then translate them to vmcatcher variable names
+      val imageMap = Config.
+        stringMapOfFilteredFields(imageConfig, jsonFieldNames).
+        map { case (k, v) ⇒ (ImageEventField.ofJsonField(k).name(), v) }
+
+      val map = externalMap ++ imageListMap ++ imageMap
+      val event = new MapEvent(EventOriginator.image_list_json, map)
+
+      Main.Log.info(s"event = $event")
+      event
+    }
   }
 }
 
@@ -121,10 +167,10 @@ class ImageConfigEvent(
     lazy val path = Event.fk(field.jsonField)
 
     field.section match {
-      case EventFieldSection.ImageList ⇒
+      case ImageList ⇒
         imageListConfig.hasPath(path)
 
-      case EventFieldSection.Image ⇒
+      case Image ⇒
         imageConfig.hasPath(path)
 
       case EventFieldSection.External ⇒
@@ -138,16 +184,15 @@ class ImageConfigEvent(
     }
   }
 
-
   def apply(field: IEventField, default: String = "") = {
     lazy val path = Event.fk(field.jsonField)
     def getOrElse(config: TConfig) = if(config.hasPath(path)) config.getString(path) else default
 
     field.section match {
-      case EventFieldSection.ImageList ⇒
+      case ImageList ⇒
         getOrElse(imageListConfig)
 
-      case EventFieldSection.Image ⇒
+      case Image ⇒
         getOrElse(imageConfig)
 
       case EventFieldSection.External ⇒

@@ -17,6 +17,9 @@
 
 package gr.grnet.egi.vmcatcher.event;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static gr.grnet.egi.vmcatcher.event.EventFieldSection.Image;
 
 /**
@@ -37,6 +40,14 @@ public enum ImageEventField implements IEventField {
     VMCATCHER_EVENT_SL_OS("sl:os"),
     VMCATCHER_EVENT_SL_OSVERSION("sl:osversion");
 
+    private static final Map<String, ImageEventField> reverseMap;
+    static {
+        reverseMap = new HashMap<String, ImageEventField>();
+        for(ImageEventField eventField: ImageEventField.values()) {
+            reverseMap.put(eventField.jsonField(), eventField);
+        }
+    }
+
     public final String jsonField;
 
     ImageEventField(String jsonField) {
@@ -46,4 +57,12 @@ public enum ImageEventField implements IEventField {
     public EventFieldSection section() { return Image; }
 
     public String jsonField() { return jsonField; }
+
+    public static ImageEventField ofJsonField(String jsonField) {
+        return reverseMap.get(jsonField);
+    }
+
+    public static String nameForJsonField(String jsonField) {
+        return reverseMap.get(jsonField).name();
+    }
 }

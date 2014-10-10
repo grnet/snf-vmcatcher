@@ -19,20 +19,30 @@ package gr.grnet.egi.vmcatcher
 
 import java.io.File
 
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{ConfigFactory, Config => TConfig}
+
 import scala.collection.JavaConverters._
 
 /**
  *
  */
 object Config {
-  def ofFilePath(path: String): com.typesafe.config.Config = {
+  def ofFilePath(path: String): TConfig = {
     val file = new File(path)
     ConfigFactory.parseFile(file).resolve()
   }
 
-  def ofString(s: String): com.typesafe.config.Config = ConfigFactory.parseString(s).resolve()
+  def ofString(s: String): TConfig = ConfigFactory.parseString(s).resolve()
 
-  def toMap(config: com.typesafe.config.Config): Map[String, String] =
+  def toMap(config: TConfig): Map[String, String] =
     config.root().unwrapped().asScala.map{ case (k, v) ⇒ (k, String.valueOf(v)) }.toMap
+
+  def toJson(config: TConfig): String = Json.jsonOfMap(toMap(config))
+
+  def stringMapOfFilteredFields(config: TConfig, fields: Set[String]): Map[String, String] =
+    config.root().unwrapped().
+      asScala.
+      filterKeys(fields).
+      map{ case (k, v) ⇒ (k, String.valueOf(v)) }.
+      toMap
 }

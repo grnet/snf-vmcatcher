@@ -18,7 +18,7 @@
 package gr.grnet.egi.vmcatcher
 
 import java.io.File
-import java.net.URL
+import java.net.{MalformedURLException, URL}
 import java.nio.file.Files
 
 import gr.grnet.egi.vmcatcher.image.ImageTransformers

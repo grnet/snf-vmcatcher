@@ -59,7 +59,8 @@ object Main extends {
     Args.nameOf( ParsedCmdLine.enqueueFromEnv       ) → DEFER { do_enqueue_from_env       ( ParsedCmdLine.enqueueFromEnv       ) },
     Args.nameOf( ParsedCmdLine.enqueueFromImageList ) → DEFER { do_enqueue_from_image_list( ParsedCmdLine.enqueueFromImageList ) },
     Args.nameOf( ParsedCmdLine.dequeue              ) → DEFER { do_dequeue                ( ParsedCmdLine.dequeue              ) },
-    Args.nameOf( ParsedCmdLine.registerNow          ) → DEFER { do_register_now           ( ParsedCmdLine.registerNow          ) }
+    Args.nameOf( ParsedCmdLine.registerNow          ) → DEFER { do_register_now           ( ParsedCmdLine.registerNow          ) },
+    Args.nameOf( ParsedCmdLine.parseImageList       ) → DEFER { do_parse_image_list       ( ParsedCmdLine.parseImageList       ) }
   )
 
   def stringOfConfig(config: com.typesafe.config.Config) = config.root().render(configRenderOptions)
@@ -101,7 +102,7 @@ object Main extends {
     do_enqueue(connector)
   }
 
-  def parseImageListJson(rawImageList: String): String = {
+  def parseImageListContainerJson(rawImageList: String): String = {
     val scanner = new Scanner(rawImageList)
     scanner.nextLine() // Ignore "MIME-Version: 1.0" first line
     scanner.useDelimiter("boundary=\"")
@@ -139,14 +140,28 @@ object Main extends {
     str
   }
 
+  def do_parse_image_list(args: Args.ParseImageList): Unit = {
+    val imageListContainerURL = args.imageListUrl
+    val rawImageListContainer = urlToUtf8(imageListContainerURL)
+    Log.info (s"imageListContainer (URL ) = $imageListContainerURL")
+    Log.debug(s"imageListContainer (raw ) =\n$rawImageListContainer")
+    val imageListContainerJson = parseImageListContainerJson(rawImageListContainer)
+    Log.info (s"imageListContainer (json) =\n$imageListContainerJson")
+    val events0 = Events.ofImageListContainer(imageListContainerJson, Map())
+    Log.info(s"Found ${events0.size} events")
+    val identifiers = events0.map(_(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER))
+    Log.info(s"Image identifiers are: ${identifiers.mkString(", ")}")
+  }
+
   def do_enqueue_from_image_list(args: Args.EnqueueFromImageList): Unit = {
     val imageListURL = args.imageListUrl
     val imageIdentifier = args.imageIdentifier
 
     val rawImageList = urlToUtf8(imageListURL)
-    Log.info(rawImageList)
-    val jsonImageList = parseImageListJson(rawImageList)
-    val events0 = Events.ofImageList(jsonImageList, Map())
+    Log.info(s"imageList (URL) = $imageListURL")
+    Log.info(s"imageList (raw) = $rawImageList")
+    val jsonImageList = parseImageListContainerJson(rawImageList)
+    val events0 = Events.ofImageListContainer(jsonImageList, Map())
 
     events0 match {
       case Nil ⇒
@@ -169,6 +184,8 @@ object Main extends {
           EXIT(3)
         }
 
+        Log.info(s"Matched ${events.size} event(s)")
+
         val connector = RabbitConnector(configOfPath(args.confDelegate.conf))
         val rabbit = connector.connect()
 
@@ -178,6 +195,7 @@ object Main extends {
           val imageIdent = event(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER)
           val imageURI = event(ImageEventField.VMCATCHER_EVENT_HV_URI)
           Log.info(s"Enqueueing event for dc:identifier = $imageIdent, hv:uri = $imageURI")
+          Log.info(s"event (image) = $event")
 
           rabbit.publish(event.toJson)
         }
@@ -271,6 +289,7 @@ object Main extends {
   def main(args: Array[String]): Unit = {
     val t0 = System.currentTimeMillis()
     val argsDebugStr = args.mkString(" ")
+    Log.info("=" * 30)
     Log.info(s"BEGIN snf-vmcatcher [$argsDebugStr]")
     val jc = Args.jc
     try {
@@ -296,16 +315,14 @@ object Main extends {
     }
     catch {
       case e: ParameterException ⇒
-        System.err.println(e.getMessage)
+        Log.error(e.getMessage)
         EXIT(1)
 
       case e: Exception ⇒
-        e.printStackTrace(System.err)
         Log.error("", e)
         EXIT(2)
 
       case e: Throwable ⇒
-        e.printStackTrace(System.err)
         Log.error("", e)
         EXIT(3)
     }
@@ -313,6 +330,7 @@ object Main extends {
       val t1 = System.currentTimeMillis()
       val dtms = t1 - t0
       Log.info(s"END snf-vmcatcher ($dtms ms) [$argsDebugStr]")
+      Log.info("=" * 30)
     }
   }
 }

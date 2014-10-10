@@ -27,17 +27,25 @@ import java.util.List;
  */
 public enum EventFieldSection {
     External (Arrays.asList(ExternalEventField.values())),
-    ImageList(Arrays.asList(ImageEventField.values())),
-    Image    (Arrays.asList(ImageListEventField.values()));
+    ImageList(Arrays.asList(ImageListEventField.values())),
+    Image    (Arrays.asList(ImageEventField.values()));
 
-    private List<? extends IEventField> fields;
+    private List<IEventField> fields;
 
     EventFieldSection(List<? extends IEventField> fields) {
         this.fields = Collections.unmodifiableList(fields);
     }
 
-    public List<? extends IEventField> getFields() {
+    public List<IEventField> getFields() {
         return fields;
+    }
+
+    public List<String> getJsonFieldNames() {
+        final List<String> names = new ArrayList<String>(fields.size());
+        for(final IEventField field : fields) {
+            names.add(field.jsonField());
+        }
+        return names;
     }
 
     public static List<IEventField> allFields() {
