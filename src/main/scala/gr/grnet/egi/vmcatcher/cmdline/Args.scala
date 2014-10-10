@@ -213,6 +213,16 @@ object Args {
     val users = "root"
   }
 
+  @Parameters(
+    commandNames = Array("drain-queue"),
+    commandDescription = "Remove all events from the queue and do nothing with them. "
+  )
+  class DrainQueue {
+    @ParametersDelegate
+    val confDelegate = new ConfDelegate
+    def conf = confDelegate.conf
+  }
+
   class ParsedCmdLine {
     val globalOptions = new GlobalOptions
     val usage = new Usage
@@ -223,6 +233,7 @@ object Args {
     val dequeue = new Dequeue
     val registerNow = new RegisterNow
     val parseImageList = new ParseImageList
+    val drainQueue = new DrainQueue
   }
 
   object ParsedCmdLine extends ParsedCmdLine
@@ -241,6 +252,7 @@ object Args {
     jc.addCommand(ParsedCmdLine.dequeue)
     jc.addCommand(ParsedCmdLine.registerNow)
     jc.addCommand(ParsedCmdLine.parseImageList)
+    jc.addCommand(ParsedCmdLine.drainQueue)
 
     jc
   }

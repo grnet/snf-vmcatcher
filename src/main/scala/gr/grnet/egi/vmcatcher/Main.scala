@@ -60,7 +60,8 @@ object Main extends {
     Args.nameOf( ParsedCmdLine.enqueueFromImageList ) → DEFER { do_enqueue_from_image_list( ParsedCmdLine.enqueueFromImageList ) },
     Args.nameOf( ParsedCmdLine.dequeue              ) → DEFER { do_dequeue                ( ParsedCmdLine.dequeue              ) },
     Args.nameOf( ParsedCmdLine.registerNow          ) → DEFER { do_register_now           ( ParsedCmdLine.registerNow          ) },
-    Args.nameOf( ParsedCmdLine.parseImageList       ) → DEFER { do_parse_image_list       ( ParsedCmdLine.parseImageList       ) }
+    Args.nameOf( ParsedCmdLine.parseImageList       ) → DEFER { do_parse_image_list       ( ParsedCmdLine.parseImageList       ) },
+    Args.nameOf( ParsedCmdLine.drainQueue           ) → DEFER { do_drain_queue            ( ParsedCmdLine.drainQueue           ) }
   )
 
   def stringOfConfig(config: com.typesafe.config.Config) = config.root().render(configRenderOptions)
@@ -206,7 +207,7 @@ object Main extends {
 
   def do_dequeue(connector: RabbitConnector, kamakiCloud: String): Unit = {
     @tailrec
-    def loop(rabbit: Rabbit, isEmpty: Boolean): Unit = {
+    def serverLoop(rabbit: Rabbit, isEmpty: Boolean): Unit = {
       val newIsEmpty =
         rabbit.getAndAck {
           if(!isEmpty) { Log.info("Queue is empty") }
@@ -228,12 +229,14 @@ object Main extends {
 
       if(isServer) {
         Thread.sleep(serverSleepMillis)
-        loop(rabbit, newIsEmpty)
+        serverLoop(rabbit, newIsEmpty)
       }
     }
 
     var lastErrorMillis = System.currentTimeMillis()
-    do {
+
+    @tailrec
+    def healthLoop(): Unit = {
       val dtMax = 10 * serverSleepMillis
 
       def checkMillis(): Boolean = {
@@ -248,7 +251,7 @@ object Main extends {
 
       try {
         val rabbit = connector.connect()
-        loop(rabbit, isEmpty = false)
+        serverLoop(rabbit, isEmpty = false)
         if(!isServer) { rabbit.close() }
       }
       catch {
@@ -259,7 +262,11 @@ object Main extends {
         case e: Exception ⇒
           checkMillisAndPrint(e)
       }
-    } while(isServer)
+
+      if(isServer) healthLoop()
+    }
+
+    healthLoop()
   }
 
   def do_dequeue(args: Args.Dequeue): Unit = {
@@ -284,6 +291,25 @@ object Main extends {
       url,
       ImageTransformers
     )
+  }
+
+  def do_drain_queue(args: Args.DrainQueue): Unit = {
+    val connector = RabbitConnector(configOfPath(args.conf))
+    val rabbit = connector.connect()
+
+    def drainLoop(count: Int): Int = {
+      rabbit.get() match {
+        case null ⇒
+          count
+
+        case getResponse ⇒
+          getResponse.getBody
+          drainLoop(count + 1)
+      }
+    }
+
+    val howmany = drainLoop(0)
+    Log.info(s"Drained $howmany messages")
   }
 
   def main(args: Array[String]): Unit = {

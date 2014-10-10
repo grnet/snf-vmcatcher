@@ -22,7 +22,9 @@ import java.net.URL
 import java.util.Locale
 
 import gr.grnet.egi.vmcatcher.Sys
-import gr.grnet.egi.vmcatcher.event.{Event, ExternalEventField, ImageEventField}
+import gr.grnet.egi.vmcatcher.event.Event
+import gr.grnet.egi.vmcatcher.event.ExternalEventField._
+import gr.grnet.egi.vmcatcher.event.ImageEventField._
 import gr.grnet.egi.vmcatcher.image.ImageTransformers
 import org.slf4j.Logger
 
@@ -52,14 +54,14 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     // the full path to the image file is $VMCATCHER_CACHE_DIR_CACHE/$VMCATCHER_EVENT_FILENAME
     log.info("Available VM")
     // image file
-    val folderPath = event.apply(ExternalEventField.VMCATCHER_CACHE_DIR_CACHE)
+    val folderPath = event(VMCATCHER_CACHE_DIR_CACHE)
     log.info(s"VMCATCHER_CACHE_DIR_CACHE = $folderPath")
     if(folderPath.isEmpty) {
       log.warn("VMCATCHER_CACHE_DIR_CACHE is empty. Aborting")
       return
     }
 
-    val filename = event.apply(ExternalEventField.VMCATCHER_EVENT_FILENAME)
+    val filename = event(VMCATCHER_EVENT_FILENAME)
     log.info(s"VMCATCHER_EVENT_FILENAME = $filename")
     if(filename.isEmpty) {
       log.warn("VMCATCHER_EVENT_FILENAME is empty. Aborting")
@@ -75,7 +77,7 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     log.info(s"imageFile = $imageFile")
 
     // format
-    val format = event.apply(ImageEventField.VMCATCHER_EVENT_HV_FORMAT)
+    val format = event(VMCATCHER_EVENT_HV_FORMAT)
     log.info(s"VMCATCHER_EVENT_HV_FORMAT = $format")
     if(format.isEmpty) {
       log.warn("VMCATCHER_EVENT_HV_FORMAT is empty. Aborting")
@@ -83,7 +85,7 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     }
 
     // osfamily
-    val osfamily = event.apply(ImageEventField.VMCATCHER_EVENT_SL_OS)
+    val osfamily = event(VMCATCHER_EVENT_SL_OS)
     log.info(s"VMCATCHER_EVENT_SL_OS = $osfamily")
     if(osfamily.isEmpty) {
       log.warn("VMCATCHER_EVENT_SL_OS is empty. Aborting")
@@ -124,6 +126,7 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     imageTransformers: ImageTransformers
   ): Unit = {
     log.info("#> handleVmCatcherScriptJSON")
+    log.info(s"eventType = $eventType")
     val eventTypeL = eventType.toLowerCase(Locale.ENGLISH)
     if(!eventTypeL.endsWith("postfix")) {
       log.info(s"Ignoring VMCATCHER_EVENT_TYPE = $eventType")
@@ -152,12 +155,11 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
   ): Unit = {
     log.info("#> handleImageJSON")
 
-    val url = new URL(event(ImageEventField.VMCATCHER_EVENT_HV_URI))
-    val formatOpt = Some(event(ImageEventField.VMCATCHER_EVENT_HV_FORMAT))
-
+    val url = new URL(event(VMCATCHER_EVENT_HV_URI))
+    val formatOpt = Some(event(VMCATCHER_EVENT_HV_FORMAT))
 
     val properties = Sys.minimumImageProperties(
-      event.apply(ImageEventField.VMCATCHER_EVENT_SL_OS),
+      event.apply(VMCATCHER_EVENT_SL_OS),
       "root"
     )
 
@@ -187,12 +189,12 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     //  2) The JSON message that snf-vmcatcher creates, using the enqueue-from-image-list command
     // So, we have to discover which one is it
 
-    event.apply(ExternalEventField.VMCATCHER_EVENT_TYPE) match {
-      case "" ⇒
+    event.get(VMCATCHER_EVENT_TYPE) match {
+      case None ⇒
         // not from vmcatcher since it always sets VMCATCHER_EVENT_TYPE
         handleImageJSON(log, event, kamakiCloud, imageTransformers)
 
-      case eventType ⇒
+      case Some(eventType) ⇒
         handleVmCatcherScriptJSON(log, event, eventType, kamakiCloud, imageTransformers)
     }
   }
