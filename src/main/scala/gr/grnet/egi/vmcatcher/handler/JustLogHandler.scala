@@ -17,6 +17,7 @@
 
 package gr.grnet.egi.vmcatcher.handler
 
+import gr.grnet.egi.vmcatcher.event.Event
 import gr.grnet.egi.vmcatcher.image.ImageTransformers
 import org.slf4j.Logger
 
@@ -26,13 +27,11 @@ import org.slf4j.Logger
 class JustLogHandler extends DequeueHandler {
   def handle(
     log: Logger,
-    json: String,
-    map: Map[String, String],
+    event: Event,
     kamakiCloud: String,
     imageTransformers: ImageTransformers
   ): Unit = {
-    log.info(s"json =\n$json")
-    if(map.isEmpty) { log.warn("map of json is empty") }
+    log.info(s"event = $event")
   }
 
   override def toString: String = getClass.getName

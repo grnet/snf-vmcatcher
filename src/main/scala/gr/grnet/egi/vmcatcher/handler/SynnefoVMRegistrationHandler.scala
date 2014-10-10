@@ -21,9 +21,9 @@ import java.io.File
 import java.net.URL
 import java.util.Locale
 
+import gr.grnet.egi.vmcatcher.Sys
+import gr.grnet.egi.vmcatcher.event.{Event, ExternalEventField, ImageEventField}
 import gr.grnet.egi.vmcatcher.image.ImageTransformers
-import gr.grnet.egi.vmcatcher.message._
-import gr.grnet.egi.vmcatcher.{Http, Sys}
 import org.slf4j.Logger
 
 /**
@@ -33,7 +33,7 @@ import org.slf4j.Logger
 class SynnefoVMRegistrationHandler extends DequeueHandler {
   def expireVM(
     log: Logger,
-    map: Map[String, String],
+    event: Event,
     kamakiCloud: String,
     imageTransformers: ImageTransformers
   ): Unit = {
@@ -43,7 +43,7 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
 
   def availableVM(
     log: Logger,
-    map: Map[String, String],
+    event: Event,
     kamakiCloud: String,
     imageTransformers: ImageTransformers
   ): Unit = {
@@ -52,14 +52,14 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     // the full path to the image file is $VMCATCHER_CACHE_DIR_CACHE/$VMCATCHER_EVENT_FILENAME
     log.info("Available VM")
     // image file
-    val folderPath = map.getOrElse("VMCATCHER_CACHE_DIR_CACHE", "")
+    val folderPath = event.apply(ExternalEventField.VMCATCHER_CACHE_DIR_CACHE)
     log.info(s"VMCATCHER_CACHE_DIR_CACHE = $folderPath")
     if(folderPath.isEmpty) {
       log.warn("VMCATCHER_CACHE_DIR_CACHE is empty. Aborting")
       return
     }
 
-    val filename = map.getOrElse("VMCATCHER_EVENT_FILENAME", "")
+    val filename = event.apply(ExternalEventField.VMCATCHER_EVENT_FILENAME)
     log.info(s"VMCATCHER_EVENT_FILENAME = $filename")
     if(filename.isEmpty) {
       log.warn("VMCATCHER_EVENT_FILENAME is empty. Aborting")
@@ -75,7 +75,7 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     log.info(s"imageFile = $imageFile")
 
     // format
-    val format = map.getOrElse("VMCATCHER_EVENT_HV_FORMAT", "")
+    val format = event.apply(ImageEventField.VMCATCHER_EVENT_HV_FORMAT)
     log.info(s"VMCATCHER_EVENT_HV_FORMAT = $format")
     if(format.isEmpty) {
       log.warn("VMCATCHER_EVENT_HV_FORMAT is empty. Aborting")
@@ -83,7 +83,7 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     }
 
     // osfamily
-    val osfamily = map.getOrElse("VMCATCHER_EVENT_SL_OS", "")
+    val osfamily = event.apply(ImageEventField.VMCATCHER_EVENT_SL_OS)
     log.info(s"VMCATCHER_EVENT_SL_OS = $osfamily")
     if(osfamily.isEmpty) {
       log.warn("VMCATCHER_EVENT_SL_OS is empty. Aborting")
@@ -94,15 +94,8 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     val users = "root"
     val rootPartition = "1"
 
-    val vmCatcherProperties = map -- List(
-      "VMCATCHER_CACHE_EVENT",
-      "VMCATCHER_HOME",
-      "VMCATCHER_RDBMS",
-      "VMCATCHER_CACHE_DIR_DOWNLOAD",
-      "VMCATCHER_CACHE_DIR_CACHE",
-      "VMCATCHER_CACHE_DIR_EXPIRE",
-      "VMCATCHER_EVENT_TYPE"
-    )
+    // FIXME add some
+    val vmCatcherProperties = Map()
 
     val synnefoProperties = Sys.minimumImageProperties(osfamily, users, rootPartition)
 
@@ -119,19 +112,18 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     )
   }
 
-  def handleOther(log: Logger, verb: String, map: Map[String, String], kamakiCloud: String): Unit = {
+  def handleOther(log: Logger, verb: String, event: Event, kamakiCloud: String): Unit = {
     log.info(s"verb = $verb (nothing to do)")
   }
 
   def handleVmCatcherScriptJSON(
     log: Logger,
-    json: String,
-    map: Map[String, String],
+    event: Event,
+    eventType: String,
     kamakiCloud: String,
     imageTransformers: ImageTransformers
   ): Unit = {
     log.info("#> handleVmCatcherScriptJSON")
-    val eventType = map.getOrElse("VMCATCHER_EVENT_TYPE", "")
     val eventTypeL = eventType.toLowerCase(Locale.ENGLISH)
     if(!eventTypeL.endsWith("postfix")) {
       log.info(s"Ignoring VMCATCHER_EVENT_TYPE = $eventType")
@@ -141,32 +133,33 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     eventTypeL.stripSuffix("postfix") match {
       case "available" ⇒
         // "available" is the interesting message
-        availableVM(log, map, kamakiCloud, imageTransformers)
+        availableVM(log, event, kamakiCloud, imageTransformers)
 
       case "expire" ⇒
-        expireVM(log, map, kamakiCloud, imageTransformers)
+        expireVM(log, event, kamakiCloud, imageTransformers)
 
       case other ⇒
-        handleOther(log, other, map, kamakiCloud)
+        handleOther(log, other, event, kamakiCloud)
     }
     log.info("#< handleVmCatcherScriptJSON")
   }
 
   def handleImageJSON(
     log: Logger,
-    imageConfig: ImageConfig,
-    json: String,
-    map: Map[String, String],
+    event: Event,
     kamakiCloud: String,
     imageTransformers: ImageTransformers
   ): Unit = {
     log.info("#> handleImageJSON")
 
-    val url = new URL(imageConfig.hvURI)
-    val formatOpt = Some(imageConfig.hvFormat)
+    val url = new URL(event(ImageEventField.VMCATCHER_EVENT_HV_URI))
+    val formatOpt = Some(event(ImageEventField.VMCATCHER_EVENT_HV_FORMAT))
 
 
-    val properties = Sys.minimumImageProperties(imageConfig.slOS, "root")
+    val properties = Sys.minimumImageProperties(
+      event.apply(ImageEventField.VMCATCHER_EVENT_SL_OS),
+      "root"
+    )
 
     Sys.downloadAndPublishImageFile(
       log,
@@ -182,32 +175,25 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
 
   def handle(
     log: Logger,
-    json: String,
-    map: Map[String, String],
+    event: Event,
     kamakiCloud: String,
     imageTransformers: ImageTransformers
   ): Unit = {
     val sh = new JustLogHandler
-    sh.handle(log, json, map, kamakiCloud, imageTransformers)
+    sh.handle(log, event, kamakiCloud, imageTransformers)
 
     // There are two types of JSON messages going in the queue:
     //  1) The JSON message that vmcatcher creates
     //  2) The JSON message that snf-vmcatcher creates, using the enqueue-from-image-list command
     // So, we have to discover which one is it
 
-    val msgType = Message.parseJson(json)
-    log.info(s"Message is ${msgType.getClass.getSimpleName}")
-    msgType match {
-      case m @ UnparsedMessage(error) ⇒
-        log.error(error)
-        log.error(json)
-        return
+    event.apply(ExternalEventField.VMCATCHER_EVENT_TYPE) match {
+      case "" ⇒
+        // not from vmcatcher since it always sets VMCATCHER_EVENT_TYPE
+        handleImageJSON(log, event, kamakiCloud, imageTransformers)
 
-      case m @ VmCatcherScriptJSON(_) ⇒
-        handleVmCatcherScriptJSON(log, json, map, kamakiCloud, imageTransformers)
-
-      case m @ ImageJSON(imageConfig) ⇒
-        handleImageJSON(log, imageConfig, json, map, kamakiCloud, imageTransformers)
+      case eventType ⇒
+        handleVmCatcherScriptJSON(log, event, eventType, kamakiCloud, imageTransformers)
     }
   }
 }

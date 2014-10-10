@@ -17,18 +17,18 @@
 
 package gr.grnet.egi.vmcatcher.handler
 
+import gr.grnet.egi.vmcatcher.event.Event
 import gr.grnet.egi.vmcatcher.image.ImageTransformers
 import org.slf4j.Logger
 
 /**
- * Handles one message from the queue.
+ * Handles one event from the queue.
  *
  */
 trait DequeueHandler {
   def handle(
     log: Logger,
-    json: String,
-    map: Map[String, String],
+    event: Event,
     kamakiCloud: String,
     imageTransformers: ImageTransformers
   ): Unit

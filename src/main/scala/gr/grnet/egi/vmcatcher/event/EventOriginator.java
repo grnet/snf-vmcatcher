@@ -15,32 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher
-package message
+package gr.grnet.egi.vmcatcher.event;
 
 /**
  *
  */
-class ImageConfig(val config: com.typesafe.config.Config)
-  extends ConfigWrapper
-  with    ConfigWrapperDcIdentifier
-  with    ConfigWrapperDcTitle
-  with    ConfigWrapperHvURI
-  with    ConfigWrapperHvVersion {
-
-  def hvFormat     = getString("hv:format")
-
-  def slArch      = getString("sl:arch")
-  def slComments  = getString("sl:comments")
-  def slOS        = getString("sl:os")
-  def slOSName    = getString("sl:osname")
-  def slOSVersion = getString("sl:osversion")
-}
-
-object ImageConfig {
-  def ofString(json: String): ImageConfig = {
-    val config = Config.ofString(json)
-    val imageConfig = new ImageConfig(config)
-    imageConfig
-  }
+public enum EventOriginator {
+    vmcatcher_sysenv,
+    image_list_json,
+    vanilla_json
 }

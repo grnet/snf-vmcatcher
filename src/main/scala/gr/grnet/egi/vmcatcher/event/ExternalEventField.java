@@ -15,21 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.handler
+package gr.grnet.egi.vmcatcher.event;
 
-import gr.grnet.egi.vmcatcher.event.Event
-import gr.grnet.egi.vmcatcher.image.ImageTransformers
-import org.slf4j.Logger
+import static gr.grnet.egi.vmcatcher.event.EventFieldSection.External;
 
 /**
  *
  */
-class ThrowingHandler extends DequeueHandler {
-  def handle(
-    log: Logger,
-    event: Event,
-    kamakiCloud: String,
-    imageTransformers: ImageTransformers
-  ): Unit =
-    throw new Exception(s"event = $event")
+public enum ExternalEventField implements IEventField {
+    VMCATCHER_EVENT_TYPE,
+    VMCATCHER_EVENT_AD_MPURI,
+    VMCATCHER_EVENT_FILENAME,
+    VMCATCHER_CACHE_DIR_CACHE,
+    VMCATCHER_EVENT_UUID_SESSION,
+    VMCATCHER_EVENT_VO;
+
+    public EventFieldSection section() { return External; }
+
+    public String jsonField() { return ""; }
 }

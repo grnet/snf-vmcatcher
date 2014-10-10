@@ -17,10 +17,7 @@
 
 package gr.grnet.egi.vmcatcher
 
-import java.net.URL
-import java.nio.file.{StandardCopyOption, Files}
-
-import gr.grnet.egi.vmcatcher.message.ImageListConfig
+import gr.grnet.egi.vmcatcher.event.{Events, ImageEventField}
 import org.junit.Test
 
 /**
@@ -83,18 +80,17 @@ class ImageListConfigTest {
       |
     """.stripMargin
   @Test def test(): Unit = {
-    val imageListConfig = ImageListConfig.ofString(data)
+    Events.ofImageList(data, Map())
   }
 
   @Test def test2(): Unit = {
-    val imageListConfig = ImageListConfig.ofString(data)
-    val imageConfigs = imageListConfig.images
+    val eventList = Events.ofImageList(data, Map())
     for {
-      imageConfig ← imageConfigs
+      event ← eventList
     } {
-      val dcIdentifier = imageConfig.dcIdentifier
+      val dcIdentifier = event(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER)
       println(dcIdentifier)
-      println(imageConfig.toJson)
+      println(event.toJson)
     }
   }
 }

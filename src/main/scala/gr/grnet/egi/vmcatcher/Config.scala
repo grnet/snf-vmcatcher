@@ -20,20 +20,19 @@ package gr.grnet.egi.vmcatcher
 import java.io.File
 
 import com.typesafe.config.ConfigFactory
+import scala.collection.JavaConverters._
 
 /**
  *
  */
 object Config {
-  // Fix the Key.
-  // _       _
-  // the Config library does not like the ':' token inside keys, unless it is quoted.
-  def fk(key: String) = key.replaceAll(":", "\":\"")
-
   def ofFilePath(path: String): com.typesafe.config.Config = {
     val file = new File(path)
     ConfigFactory.parseFile(file).resolve()
   }
 
   def ofString(s: String): com.typesafe.config.Config = ConfigFactory.parseString(s).resolve()
+
+  def toMap(config: com.typesafe.config.Config): Map[String, String] =
+    config.root().unwrapped().asScala.map{ case (k, v) ⇒ (k, String.valueOf(v)) }.toMap
 }

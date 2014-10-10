@@ -25,8 +25,8 @@ import com.beust.jcommander.ParameterException
 import com.typesafe.config.ConfigRenderOptions
 import gr.grnet.egi.vmcatcher.cmdline.Args
 import gr.grnet.egi.vmcatcher.cmdline.Args.ParsedCmdLine
+import gr.grnet.egi.vmcatcher.event._
 import gr.grnet.egi.vmcatcher.image.ImageTransformers
-import gr.grnet.egi.vmcatcher.message.ImageListConfig
 import gr.grnet.egi.vmcatcher.rabbit.{Rabbit, RabbitConnector}
 import okio.Okio
 import org.slf4j.LoggerFactory
@@ -67,12 +67,6 @@ object Main extends {
   def env: Map[String, String] = sys.env
   def envAsJson = Json.jsonOfMap(env)
   def envAsPrettyJson: String =  Json.jsonOfMap(env)
-  def VMCatcherFilter(key: String) = key.startsWith("VMCATCHER_")
-
-  /**
-   * Creates the subset of environment variables whose key starts with "VMCATCHER_".
-   */
-  def vmCatcherSysEnv: Map[String, String] = env.filter { case (k, _) ⇒ VMCatcherFilter(k) }
 
   def isVerbose = ParsedCmdLine.globalOptions.verbose
   def isHelp    = ParsedCmdLine.globalOptions.help
@@ -92,12 +86,13 @@ object Main extends {
   def do_show_conf(args: Args.ShowConf): Unit = println(stringOfConfig(configOfPath(args.conf)))
 
   def do_enqueue(connector: RabbitConnector): Unit = {
-    val map = vmCatcherSysEnv
-    val jsonMsg = Json.jsonOfMap(map)
-    Log.info(s"jsonMsg = $jsonMsg")
+    val event = Event.ofSysEnv
+    Log.info(s"event (sysenv) = $event")
+    val json = event.toJson
+
     val rabbit = connector.connect()
 
-    rabbit.publish(jsonMsg)
+    rabbit.publish(json)
     rabbit.close()
   }
   
@@ -151,31 +146,44 @@ object Main extends {
     val rawImageList = urlToUtf8(imageListURL)
     Log.info(rawImageList)
     val jsonImageList = parseImageListJson(rawImageList)
+    val events0 = Events.ofImageList(jsonImageList, Map())
 
-    val imageListConfig = ImageListConfig.ofString(jsonImageList)
-    Log.info(s"Parsed image list dc:identifier = ${imageListConfig.dcIdentifier}")
-    Log.info(s"                         hv:uri = ${imageListConfig.hvURI}")
-    val projectedForIdent = imageListConfig.projectImageDcIdentifier(imageIdentifier)
-    if(projectedForIdent.size == 0) {
-      Log.error(s"Image identifier $imageIdentifier not found in image list hv:uri = ${imageListConfig.hvURI}")
-      Log.info(s"Available identifiers are: ${imageListConfig.images.map(_.dcIdentifier).mkString(", ")}")
-      EXIT(3)
+    events0 match {
+      case Nil ⇒
+        Log.error(s"Could not parse events from image list")
+        EXIT(4)
+
+      case event :: _ ⇒
+        val dcIdentifier = event(ImageListEventField.VMCATCHER_EVENT_IL_DC_IDENTIFIER)
+        Log.info(s"Parsed image list dc:identifier = $dcIdentifier")
+        val events =
+          if(imageIdentifier eq null)
+            events0
+          else
+            events0.filter(_(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER) == imageIdentifier)
+
+        if(events.isEmpty) {
+          Log.error(s"Image identifier $imageIdentifier not found")
+          val identifiers = events0.map(_(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER))
+          Log.info(s"Available identifiers are: ${identifiers.mkString(", ")}")
+          EXIT(3)
+        }
+
+        val connector = RabbitConnector(configOfPath(args.confDelegate.conf))
+        val rabbit = connector.connect()
+
+        for {
+          event ← events
+        } {
+          val imageIdent = event(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER)
+          val imageURI = event(ImageEventField.VMCATCHER_EVENT_HV_URI)
+          Log.info(s"Enqueueing event for dc:identifier = $imageIdent, hv:uri = $imageURI")
+
+          rabbit.publish(event.toJson)
+        }
+
+        rabbit.close()
     }
-
-    val connector = RabbitConnector(configOfPath(args.confDelegate.conf))
-    val rabbit = connector.connect()
-
-    for {
-      imageConfig ← projectedForIdent
-    } {
-      val imageIdent = imageConfig.dcIdentifier
-      val imageURI = imageConfig.hvURI
-      Log.info(s"Enqueueing dc:identifier = $imageIdent, hv:uri = $imageURI")
-
-      rabbit.publish(imageConfig.toJson)
-    }
-
-    rabbit.close()
   }
 
   def do_dequeue(connector: RabbitConnector, kamakiCloud: String): Unit = {
@@ -188,13 +196,12 @@ object Main extends {
         } { response ⇒
           val jsonMsgBytes = response.getBody
           val jsonMsg = new String(jsonMsgBytes, StandardCharsets.UTF_8)
-          val map = Json.stringMapOfJson(jsonMsg)
+          val event = Event.ofJson(jsonMsg)
 
           Log.info(s"dequeueHandler = ${dequeueHandler.getClass.getName}")
           dequeueHandler.handle(
             Log,
-            jsonMsg,
-            map,
+            event,
             kamakiCloud,
             ImageTransformers
           )
