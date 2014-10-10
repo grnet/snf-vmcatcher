@@ -75,7 +75,7 @@ Usage: gr.grnet.egi.vmcatcher.Main [options] [command] [command options]
              The 'dc:identifier' of the specific VM image you want to enqueue.
              If not given, then all VM images given in the list are enqueued.
         * -image-list-url
-             The URL of the image list. Use an http(s) URL.
+             The URL of the image list. You can use an http(s) or file URL.
 
     dequeue      Dequeue one message from RabbitMQ and register the corresponding VM instance
       Usage: dequeue [options]
@@ -86,7 +86,7 @@ Usage: gr.grnet.egi.vmcatcher.Main [options] [command] [command options]
              The Java class that will handle a message from RabbitMQ. Use
              gr.grnet.egi.vmcatcher.handler.SynnefoVMRegistrationHandler for the standard behavior. Other values are
              gr.grnet.egi.vmcatcher.handler.JustLogHandler and gr.grnet.egi.vmcatcher.handler.ThrowingHandler
-             Default: gr.grnet.egi.vmcatcher.handler.SynnefoVMRegistrationHandler@7bd94799
+             Default: gr.grnet.egi.vmcatcher.handler.SynnefoVMRegistrationHandler
         * -kamaki-cloud
              The name of the cloud from ~/.kamakirc that will be used by kamaki
              for VM upload
@@ -103,8 +103,13 @@ Usage: gr.grnet.egi.vmcatcher.Main [options] [command] [command options]
         * -kamaki-cloud
              The name of the cloud from ~/.kamakirc that will be used by kamaki
              for VM upload
+        * -osfamily
+             The OS family, e.g. 'linux' or 'windows'
+             Default: linux
         * -url
-             The http(s) URL from where to fetch the VM
-
+             The URL from where to fetch the VM.
+        * -users
+             The OS 'users' that will become a field in the metafile properties
+             Default: root
 ```
 
