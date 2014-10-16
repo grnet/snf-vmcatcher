@@ -236,7 +236,8 @@ class Sys {
     }
   }
 
-  def downloadToFile(url: URL, file: File): Unit = {
+  def downloadToFile(log: Logger, url: URL, file: File): Unit = {
+    log.info(s"Downloading $url to $file")
     val in = url.openStream()
     try {
       val urlSource = Okio.source(in)
@@ -248,6 +249,14 @@ class Sys {
     finally in.close()
   }
 
+  def createTempImageFile(filename: String): File = Sys.createTempFile("." + filename)
+
+  def createTempImageFile(imageURL: URL): File = {
+    // We want to preserve the remote filename
+    val filename = new File(imageURL.getFile).getName
+    Sys.createTempImageFile(filename)
+  }
+
   def downloadAndPublishImageFile(
     log: Logger,
     formatOpt: Option[String],
@@ -255,14 +264,12 @@ class Sys {
     kamakiCloud: String,
     url: URL,
     imageTransformers: ImageTransformers
-  ) = {
-    // We want to preserve the remote filename
-    val filename = new File(url.getFile).getName
-    val imageFile = Sys.createTempFile("." + filename)
-    log.info(s"Downloading $url to $imageFile")
-    Sys.downloadToFile(url, imageFile)
-    Sys.publishVmImageFile(log, formatOpt, properties, imageFile, kamakiCloud, imageTransformers, true)
-    imageFile.delete()
+  ): Unit = {
+    val imageFile = Sys.createTempImageFile(url)
+    Sys.downloadToFile(log, url, imageFile)
+
+    try     Sys.publishVmImageFile(log, formatOpt, properties, imageFile, kamakiCloud, imageTransformers, true)
+    finally imageFile.delete()
   }
 }
 

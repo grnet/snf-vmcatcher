@@ -61,7 +61,8 @@ object Main extends {
     Args.nameOf( ParsedCmdLine.dequeue              ) → DEFER { do_dequeue                ( ParsedCmdLine.dequeue              ) },
     Args.nameOf( ParsedCmdLine.registerNow          ) → DEFER { do_register_now           ( ParsedCmdLine.registerNow          ) },
     Args.nameOf( ParsedCmdLine.parseImageList       ) → DEFER { do_parse_image_list       ( ParsedCmdLine.parseImageList       ) },
-    Args.nameOf( ParsedCmdLine.drainQueue           ) → DEFER { do_drain_queue            ( ParsedCmdLine.drainQueue           ) }
+    Args.nameOf( ParsedCmdLine.drainQueue           ) → DEFER { do_drain_queue            ( ParsedCmdLine.drainQueue           ) },
+    Args.nameOf( ParsedCmdLine.transform            ) → DEFER { do_transform              ( ParsedCmdLine.transform            ) }
   )
 
   def stringOfConfig(config: com.typesafe.config.Config) = config.root().render(configRenderOptions)
@@ -326,6 +327,19 @@ object Main extends {
 
     val howmany = drainLoop(0)
     Log.info(s"Drained $howmany messages")
+  }
+
+  def do_transform(args: Args.Transform): Unit = {
+    val imageURL = args.url
+    val imageFile = Sys.createTempImageFile(imageURL)
+    Sys.downloadToFile(Log, imageURL, imageFile)
+    val tramsformedFileOpt = ImageTransformers.pipelineTransform(Log, None, imageFile, true)
+    for {
+      transformedFile ← tramsformedFileOpt
+    } {
+      Log.info(s"Transformed $imageURL to $transformedFile.")
+      transformedFile.delete()
+    }
   }
 
   def main(args: Array[String]): Unit = {

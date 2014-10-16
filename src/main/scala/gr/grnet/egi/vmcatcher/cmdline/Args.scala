@@ -223,6 +223,22 @@ object Args {
     def conf = confDelegate.conf
   }
 
+  @Parameters(
+    commandNames = Array("transform"),
+    commandDescription = "Transform a VM image to raw format"
+  )
+  class Transform {
+    @Parameter(
+      names = Array("-url"),
+      description = "The URL from where to fetch the VM.",
+      required = true,
+      validateWith = classOf[NotEmptyStringValidator],
+      validateValueWith = classOf[NotNullValueValidator[_]],
+      converter = classOf[URLStringConverter]
+    )
+    val url: URL = null
+  }
+
   class ParsedCmdLine {
     val globalOptions = new GlobalOptions
     val usage = new Usage
@@ -234,6 +250,7 @@ object Args {
     val registerNow = new RegisterNow
     val parseImageList = new ParseImageList
     val drainQueue = new DrainQueue
+    val transform = new Transform
   }
 
   object ParsedCmdLine extends ParsedCmdLine
@@ -253,6 +270,7 @@ object Args {
     jc.addCommand(ParsedCmdLine.registerNow)
     jc.addCommand(ParsedCmdLine.parseImageList)
     jc.addCommand(ParsedCmdLine.drainQueue)
+    jc.addCommand(ParsedCmdLine.transform)
 
     jc
   }

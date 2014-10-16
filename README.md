@@ -86,7 +86,7 @@ Usage: gr.grnet.egi.vmcatcher.Main [options] [command] [command options]
              The Java class that will handle a message from RabbitMQ. Use
              gr.grnet.egi.vmcatcher.handler.SynnefoVMRegistrationHandler for the standard behavior. Other values are
              gr.grnet.egi.vmcatcher.handler.JustLogHandler and gr.grnet.egi.vmcatcher.handler.ThrowingHandler
-             Default: gr.grnet.egi.vmcatcher.handler.SynnefoVMRegistrationHandler@3eed9cd5
+             Default: gr.grnet.egi.vmcatcher.handler.SynnefoVMRegistrationHandler
         * -kamaki-cloud
              The name of the cloud from ~/.kamakirc that will be used by kamaki
              for VM upload
@@ -118,10 +118,16 @@ Usage: gr.grnet.egi.vmcatcher.Main [options] [command] [command options]
         * -image-list-url
              The URL of the image list. You can use an http(s) or file URL.
 
-    drain-queue      Remove all events from the queue and do nothing with them. 
+    drain-queue      Remove all events from the queue and do nothing with them.
       Usage: drain-queue [options]
         Options:
         * -conf
              The configuration file the application uses
+
+    transform      Transform a VM image to raw format
+      Usage: transform [options]
+        Options:
+        * -url
+             The URL from where to fetch the VM.
 ```
 
