@@ -67,9 +67,7 @@ class Sys {
     )
   }
 
-  def kamakiRegisterRawImage(log: Logger, rcCloudName: String, properties: Map[String, String], imageFile: File, name: String): Int = {
-    // Make the file for --metafile parameter
-    log.info(s"Image properties (map ) = $properties")
+  def createRegistrationMetafile(log: Logger, properties: Map[String, String]): File = {
     val metaMap = Map("properties" → properties)
     val metaJson = Json.jsonOfMap(metaMap)
     log.info(s"Image meta       (json) = $metaJson")
@@ -81,19 +79,33 @@ class Sys {
     metaSink.write(buffer, metaString.size())
     metaSink.close()
 
+    metaFile
+  }
+
+  def kamakiRegisterRawImage(log: Logger, rcCloudName: String, properties: Map[String, String], imageFile: File, name: String): Int = {
+    // Make the file for --metafile parameter
+    log.info(s"Image properties (map ) = $properties")
+    val metaFile = createRegistrationMetafile(log, properties)
     val kamaki = "kamaki"
     log.info(s"Registering $imageFile using $kamaki")
-    exec(
-      log,
-      kamaki,
-      "image", "register",
-      "--cloud", rcCloudName,
-      "--public",
-      "--metafile", metaFile.getAbsolutePath,
-      "--upload-image-file", imageFile.getAbsolutePath,
-      "--name", name,
-      "--location", s"/images/$name"
-    )
+
+    val result =
+      exec(
+        log,
+        kamaki,
+        "image", "register",
+        "--cloud", rcCloudName,
+        "--public",
+        "--metafile", metaFile.getAbsolutePath,
+        "--upload-image-file", imageFile.getAbsolutePath,
+        "--name", name,
+        "--location", s"/images/$name"
+      )
+
+    log.info(s"Deleting tmp metafile $metaFile")
+    metaFile.delete()
+
+    result
   }
 
   def untar(log: Logger, tarFile: File, where: File): Int = {
