@@ -33,6 +33,4 @@ class JustLogHandler extends DequeueHandler {
   ): Unit = {
     log.info(s"event = $event")
   }
-
-  override def toString: String = getClass.getName
 }

@@ -32,4 +32,6 @@ trait DequeueHandler {
     kamakiCloud: String,
     imageTransformers: ImageTransformers
   ): Unit
+
+  override def toString: String = this.getClass.getName
 }
