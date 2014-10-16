@@ -206,6 +206,9 @@ object Main extends {
   }
 
   def do_dequeue(connector: RabbitConnector, kamakiCloud: String): Unit = {
+    /**
+     * This is the main server loop.
+     */
     @tailrec
     def serverLoop(rabbit: Rabbit, isEmpty: Boolean): Unit = {
       val newIsEmpty =
@@ -305,6 +308,18 @@ object Main extends {
 
         case getResponse ⇒
           rabbit.ack(getResponse)
+
+          try {
+            val drainedBytes = getResponse.getBody
+            val drainedString = new String(drainedBytes, StandardCharsets.UTF_8)
+            val event = Event.ofJson(drainedString)
+            Log.info(s"Drained event $count\n$event")
+          }
+          catch {
+            case e: Exception ⇒
+              Log.error(s"Error converting drained event $count to appropriate format: ${e.getMessage}")
+          }
+
           drainLoop(count + 1)
       }
     }
