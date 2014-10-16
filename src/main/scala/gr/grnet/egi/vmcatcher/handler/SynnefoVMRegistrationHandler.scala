@@ -156,11 +156,8 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
 
     val users = "root"
     val rootPartition = "1"
+    val properties = Sys.newImageProperties(event, users, rootPartition)
 
-    val vmCatcherProperties = event.toMap
-    val synnefoProperties = Sys.minimumImageProperties(event(ImageEventField.VMCATCHER_EVENT_SL_OS), users, rootPartition)
-    val properties = synnefoProperties ++ vmCatcherProperties
-    
     Sys.downloadAndPublishImageFile(
       log,
       formatOpt,

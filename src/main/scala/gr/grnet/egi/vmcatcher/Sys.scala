@@ -21,6 +21,7 @@ import java.io.File
 import java.net.{MalformedURLException, URL}
 import java.nio.file.Files
 
+import gr.grnet.egi.vmcatcher.event.{ImageEventField, Event}
 import gr.grnet.egi.vmcatcher.image.ImageTransformers
 import okio.{ByteString, Buffer, Sink, Okio}
 import org.slf4j.Logger
@@ -194,6 +195,13 @@ class Sys {
       "users" → users,
       "ROOT_PARTITION" → rootPartition
     )
+
+  def newImageProperties(event: Event, users: String, rootPartition: String = "1") =
+    minimumImageProperties(
+      event(ImageEventField.VMCATCHER_EVENT_SL_OS),
+      users,
+      rootPartition
+    ) ++ event.toMap
 
   def publishVmImageFile(
     log: Logger,
