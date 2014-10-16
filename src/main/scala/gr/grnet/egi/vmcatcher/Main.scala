@@ -304,7 +304,7 @@ object Main extends {
           count
 
         case getResponse ⇒
-          getResponse.getBody
+          rabbit.ack(getResponse)
           drainLoop(count + 1)
       }
     }
