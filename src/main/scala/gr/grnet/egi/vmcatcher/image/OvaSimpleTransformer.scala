@@ -75,7 +75,7 @@ class OvaSimpleTransformer extends ImageTransformerSkeleton {
 
         case Some(imageFile) ⇒
           log.info(s"Found image $imageFile")
-          registry.pipelineTransform(log, None, imageFile, true)  match {
+          registry.pipelineTransform(log, imageFile, true)  match {
             case None ⇒
               log.error(s"Unknown transformer for $imageFile from OVA archive $ovaFile")
               None

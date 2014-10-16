@@ -43,11 +43,16 @@ trait ImageTransformer {
 
   def transform(log: Logger, registry: ImageTransformers, formatOpt: Option[String], file: File): Option[File]
 
+  def transform(log: Logger, registry: ImageTransformers, file: File): Option[File] =
+    this.transform(log, registry, None, file)
+
+  def suggestTransformedFilename(filename: String): String = Sys.dropFileExtension(filename)
+
   // returns the new formatOpt and the suggested filename
   def suggestTransformedFilename(formatOpt: Option[String], filename: String): (Option[String], String) =
     formatOpt match {
       case None ⇒
-        None → Sys.dropFileExtension(filename)
+        None → this.suggestTransformedFilename(filename)
         
       case Some(format) ⇒
         val newFormat = Sys.dropFileExtension(format)
@@ -55,8 +60,12 @@ trait ImageTransformer {
         Some(newFormat) → newFilename
     }
 
+  def suggestTransformedFilename(file: File): String = this.suggestTransformedFilename(file.getName)
+
   def suggestTransformedFilename(formatOpt: Option[String], file: File): (Option[String], String) =
     suggestTransformedFilename(formatOpt, file.getName)
+
+
 
   override def toString: String = getClass.getSimpleName
 }
