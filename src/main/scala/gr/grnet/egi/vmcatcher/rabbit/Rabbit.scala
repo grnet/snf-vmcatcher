@@ -22,7 +22,6 @@ import java.io.Closeable
 import com.typesafe.config.Config
 import com.rabbitmq.client.AMQP.BasicProperties
 import java.nio.charset.StandardCharsets
-import scala.util.{Failure, Success, Try}
 
 /**
  *
