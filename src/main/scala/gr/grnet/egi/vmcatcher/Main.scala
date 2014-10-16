@@ -300,6 +300,7 @@ object Main extends {
     def drainLoop(count: Int): Int = {
       rabbit.get() match {
         case null ⇒
+          rabbit.close()
           count
 
         case getResponse ⇒
