@@ -22,7 +22,7 @@ import java.net.URL
 import java.util.Locale
 
 import gr.grnet.egi.vmcatcher.Sys
-import gr.grnet.egi.vmcatcher.event.Event
+import gr.grnet.egi.vmcatcher.event.{ImageEventField, Event}
 import gr.grnet.egi.vmcatcher.event.ExternalEventField._
 import gr.grnet.egi.vmcatcher.event.ImageEventField._
 import gr.grnet.egi.vmcatcher.image.ImageTransformers
@@ -92,15 +92,11 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
       return
     }
 
-    // user
     val users = "root"
     val rootPartition = "1"
 
-    // FIXME add some
-    val vmCatcherProperties = Map()
-
+    val vmCatcherProperties = event.toMap
     val synnefoProperties = Sys.minimumImageProperties(osfamily, users, rootPartition)
-
     val properties = synnefoProperties ++ vmCatcherProperties
 
     Sys.publishVmImageFile(
@@ -158,11 +154,13 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     val url = new URL(event(VMCATCHER_EVENT_HV_URI))
     val formatOpt = Some(event(VMCATCHER_EVENT_HV_FORMAT))
 
-    val properties = Sys.minimumImageProperties(
-      event.apply(VMCATCHER_EVENT_SL_OS),
-      "root"
-    )
+    val users = "root"
+    val rootPartition = "1"
 
+    val vmCatcherProperties = event.toMap
+    val synnefoProperties = Sys.minimumImageProperties(event(ImageEventField.VMCATCHER_EVENT_SL_OS), users, rootPartition)
+    val properties = synnefoProperties ++ vmCatcherProperties
+    
     Sys.downloadAndPublishImageFile(
       log,
       formatOpt,
