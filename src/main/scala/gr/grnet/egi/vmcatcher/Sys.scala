@@ -248,7 +248,7 @@ class Sys {
     val filename = new File(url.getFile).getName
     val imageFile = Sys.createTempFile("." + filename)
     log.info(s"Downloading $url to $imageFile")
-    Http.downloadToFile(url, imageFile)
+    Sys.downloadToFile(url, imageFile)
     Sys.publishVmImageFile(log, formatOpt, properties, imageFile, kamakiCloud, imageTransformers, true)
     imageFile.delete()
   }
