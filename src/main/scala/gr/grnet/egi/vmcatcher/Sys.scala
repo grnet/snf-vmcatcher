@@ -221,6 +221,17 @@ class Sys {
       case Some(transformedImageFile) ⇒
         log.info(s"Transformed $imageFile to $transformedImageFile")
 
+        // Now make a better name
+        val tname0 = transformedImageFile.getName
+        val tname1 =
+          if(tname0.startsWith("snf"))
+            tname0.substring(tname0.indexOf('.') + 1)
+          else
+            tname0
+        val tnamePrefix = "vmcatcher-" // TODO Make it configurab
+        val tname = tnamePrefix + Sys.dropFileExtension(tname1)
+        log.info(s"Name of image to upload is $tname")
+
         try {
           val kamakiExitCode =
             Sys.kamakiRegisterRawImage(
@@ -228,7 +239,7 @@ class Sys {
               kamakiCloud,
               properties,
               transformedImageFile,
-              transformedImageFile.getName
+              tname
             )
 
           if(kamakiExitCode != 0) {
