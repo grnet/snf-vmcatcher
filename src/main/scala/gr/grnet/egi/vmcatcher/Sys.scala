@@ -276,6 +276,18 @@ class Sys {
     Sys.createTempImageFile(filename)
   }
 
+  def getImage(log: Logger, url: URL): GetImage = {
+    url.getProtocol match {
+      case "file" ⇒
+        GetImage(isTemporary = false, new File(url.getFile))
+
+      case _ ⇒
+        val imageFile = Sys.createTempImageFile(url)
+        Sys.downloadToFile(log, url, imageFile)
+        GetImage(isTemporary = true, imageFile)
+    }
+  }
+
   def downloadAndPublishImageFile(
     log: Logger,
     formatOpt: Option[String],
@@ -284,10 +296,9 @@ class Sys {
     url: URL,
     imageTransformers: ImageTransformers
   ): Unit = {
-    val imageFile = Sys.createTempImageFile(url)
-    Sys.downloadToFile(log, url, imageFile)
+    val GetImage(isTemporary, imageFile) = Sys.getImage(log, url)
 
-    try     Sys.publishVmImageFile(log, formatOpt, properties, imageFile, kamakiCloud, imageTransformers, true)
+    try     Sys.publishVmImageFile(log, formatOpt, properties, imageFile, kamakiCloud, imageTransformers, isTemporary)
     finally imageFile.delete()
   }
 }
