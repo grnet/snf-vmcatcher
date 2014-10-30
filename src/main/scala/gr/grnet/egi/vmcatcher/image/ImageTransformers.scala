@@ -35,7 +35,7 @@ trait ImageTransformers {
     def logit(imageTransformer: ImageTransformer) =
       log.info(s"Found ${imageTransformer.getClass.getSimpleName} for $file")
 
-    transformers.find(_.canTransform(None, file)) match {
+    transformers.find(_.canTransform(file)) match {
       case some @ Some(imageTransformer) ⇒
         logit(imageTransformer)
         some
@@ -50,16 +50,17 @@ trait ImageTransformers {
     }
   }
 
-  def findForFormat(log: Logger, format: String, file: File): Option[ImageTransformer] = {
+  def findForFormat(log: Logger, format: String): Option[ImageTransformer] = {
     def logit(imageTransformer: ImageTransformer) =
-      log.info(s"Found ${imageTransformer.getClass.getSimpleName} for $file of format $format")
+      log.info(s"Found ${imageTransformer.getClass.getSimpleName} for format $format")
 
-    transformers.find(_.canTransform(Some(format), file)) match {
+    transformers.find(_.canTransform(format)) match {
       case some @ Some(imageTransformer) ⇒
         logit(imageTransformer)
         some
 
       case None ⇒
+        log.info(s"No transformer found for format = $format")
         ImageTransformers.lastResortTransformerOption match {
           case None ⇒ None
           case some @ Some(imageTransformer) ⇒
@@ -70,9 +71,20 @@ trait ImageTransformers {
   }
 
   def find(log: Logger, formatOpt: Option[String], file: File): Option[ImageTransformer] =
-    formatOpt match {
-      case Some(format) ⇒ findForFormat(log, format, file)
-      case None ⇒ findForFile(log, file)
+    findForFile(log, file) match {
+      case None ⇒
+        log.info(s"No transformer found from file $file")
+        formatOpt match {
+          case None ⇒
+            log.info(s"No transformer found at all, formatOpt = None")
+            None
+
+          case Some(format) ⇒
+            log.info(s"Trying to find transformer from format = $format")
+            findForFormat(log, format)
+        }
+      case some ⇒
+        some
     }
 
   def pipelineTransform(
@@ -83,11 +95,11 @@ trait ImageTransformers {
   ): Option[File] = {
 
     log.info(s"BEGIN pipelineTransform($originalFormatOpt, $originalFile, $deleteOriginalFile)")
-    log.info(s"IGNORE originalFormatOpt = $originalFormatOpt, will use only filename")
 
     @tailrec
     def runTransformationRound(
       round: Int,
+      formatOpt: Option[String],
       file: File,
       deleteFileAfterTransform: Boolean
     ): Option[File] = {
@@ -99,17 +111,17 @@ trait ImageTransformers {
           file.delete()
         }
 
-      findForFile(log, file) match {
+      find(log, formatOpt, file) match {
         case None ⇒
-          if(round == 1)
-            log.info(s"No transformer found for $file")
-          else
-            log.info(s"No further transformer found for $file")
+//          if(round == 1)
+//            log.info(s"No transformer found for $file")
+//          else
+//            log.info(s"No further transformer found for $file")
 
           Some(file) // either we transformed or we just return the original
 
         case Some(imageTransformer) ⇒
-          val suggestedFilename = imageTransformer.suggestTransformedFilename(file)
+          val suggestedFilename = imageTransformer.suggestTransformedFilename(formatOpt, file)
           log.info(s"Using $imageTransformer to transform $fileInfo to $suggestedFilename ...")
 
           // the final name after transform() must be the same as the value of `suggestedFilename`
@@ -125,13 +137,13 @@ trait ImageTransformers {
               log.info(s"Transformed $fileInfo to $transformedFile")
               checkDelete()
               log.info(s"===END   Round $round using $imageTransformer for $file")
-              runTransformationRound(round + 1, transformedFile, true)
+              runTransformationRound(round + 1, None, transformedFile, true)
           }
       }
     }
 
     val result =
-      runTransformationRound(1, originalFile, false) match {
+      runTransformationRound(1, originalFormatOpt,originalFile, false) match {
         case None ⇒ None
         case Some(transformedFile) if originalFile.getAbsolutePath == transformedFile.getAbsolutePath ⇒ None
         case some ⇒ some
@@ -145,13 +157,6 @@ trait ImageTransformers {
     log.info(s"END   pipelineTransform($originalFormatOpt, $originalFile, $deleteOriginalFile)")
     result
   }
-
-  def pipelineTransform(
-    log: Logger,
-    originalFile: File,
-    deleteOriginalFile: Boolean
-  ): Option[File] =
-    this.pipelineTransform(log, None, originalFile, deleteOriginalFile)
 }
 
 object ImageTransformers extends ImageTransformers {

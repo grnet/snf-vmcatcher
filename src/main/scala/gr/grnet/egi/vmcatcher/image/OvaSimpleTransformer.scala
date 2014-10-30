@@ -29,31 +29,22 @@ import org.slf4j.Logger
  * One of the present files is an .ovf metadata file and the other one is the image itself.
  *
  */
-class OvaSimpleTransformer extends ImageTransformerSkeleton {
-  protected def canTransformImpl(
-    formatOpt: Option[String],
-    extension: String,
-    file: File
-  ): Boolean =
-    formatOpt match {
-      case Some(".ova") ⇒ true
-      case _ ⇒ extension == ".ova"
-    }
+class OvaSimpleTransformer extends ImageTransformer {
+  protected def canTransformImpl(format: String): Boolean = format == ".ova"
 
-  protected def transformImpl(
+  def transform(
     log: Logger,
     registry: ImageTransformers,
-    formatOpt: Option[String],
-    extension: String,
+    format: String,
     ovaFile: File
   ): Option[File] = {
-    val tmpDir =  Sys.createTempDirectory()
+    val tmpDir    = Sys.createTempDirectory()
     val untarCode = Sys.untar(log, ovaFile, tmpDir)
 
     if(untarCode != 0) {
       log.error(s"EXEC exit code $untarCode")
       log.error(s"IGNORE $ovaFile")
-      None
+      return None
     }
 
     // For now, assume a simple structure:
@@ -75,7 +66,7 @@ class OvaSimpleTransformer extends ImageTransformerSkeleton {
 
         case Some(imageFile) ⇒
           log.info(s"Found image $imageFile")
-          registry.pipelineTransform(log, imageFile, true)  match {
+          registry.pipelineTransform(log, None, imageFile, true)  match {
             case None ⇒
               log.error(s"Unknown transformer for $imageFile from OVA archive $ovaFile")
               None

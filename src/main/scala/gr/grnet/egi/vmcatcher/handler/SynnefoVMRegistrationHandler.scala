@@ -77,7 +77,7 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     log.info(s"imageFile = $imageFile")
 
     // format
-    val format = event(VMCATCHER_EVENT_HV_FORMAT)
+    val format = Sys.fixFormat(event(VMCATCHER_EVENT_HV_FORMAT))
     log.info(s"VMCATCHER_EVENT_HV_FORMAT = $format")
     if(format.isEmpty) {
       log.warn("VMCATCHER_EVENT_HV_FORMAT is empty. Aborting")
@@ -152,7 +152,7 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     log.info("#> handleImageJSON")
 
     val url = new URL(event(VMCATCHER_EVENT_HV_URI))
-    val formatOpt = Some(event(VMCATCHER_EVENT_HV_FORMAT))
+    val formatOpt = Some(Sys.fixFormat(event(VMCATCHER_EVENT_HV_FORMAT)))
 
     val users = "root"
     val rootPartition = "1"

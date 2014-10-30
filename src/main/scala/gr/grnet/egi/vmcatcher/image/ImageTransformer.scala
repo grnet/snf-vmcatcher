@@ -23,8 +23,6 @@ import java.util.Locale
 import gr.grnet.egi.vmcatcher.Sys
 import org.slf4j.Logger
 
-import scala.annotation.tailrec
-
 /**
  * Transform an image to raw format, so that `snf-image-creator` can pick it up.
  *
@@ -39,80 +37,62 @@ import scala.annotation.tailrec
  *
  */
 trait ImageTransformer {
-  def canTransform(formatOpt: Option[String], file: File): Boolean
+  def canTransform(file: File): Boolean = {
+    val extension = Sys.fileExtension(file).toLowerCase(Locale.ENGLISH)
+    canTransform(extension)
+  }
 
-  def transform(log: Logger, registry: ImageTransformers, formatOpt: Option[String], file: File): Option[File]
+  // The file extension takes priority over the optionally provided format
+  def canTransform(formatOpt: Option[String], file: File): Boolean =
+    if(canTransform(file)) {
+      true
+    }
+    else {
+      formatOpt match {
+        case None ⇒ false
+        case Some(format) ⇒ canTransform(format)
+      }
+    }
+
+  protected def canTransformImpl(format0: String): Boolean
+
+  def canTransform(format0: String): Boolean = {
+    val format = Sys.fixFormat(format0)
+    canTransformImpl(format)
+  }
+
+  def transform(log: Logger, registry: ImageTransformers, formatOpt: Option[String], file: File): Option[File] = {
+    val extension = Sys.fileExtension(file).toLowerCase(Locale.ENGLISH)
+    if(canTransform(extension)) {
+      transform(log, registry, extension, file)
+    }
+    else {
+      formatOpt match {
+        case None ⇒
+          None
+
+        case Some(format0) ⇒
+          val format = Sys.fixFormat(format0)
+          if(canTransform(format)) {
+            transform(log, registry, format, file)
+          }
+          else {
+            None
+          }
+      }
+    }
+  }
 
   def transform(log: Logger, registry: ImageTransformers, file: File): Option[File] =
     this.transform(log, registry, None, file)
 
-  def suggestTransformedFilename(filename: String): String = Sys.dropFileExtension(filename)
+  def transform(log: Logger, registry: ImageTransformers, format: String, file: File): Option[File]
 
-  // returns the new formatOpt and the suggested filename
-  def suggestTransformedFilename(formatOpt: Option[String], filename: String): (Option[String], String) =
-    formatOpt match {
-      case None ⇒
-        None → this.suggestTransformedFilename(filename)
-        
-      case Some(format) ⇒
-        val newFormat = Sys.dropFileExtension(format)
-        val newFilename = Sys.dropFileExtensions(filename) + newFormat
-        Some(newFormat) → newFilename
-    }
+  def suggestTransformedFilename(formatOpt: Option[String], filename: String): String =
+    Sys.dropFileExtension(formatOpt, filename)
 
-  def suggestTransformedFilename(file: File): String = this.suggestTransformedFilename(file.getName)
-
-  def suggestTransformedFilename(formatOpt: Option[String], file: File): (Option[String], String) =
-    suggestTransformedFilename(formatOpt, file.getName)
-
-
+  def suggestTransformedFilename(formatOpt: Option[String], file: File): String =
+    this.suggestTransformedFilename(formatOpt, file.getName)
 
   override def toString: String = getClass.getSimpleName
-}
-
-abstract class ImageTransformerSkeleton extends ImageTransformer {
-
-  // A format is made to resemble an extension, that is with a preceding dot.
-  // See the doc of ImageTransformer
-  @tailrec
-  final def fixFormat(format: String): String =
-    if(format.isEmpty)
-      ""
-    else if(format.startsWith("."))
-      format.toLowerCase(Locale.ENGLISH)
-    else
-      fixFormat("." + format)
-
-  def fixFormatOpt(formatOpt: Option[String]): Option[String] =
-    formatOpt.map(fixFormat)
-
-  final def canTransform(formatOpt: Option[String], file: File): Boolean = {
-    val extension = Sys.fileExtension(file).toLowerCase(Locale.ENGLISH)
-    val fixedFormatOpt = fixFormatOpt(formatOpt)
-    canTransformImpl(fixedFormatOpt, extension, file)
-  }
-
-  final def transform(log: Logger, registry: ImageTransformers, formatOpt: Option[String], file: File): Option[File] = {
-    if(!canTransform(formatOpt, file))
-      None
-    else {
-      val extension = Sys.fileExtension(file).toLowerCase(Locale.ENGLISH)
-      val fixedFormatOpt = fixFormatOpt(formatOpt)
-      transformImpl(log, registry, fixedFormatOpt, extension, file)
-    }
-  }
-
-  protected def canTransformImpl(
-    formatOpt: Option[String],
-    extension: String,
-    file: File
-  ): Boolean
-
-  protected def transformImpl(
-    log: Logger,
-    registry: ImageTransformers,
-    formatOpt: Option[String],
-    extension: String,
-    file: File
-  ): Option[File]
 }

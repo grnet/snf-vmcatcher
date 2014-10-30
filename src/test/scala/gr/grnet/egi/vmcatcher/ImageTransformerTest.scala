@@ -33,16 +33,15 @@ class ImageTransformerTest {
   @Test
   def findOne(): Unit = {
     val file = new File("treeThreader.qcow2.gz")
-    ImageTransformers.findForFile(Log, file)
+    assert(ImageTransformers.findForFile(Log, file).isDefined)
   }
 
   @Test
   def suggestTransformedFilename2(): Unit = {
     val filename = "foo.cow.gz"
     val expected = "foo.cow"
-    val (newFormatOpt, suggestedFilename) = Identity.suggestTransformedFilename(None, filename)
+    val suggestedFilename = Identity.suggestTransformedFilename(None, filename)
 
-    Assert.assertEquals(None, newFormatOpt)
     Assert.assertEquals(expected, suggestedFilename)
   }
 
@@ -50,20 +49,8 @@ class ImageTransformerTest {
   def suggestTransformedFilename1(): Unit = {
     val filename = "foo.cow"
     val expected = "foo"
-    val (newFormatOpt, suggestedFilename) = Identity.suggestTransformedFilename(None, filename)
+    val suggestedFilename = Identity.suggestTransformedFilename(None, filename)
 
-    Assert.assertEquals(None, newFormatOpt)
-    Assert.assertEquals(expected, suggestedFilename)
-  }
-
-  @Test
-  def suggestTransformedFilename2Format(): Unit = {
-    val filename = "random.irrelevant"
-    val formatOpt = Some(".cow.gz")
-    val expected = "random.cow"
-    val (newFormatOpt, suggestedFilename) = Identity.suggestTransformedFilename(formatOpt, filename)
-
-    Assert.assertEquals(Some(".cow"), newFormatOpt)
     Assert.assertEquals(expected, suggestedFilename)
   }
 
@@ -71,10 +58,29 @@ class ImageTransformerTest {
   def suggestTransformedFilename1Format(): Unit = {
     val filename = "random.irrelevant"
     val formatOpt = Some(".cow")
-    val expected = "random"
-    val (newFormatOpt, suggestedFilename) = Identity.suggestTransformedFilename(formatOpt, filename)
+    val expected = filename
+    val suggestedFilename = Identity.suggestTransformedFilename(formatOpt, filename)
 
-    Assert.assertEquals(Some(""), newFormatOpt)
+    Assert.assertEquals(expected, suggestedFilename)
+  }
+
+  @Test
+  def suggestTransformedFilename2Format(): Unit = {
+    val filename = "random.irrelevant"
+    val formatOpt = None
+    val expected = "random"
+    val suggestedFilename = Identity.suggestTransformedFilename(formatOpt, filename)
+
+    Assert.assertEquals(expected, suggestedFilename)
+  }
+
+  @Test
+  def suggestTransformedFilename3Format(): Unit = {
+    val filename = "random.irrelevant"
+    val formatOpt = Some(".cow.gz")
+    val expected = filename
+    val suggestedFilename = Identity.suggestTransformedFilename(formatOpt, filename)
+
     Assert.assertEquals(expected, suggestedFilename)
   }
 }

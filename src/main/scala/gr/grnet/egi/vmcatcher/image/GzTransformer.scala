@@ -18,7 +18,6 @@
 package gr.grnet.egi.vmcatcher.image
 
 import java.io.File
-import java.util.Locale
 
 import gr.grnet.egi.vmcatcher.Sys
 import org.slf4j.Logger
@@ -26,28 +25,16 @@ import org.slf4j.Logger
 /**
  *
  */
-class GzTransformer extends ImageTransformerSkeleton {
-  protected def canTransformImpl(
-    formatOpt: Option[String],
-    extension: String,
-    file: File
-  ): Boolean =
-    formatOpt match {
-      case Some(format) if Sys.fileExtension(format).toLowerCase(Locale.ENGLISH) == ".gz" ⇒
-        true
+class GzTransformer extends ImageTransformer {
+  protected def canTransformImpl(format: String): Boolean = format == ".gz"
 
-      case _ ⇒
-        extension == ".gz"
-    }
-
-  protected def transformImpl(
+  def transform(
     log: Logger,
     registry: ImageTransformers,
-    formatOpt: Option[String],
-    extension: String,
+    format: String,
     gzFile: File
   ): Option[File] = {
-    val dropGz = Sys.dropFileExtension(gzFile)
+    val dropGz = Sys.dropFileExtension(gzFile.getName)
     val tmpFile =  Sys.createTempFile("." + dropGz)
     val exitCode = Sys.gunzip(log, gzFile, tmpFile)
 

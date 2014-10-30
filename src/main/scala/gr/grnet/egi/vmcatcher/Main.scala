@@ -284,12 +284,14 @@ object Main extends {
     val kamakiCloud = args.kamakiCloud
     val osfamily = args.osfamily
     val users = args.users
+    val format = args.format
+    val formatOpt = Option(format).map(f ⇒ if(f.startsWith(".")) f else s".$f")
 
     val properties = Sys.minimumImageProperties(osfamily, users)
 
     Sys.downloadAndPublishImageFile(
       Log,
-      None,
+      formatOpt,
       properties,
       kamakiCloud,
       url,
@@ -371,6 +373,7 @@ object Main extends {
     }
     catch {
       case e: ParameterException ⇒
+        System.err.println(e.getMessage)
         Log.error(e.getMessage)
         EXIT(1)
 

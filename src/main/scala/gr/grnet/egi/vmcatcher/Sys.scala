@@ -18,12 +18,13 @@
 package gr.grnet.egi.vmcatcher
 
 import java.io.File
-import java.net.{MalformedURLException, URL}
+import java.net.URL
 import java.nio.file.Files
+import java.util.Locale
 
-import gr.grnet.egi.vmcatcher.event.{ImageEventField, Event}
+import gr.grnet.egi.vmcatcher.event.{Event, ImageEventField}
 import gr.grnet.egi.vmcatcher.image.ImageTransformers
-import okio.{ByteString, Buffer, Sink, Okio}
+import okio.{Buffer, ByteString, Okio}
 import org.slf4j.Logger
 import org.zeroturnaround.exec.ProcessExecutor
 import org.zeroturnaround.exec.stream.slf4j.Slf4jStream
@@ -153,14 +154,31 @@ class Sys {
   /**
    * Computes the filename without the extension
    */
-  def dropFileExtension(filename: String): String = {
+  def dropFileExtension(extOpt: Option[String], filename: String): String = {
     filename.lastIndexOf('.') match {
-      case -1 ⇒ filename
-      case  i ⇒ filename.substring(0, i)
+      case -1 | 0 ⇒ filename
+      case  i ⇒
+        extOpt match {
+          case None ⇒
+            filename.substring(0, i)
+
+          case Some(extension) ⇒
+            val realExtension = filename.substring(i)
+            if(extension.toLowerCase(Locale.ENGLISH) == realExtension.toLowerCase(Locale.ENGLISH)) {
+              filename.substring(0, i)
+            }
+            else {
+              filename
+            }
+        }
     }
   }
 
-  def dropFileExtension(file: File): String = dropFileExtension(file.getName)
+  def dropFileExtension(filename: String): String = dropFileExtension(None, filename)
+
+  def dropFileExtension(file: File): String = dropFileExtension(None, file.getName)
+
+  def dropSpecificFileExtension(extension: String, file: File): String = dropFileExtension(Some(extension), file.getName)
 
   def dropFileExtensions(filename: String): String = {
     @tailrec
@@ -175,8 +193,6 @@ class Sys {
     drop(filename)
   }
 
-  def dropFileExtensions(file: File): String = dropFileExtensions(file.getName)
-
   def filePreExtension(name: String): String = {
     name.lastIndexOf('.') match {
       case -1 ⇒ ""
@@ -187,6 +203,17 @@ class Sys {
   }
 
   def filePreExtension(file: File): String = filePreExtension(file.getName)
+
+  // A format is made to resemble an extension, that is with a preceding dot.
+  // See the doc of ImageTransformer
+  def fixFormat(format: String): String =
+    if(format.isEmpty)
+      ""
+    else if(format.startsWith("."))
+      format.toLowerCase(Locale.ENGLISH)
+    else
+      "." + format.toLowerCase(Locale.ENGLISH)
+
 
   // Constructs the minimum set of image properties (--metafile) and their values.
   def minimumImageProperties(osfamily: String, users: String, rootPartition: String = "1") =

@@ -26,31 +26,18 @@ import org.slf4j.Logger
  * Transforms the majority of qemu-supported formats to `raw` by using `qemu-img`.
  *
  */
-class AllQemuTransformer extends ImageTransformerSkeleton {
-  protected def canTransformImpl(
-    formatOpt: Option[String],
-    extension: String,
-    file: File
-  ): Boolean =
-    formatOpt match {
-      case Some(format) if AllQemuTransformer.SupportedExtensions(format) ⇒
-        true
+class AllQemuTransformer extends ImageTransformer {
+  protected def canTransformImpl(format: String): Boolean = AllQemuTransformer.SupportedExtensions(format)
 
-      case _ ⇒
-        AllQemuTransformer.SupportedExtensions(extension)
-    }
-
-
-  protected def transformImpl(
+  def transform(
     log: Logger,
     registry: ImageTransformers,
-    formatOpt: Option[String],
-    extension: String,
+    format: String,
     imageFile: File
   ): Option[File] = {
-    val inFormat = extension.drop(1) // remove '.'
-    val outFormat = "raw"
-    val tmpFile = Sys.createTempFile("." + Sys.dropFileExtension(imageFile) + "." + outFormat)
+    val inFormat = Sys.fixFormat(format).substring(1) // remove '.'
+    val outFormat = ".raw"
+    val tmpFile = Sys.createTempFile("." + Sys.dropFileExtension(imageFile) + outFormat)
     log.info(s"Transforming $imageFile from $inFormat to $outFormat at $tmpFile")
     Sys.qemuImgConvert(log, inFormat, outFormat, imageFile, tmpFile) match {
       case n if n != 0 ⇒

@@ -49,7 +49,7 @@ class SysTest {
   @Test
   def dropExt0(): Unit = {
     val ext = ".bar"
-    val foo = ""
+    val foo = ext // No file extension to drop if the filename is the extension
     val name = s"$foo$ext"
 
     Assert.assertEquals(foo, Sys.dropFileExtension(name))

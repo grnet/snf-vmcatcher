@@ -211,6 +211,15 @@ object Args {
       validateValueWith = classOf[NotNullValueValidator[_]]
     )
     val users = "root"
+
+    @Parameter(
+      names = Array("-format"),
+      description = "Use this VM format if none can be automatically discovered",
+      required = false,
+      validateWith = classOf[NotEmptyStringValidator],
+      validateValueWith = classOf[NotNullValueValidator[_]]
+    )
+    val format: String = null
   }
 
   @Parameters(
