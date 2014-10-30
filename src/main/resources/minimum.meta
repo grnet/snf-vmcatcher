@@ -1,0 +1,5 @@
+{
+  "OSFAMILY": "linux",
+  "USERS": "root",
+  "ROOT_PARTITION": 1
+}
