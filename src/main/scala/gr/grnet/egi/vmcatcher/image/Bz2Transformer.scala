@@ -20,27 +20,21 @@ package gr.grnet.egi.vmcatcher.image
 import java.io.File
 
 import gr.grnet.egi.vmcatcher.Sys
-import org.slf4j.Logger
 
 /**
  *
  */
 class Bz2Transformer extends ImageTransformer {
-  protected def canTransformImpl(format: String): Boolean = format == ".bz2"
+  protected def canTransformImpl(fixedFormat: String): Boolean = fixedFormat == ".bz2"
 
-  def transform(
-    log: Logger,
-    registry: ImageTransformers,
-    format: String,
-    bz2File: File
-  ): Option[File] = {
-    val dropBz2 = Sys.dropFileExtension(bz2File)
+  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File] = {
+    val dropBz2 = Sys.dropFileExtension(file)
     val tmpFile =  Sys.createTempFile("." + dropBz2)
-    val exitCode = Sys.bunzip2(log, bz2File, tmpFile)
+    val exitCode = Sys.bunzip2(log, file, tmpFile)
 
     if(exitCode != 0) {
       log.error(s"EXEC exit code $exitCode")
-      log.error(s"IGNORE $bz2File")
+      log.error(s"IGNORE $file")
       return None
     }
 

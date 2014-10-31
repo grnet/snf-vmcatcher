@@ -18,6 +18,7 @@
 package gr.grnet.egi.vmcatcher
 
 import java.io.File
+import java.util.Locale
 
 import gr.grnet.egi.vmcatcher.image.{IdentityTransformer, ImageTransformers}
 import org.junit.{Assert, Test}
@@ -33,7 +34,7 @@ class ImageTransformerTest {
   @Test
   def findOne(): Unit = {
     val file = new File("treeThreader.qcow2.gz")
-    assert(ImageTransformers.findForFile(Log, file).isDefined)
+    assert(ImageTransformers.find(None, file).isDefined)
   }
 
   @Test

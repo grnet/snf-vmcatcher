@@ -19,151 +19,88 @@ package gr.grnet.egi.vmcatcher.image
 
 import java.io.File
 
-import org.slf4j.Logger
-
-import scala.annotation.tailrec
+import gr.grnet.egi.vmcatcher.Sys
 
 /**
  *
  */
-trait ImageTransformers {
-  def lastResortTransformerOption: Option[ImageTransformer]
-  
+trait ImageTransformers extends ImageTransformer {
   def transformers: List[ImageTransformer]
 
-  def findForFile(log: Logger, file: File): Option[ImageTransformer] = {
-    def logit(imageTransformer: ImageTransformer) =
-      log.info(s"Found ${imageTransformer.getClass.getSimpleName} for $file")
+  protected def find(format: String): Option[ImageTransformer] =
+    transformers.find(_.canTransform(format))
 
-    transformers.find(_.canTransform(file)) match {
-      case some @ Some(imageTransformer) ⇒
-        logit(imageTransformer)
-        some
+  def find(formatOpt: Option[String], file: File): Option[ImageTransformer] = {
+    val myClass = this.getClass.getSimpleName
+    val callInfo = s"$myClass.find($formatOpt, $file)"
+    log.info(s"BEGIN $callInfo")
 
-      case None ⇒
-        ImageTransformers.lastResortTransformerOption match {
-          case None ⇒ None
-          case some @ Some(imageTransformer) ⇒
-            logit(imageTransformer)
-            some
-        }
-    }
-  }
-
-  def findForFormat(log: Logger, format: String): Option[ImageTransformer] = {
-    def logit(imageTransformer: ImageTransformer) =
-      log.info(s"Found ${imageTransformer.getClass.getSimpleName} for format $format")
-
-    transformers.find(_.canTransform(format)) match {
-      case some @ Some(imageTransformer) ⇒
-        logit(imageTransformer)
-        some
-
-      case None ⇒
-        log.info(s"No transformer found for format = $format")
-        ImageTransformers.lastResortTransformerOption match {
-          case None ⇒ None
-          case some @ Some(imageTransformer) ⇒
-            logit(imageTransformer)
-            some
-        }
-    }
-  }
-
-  def find(log: Logger, formatOpt: Option[String], file: File): Option[ImageTransformer] =
-    findForFile(log, file) match {
-      case None ⇒
-        log.info(s"No transformer found from file $file")
-        formatOpt match {
-          case None ⇒
-            log.info(s"No transformer found at all, formatOpt = None")
-            None
-
-          case Some(format) ⇒
-            log.info(s"Trying to find transformer from format = $format")
-            findForFormat(log, format)
-        }
-      case some ⇒
-        some
-    }
-
-  def pipelineTransform(
-    log: Logger,
-    originalFormatOpt: Option[String],
-    originalFile: File,
-    deleteOriginalFile: Boolean
-  ): Option[File] = {
-
-    log.info(s"BEGIN pipelineTransform($originalFormatOpt, $originalFile, $deleteOriginalFile)")
-
-    @tailrec
-    def runTransformationRound(
-      round: Int,
-      formatOpt: Option[String],
-      file: File,
-      deleteFileAfterTransform: Boolean
-    ): Option[File] = {
-      def fileInfo = s"$file"
-
-      def checkDelete() =
-        if(deleteFileAfterTransform) {
-          log.info(s"Deleting intermediate file $file")
-          file.delete()
-        }
-
-      find(log, formatOpt, file) match {
+    try {
+      val extension = Sys.fileExtension(file)
+      find(extension) match {
         case None ⇒
-//          if(round == 1)
-//            log.info(s"No transformer found for $file")
-//          else
-//            log.info(s"No further transformer found for $file")
-
-          Some(file) // either we transformed or we just return the original
-
-        case Some(imageTransformer) ⇒
-          val suggestedFilename = imageTransformer.suggestTransformedFilename(formatOpt, file)
-          log.info(s"Using $imageTransformer to transform $fileInfo to $suggestedFilename ...")
-
-          // the final name after transform() must be the same as the value of `suggestedFilename`
-          log.info(s"===BEGIN Round $round using $imageTransformer for $file")
-          imageTransformer.transform(log, this, file) match {
+          log.info(s"No transformer found from extension '$extension' of file $file")
+          formatOpt match {
             case None ⇒
-              log.error(s"Could not transform $fileInfo using $imageTransformer")
-              checkDelete()
-              log.info(s"===END   Round $round using $imageTransformer for $file")
+              log.info(s"No transformer found at all, since auxiliary format does not exist")
               None
 
-            case Some(transformedFile) ⇒
-              log.info(s"Transformed $fileInfo to $transformedFile")
-              checkDelete()
-              log.info(s"===END   Round $round using $imageTransformer for $file")
-              runTransformationRound(round + 1, None, transformedFile, true)
+            case Some(format) ⇒
+              log.info(s"Trying to find transformer from auxiliary format '$format'")
+              find(format) match {
+                case None ⇒
+                  log.info(s"No transformer found for format '$format' or extension '$extension'")
+                  None
+                case some @ Some(transformer) ⇒
+                  log.info(s"Found transformer $transformer from format '$format'")
+                  some
+              }
           }
+
+        case some @ Some(transformer) ⇒
+          log.info(s"Found transformer $transformer from extension '$extension' of file $file")
+          some
       }
     }
-
-    val result =
-      runTransformationRound(1, originalFormatOpt,originalFile, false) match {
-        case None ⇒ None
-        case Some(transformedFile) if originalFile.getAbsolutePath == transformedFile.getAbsolutePath ⇒ None
-        case some ⇒ some
-      }
-
-    if(deleteOriginalFile) {
-      log.info(s"Deleting original file $originalFile")
-      originalFile.delete()
-    }
-
-    log.info(s"END   pipelineTransform($originalFormatOpt, $originalFile, $deleteOriginalFile)")
-    result
+    finally log.info(s"END   $callInfo")
   }
+
+  protected def canTransformImpl(fixedFormat: String): Boolean = find(fixedFormat).isDefined
+  
+  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File] = {
+    find(format) match {
+      case None ⇒ None
+      case Some(transformer) ⇒
+        transformer.transformImpl(registry, format, file) match {
+          case None ⇒
+            log.error(s"$transformer should have transformed $file via format '$format'")
+            None
+
+          case some@Some(transformed) ⇒
+            if(!transformer.isRaw) {
+              val extension = Sys.fileExtension(transformed)
+              transformImpl(registry, extension, transformed) match {
+                case None ⇒
+                  some
+
+                case finalSome@Some(finalTransformed) ⇒
+                  log.info(s"Deleting intermediate $finalTransformed")
+                  transformed.delete()
+                  finalSome
+              }
+            }
+            else some
+        }
+    }
+  }
+
+  def transform(formatOpt: Option[String], file: File): Option[File] =
+    transform(this, formatOpt, file)
 }
 
 object ImageTransformers extends ImageTransformers {
-  final val lastResortTransformerOption: Option[ImageTransformer] =
-    None
-
   final val transformers = List(
+    new RawTransformer,
     new AllQemuTransformer,
     new GzTransformer,
     new Bz2Transformer,

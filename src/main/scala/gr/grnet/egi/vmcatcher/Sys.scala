@@ -241,7 +241,7 @@ class Sys {
     deleteImageAfterTransform: Boolean
   ): Unit = {
 
-    val transformedImageFileOpt = imageTransformers.pipelineTransform(log, formatOpt, imageFile, deleteImageAfterTransform)
+    val transformedImageFileOpt = imageTransformers.transform(formatOpt, imageFile)
     transformedImageFileOpt match {
       case None ⇒
         log.error(s"Unknown (unexpected) transformer for $imageFile")
@@ -256,7 +256,7 @@ class Sys {
             tname0.substring(tname0.indexOf('.') + 1)
           else
             tname0
-        val tnamePrefix = "vmcatcher-" // TODO Make it configurab
+        val tnamePrefix = "vmcatcher-" // TODO Make it configurable
         val tname = tnamePrefix + Sys.dropFileExtension(tname1)
         log.info(s"Name of image to upload is $tname")
 
@@ -275,7 +275,7 @@ class Sys {
           }
         }
         finally {
-          if(imageFile.getAbsolutePath != transformedImageFile.getAbsolutePath) {
+          if(deleteImageAfterTransform /*&& imageFile.getAbsolutePath != transformedImageFile.getAbsolutePath*/) {
             log.info(s"Deleting temporary $transformedImageFile")
             transformedImageFile.delete()
           }
@@ -293,7 +293,22 @@ class Sys {
 
       urlBuffer.readAll(fileSink)
     }
-    finally in.close()
+    finally {
+      in.close()
+
+      // not the best efficiency but the best of fun
+      val length = file.length()
+      val sizeB = length → "bytes"
+      val sizeKB = (length / 1024) → "KB"
+      val sizeMB = (length / (1024 * 1024)) → "MB"
+      val sizeGB = (length / (1024 * 1024 * 1024)) → "GB"
+
+      val sizeOpt = List(sizeGB, sizeMB, sizeKB, sizeB).find(_._1 > 0)
+      val size = sizeOpt.getOrElse(sizeB)
+      val sizeStr = size.productIterator.mkString(" ")
+
+      log.info(s"Size of $file is $sizeStr")
+    }
   }
 
   def createTempImageFile(filename: String): File = Sys.createTempFile("." + filename)

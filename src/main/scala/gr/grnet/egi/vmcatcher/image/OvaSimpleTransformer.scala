@@ -21,7 +21,6 @@ import java.io.File
 import java.util.Locale
 
 import gr.grnet.egi.vmcatcher.Sys
-import org.slf4j.Logger
 
 /**
  * Given an OVA file, extracts the VM image file.
@@ -30,20 +29,15 @@ import org.slf4j.Logger
  *
  */
 class OvaSimpleTransformer extends ImageTransformer {
-  protected def canTransformImpl(format: String): Boolean = format == ".ova"
+  protected def canTransformImpl(fixedFormat: String): Boolean = fixedFormat == ".ova"
 
-  def transform(
-    log: Logger,
-    registry: ImageTransformers,
-    format: String,
-    ovaFile: File
-  ): Option[File] = {
+  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File] = {
     val tmpDir    = Sys.createTempDirectory()
-    val untarCode = Sys.untar(log, ovaFile, tmpDir)
+    val untarCode = Sys.untar(log, file, tmpDir)
 
     if(untarCode != 0) {
       log.error(s"EXEC exit code $untarCode")
-      log.error(s"IGNORE $ovaFile")
+      log.error(s"IGNORE $file")
       return None
     }
 
@@ -60,15 +54,15 @@ class OvaSimpleTransformer extends ImageTransformer {
     try {
       imageFileOpt match {
         case None ⇒
-          val msg = s"Could not find image in archive $ovaFile"
+          val msg = s"Could not find image in archive $file"
           log.error(msg)
           None
 
         case Some(imageFile) ⇒
           log.info(s"Found image $imageFile")
-          registry.pipelineTransform(log, None, imageFile, true)  match {
+          registry.transform(None, imageFile) match {
             case None ⇒
-              log.error(s"Unknown transformer for $imageFile from OVA archive $ovaFile")
+              log.error(s"Unknown transformer for $imageFile from OVA archive $file")
               None
 
             case some ⇒

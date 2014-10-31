@@ -20,28 +20,22 @@ package gr.grnet.egi.vmcatcher.image
 import java.io.File
 
 import gr.grnet.egi.vmcatcher.Sys
-import org.slf4j.Logger
 
 /**
  * Transforms the majority of qemu-supported formats to `raw` by using `qemu-img`.
  *
  */
 class AllQemuTransformer extends ImageTransformer {
-  protected def canTransformImpl(format: String): Boolean = AllQemuTransformer.SupportedExtensions(format)
+  protected def canTransformImpl(fixedFormat: String): Boolean = AllQemuTransformer.SupportedExtensions(fixedFormat)
 
-  def transform(
-    log: Logger,
-    registry: ImageTransformers,
-    format: String,
-    imageFile: File
-  ): Option[File] = {
-    val inFormat = Sys.fixFormat(format).substring(1) // remove '.'
-    val outFormat = ".raw"
-    val tmpFile = Sys.createTempFile("." + Sys.dropFileExtension(imageFile) + outFormat)
-    log.info(s"Transforming $imageFile from $inFormat to $outFormat at $tmpFile")
-    Sys.qemuImgConvert(log, inFormat, outFormat, imageFile, tmpFile) match {
+  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File] = {
+    val inFormatStripped = Sys.fixFormat(format).substring(1) // remove '.'
+    val outFormatStripped = "raw"
+    val tmpFile = Sys.createTempFile("." + Sys.dropFileExtension(file) + "." + outFormatStripped)
+    log.info(s"Transforming $file from $inFormatStripped to $outFormatStripped at $tmpFile")
+    Sys.qemuImgConvert(log, inFormatStripped, outFormatStripped, file, tmpFile) match {
       case n if n != 0 ⇒
-        val msg = s"Could not transform image $imageFile from $inFormat to $outFormat"
+        val msg = s"Could not transform image $file from $inFormatStripped to $outFormatStripped"
         log.error(msg)
         None
 

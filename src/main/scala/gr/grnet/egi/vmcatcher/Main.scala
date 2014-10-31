@@ -335,7 +335,7 @@ object Main extends {
     val imageURL = args.url
     val imageFile = Sys.createTempImageFile(imageURL)
     Sys.downloadToFile(Log, imageURL, imageFile)
-    val tramsformedFileOpt = ImageTransformers.pipelineTransform(Log, None, imageFile, true)
+    val tramsformedFileOpt = ImageTransformers.transform(None, imageFile)
     for {
       transformedFile ← tramsformedFileOpt
     } {

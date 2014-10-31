@@ -20,7 +20,7 @@ package gr.grnet.egi.vmcatcher.image
 import java.io.File
 import java.util.Locale
 
-import gr.grnet.egi.vmcatcher.Sys
+import gr.grnet.egi.vmcatcher.{Main, Sys}
 import org.slf4j.Logger
 
 /**
@@ -28,65 +28,56 @@ import org.slf4j.Logger
  *
  * There are two parameters that govern the selection of the appropriate transformer:
  * a) `formatOpt`, which is an optional format and b) `file`, which is the actual file we
- * want to transform. By design, the `formatOpt`, if defined, takes precedence. The rationale
- * for this precedence rule is that when an image is described in an image list, a field called
- * `hv:format` indicates the format, so this should be preferred over the filename. Our current usage
- * scenarios/patterns indicate that the `hv:format` field resembles a file extension (e.g. `.cpio.gz`),
- * so an implementation can rely on this fact and unify the handling of both `formatOpt` and `file` should
- * the filename extension of `file` be taken into account.
- *
+ * want to transform. By design, the `file` extension is interpreted as a format and takes
+ * precedence over `formatOpt`.
  */
 trait ImageTransformer {
-  def canTransform(file: File): Boolean = {
-    val extension = Sys.fileExtension(file).toLowerCase(Locale.ENGLISH)
-    canTransform(extension)
+  def log: Logger = Main.Log
+
+  protected def canTransformImpl(fixedFormat: String): Boolean
+
+  def isRaw: Boolean = false
+
+  def canTransform(format: String): Boolean = {
+    val fixedFormat = Sys.fixFormat(format)
+    canTransformImpl(fixedFormat)
   }
 
-  // The file extension takes priority over the optionally provided format
-  def canTransform(formatOpt: Option[String], file: File): Boolean =
-    if(canTransform(file)) {
-      true
-    }
-    else {
-      formatOpt match {
-        case None ⇒ false
-        case Some(format) ⇒ canTransform(format)
+  def transform(registry: ImageTransformers, formatOpt: Option[String], file: File): Option[File] = {
+    val myClass = this.getClass.getSimpleName
+    val callInfo = s"$myClass.transform($formatOpt, $file)"
+    log.info(s"BEGIN $callInfo")
+
+    try {
+      val extension = Sys.fileExtension(file).toLowerCase(Locale.ENGLISH)
+      if(canTransform(extension)) {
+        log.info(s"Transforming by extension '$extension'")
+        transformImpl(registry, extension, file)
       }
-    }
-
-  protected def canTransformImpl(format0: String): Boolean
-
-  def canTransform(format0: String): Boolean = {
-    val format = Sys.fixFormat(format0)
-    canTransformImpl(format)
-  }
-
-  def transform(log: Logger, registry: ImageTransformers, formatOpt: Option[String], file: File): Option[File] = {
-    val extension = Sys.fileExtension(file).toLowerCase(Locale.ENGLISH)
-    if(canTransform(extension)) {
-      transform(log, registry, extension, file)
-    }
-    else {
-      formatOpt match {
-        case None ⇒
-          None
-
-        case Some(format0) ⇒
-          val format = Sys.fixFormat(format0)
-          if(canTransform(format)) {
-            transform(log, registry, format, file)
-          }
-          else {
+      else {
+        formatOpt match {
+          case None ⇒
+            log.info(s"No auxiliary format, cannot proceed further, not transformed")
             None
-          }
+
+          case Some(format0) ⇒
+            val format = Sys.fixFormat(format0)
+            log.info(s"Could not transform by extension '$extension', see if can transform by format '$format'")
+            if(canTransform(format)) {
+              log.info(s"Transforming by format '$format'")
+              transformImpl(registry, format, file)
+            }
+            else {
+              log.info(s"Could not transform by extension '$extension' or format '$format'")
+              None
+            }
+        }
       }
     }
+    finally log.info(s"END   $callInfo")
   }
 
-  def transform(log: Logger, registry: ImageTransformers, file: File): Option[File] =
-    this.transform(log, registry, None, file)
-
-  def transform(log: Logger, registry: ImageTransformers, format: String, file: File): Option[File]
+  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File]
 
   def suggestTransformedFilename(formatOpt: Option[String], filename: String): String =
     Sys.dropFileExtension(formatOpt, filename)

@@ -19,15 +19,13 @@ package gr.grnet.egi.vmcatcher.image
 
 import java.io.File
 
-import org.slf4j.Logger
-
 /**
  *
  */
 class IdentityTransformer extends ImageTransformer {
-  protected def canTransformImpl(format: String): Boolean = true
+  protected def canTransformImpl(fixedFormat: String): Boolean = true
 
-  def transform(log: Logger, registry: ImageTransformers, format: String, file: File): Option[File] = {
+  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File] = {
     log.info(s"Assume $file is a raw image file")
     Some(file)
   }

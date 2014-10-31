@@ -19,25 +19,16 @@ package gr.grnet.egi.vmcatcher.image
 
 import java.io.File
 
-import gr.grnet.egi.vmcatcher.Sys
-
 /**
  *
  */
-class GzTransformer extends ImageTransformer {
-  protected def canTransformImpl(fixedFormat: String): Boolean = fixedFormat == ".gz"
+class RawTransformer extends ImageTransformer {
+  protected def canTransformImpl(fixedFormat: String): Boolean = fixedFormat == ".raw"
 
   private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File] = {
-    val dropGz = Sys.dropFileExtension(file.getName)
-    val tmpFile =  Sys.createTempFile("." + dropGz)
-    val exitCode = Sys.gunzip(log, file, tmpFile)
-
-    if(exitCode != 0) {
-      log.error(s"EXEC exit code $exitCode")
-      log.error(s"IGNORE $file")
-      return None
-    }
-
-    Some(tmpFile)
+    log.info(s"Assuming $file is indeed a raw image file")
+    Some(file)
   }
+
+  override def isRaw: Boolean = true
 }
