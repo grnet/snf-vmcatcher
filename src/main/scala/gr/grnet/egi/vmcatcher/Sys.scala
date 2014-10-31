@@ -98,6 +98,7 @@ class Sys {
         "image", "register",
         "--cloud", rcCloudName,
         "--public",
+        "--force",
         "--metafile", metaFile.getAbsolutePath,
         "--upload-image-file", imageFile.getAbsolutePath,
         "--name", name,
