@@ -33,6 +33,7 @@ class OvaSimpleTransformer extends ImageTransformer {
 
   private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File] = {
     val tmpDir    = Sys.createTempDirectory()
+    log.info(s"Extract $file to $tmpDir")
     val untarCode = Sys.untar(log, file, tmpDir)
 
     if(untarCode != 0) {
@@ -71,6 +72,7 @@ class OvaSimpleTransformer extends ImageTransformer {
       }
     }
     finally {
+      log.info(s"Deleting temporary folder $tmpDir")
       Sys.rmrf(log, tmpDir)
     }
   }

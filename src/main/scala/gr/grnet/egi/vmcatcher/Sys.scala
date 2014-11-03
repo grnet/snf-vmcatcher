@@ -36,7 +36,6 @@ class Sys {
     val pe = new ProcessExecutor().
       command(args:_*).
       exitValueAny().
-      readOutput(true).
       redirectErrorStream(true).
       redirectOutput(System.out).
       redirectOutputAlsoTo(Slf4jStream.of(log).asInfo())
@@ -237,17 +236,21 @@ class Sys {
     properties: Map[String, String],
     imageFile: File,
     kamakiCloud: String,
-    imageTransformers: ImageTransformers,
-    deleteImageAfterTransform: Boolean
+    imageTransformers: ImageTransformers
   ): Unit = {
 
     val transformedImageFileOpt = imageTransformers.transform(formatOpt, imageFile)
     transformedImageFileOpt match {
       case None ⇒
-        log.error(s"Unknown (unexpected) transformer for $imageFile")
+        log.error(s"publishVmImageFile(): Unknown (unexpected) transformer for $imageFile")
 
       case Some(transformedImageFile) ⇒
-        log.info(s"Transformed $imageFile to $transformedImageFile")
+        if(imageFile == transformedImageFile) {
+          log.info(s"publishVmImageFile(): No transformation needed for $imageFile")
+        }
+        else {
+          log.info(s"publishVmImageFile(): Transformed $imageFile to $transformedImageFile")
+        }
 
         // Now make a better name
         val tname0 = transformedImageFile.getName
@@ -258,27 +261,24 @@ class Sys {
             tname0
         val tnamePrefix = "vmcatcher-" // TODO Make it configurable
         val tname = tnamePrefix + Sys.dropFileExtension(tname1)
-        log.info(s"Name of image to upload is $tname")
+        log.info(s"publishVmImageFile(): Name of image to upload is $tname")
 
-        try {
-          val kamakiExitCode =
-            Sys.kamakiRegisterRawImage(
-              log,
-              kamakiCloud,
-              properties,
-              transformedImageFile,
-              tname
-            )
+        val kamakiExitCode =
+          Sys.kamakiRegisterRawImage(
+            log,
+            kamakiCloud,
+            properties,
+            transformedImageFile,
+            tname
+          )
 
-          if(kamakiExitCode != 0) {
-            log.error(s"Could not register image $imageFile to $kamakiCloud")
-          }
+        if(kamakiExitCode != 0) {
+          log.error(s"Could not register image $imageFile to $kamakiCloud")
         }
-        finally {
-          if(deleteImageAfterTransform /*&& imageFile.getAbsolutePath != transformedImageFile.getAbsolutePath*/) {
-            log.info(s"Deleting temporary $transformedImageFile")
-            transformedImageFile.delete()
-          }
+
+        if(transformedImageFile != imageFile) {
+          log.info(s"Deleting transformed published file $transformedImageFile")
+          transformedImageFile.delete()
         }
     }
   }
@@ -322,7 +322,11 @@ class Sys {
   def getImage(log: Logger, url: URL): GetImage = {
     url.getProtocol match {
       case "file" ⇒
-        GetImage(isTemporary = false, new File(url.getFile))
+        val file = new File(url.getFile)
+        if(!file.isFile) {
+          throw new Exception(s"Image file $file is not a file!")
+        }
+        GetImage(isTemporary = false, file = file)
 
       case _ ⇒
         val imageFile = Sys.createTempImageFile(url)
@@ -341,8 +345,13 @@ class Sys {
   ): Unit = {
     val GetImage(isTemporary, imageFile) = Sys.getImage(log, url)
 
-    try     Sys.publishVmImageFile(log, formatOpt, properties, imageFile, kamakiCloud, imageTransformers, isTemporary)
-    finally imageFile.delete()
+    try     Sys.publishVmImageFile(log, formatOpt, properties, imageFile, kamakiCloud, imageTransformers)
+    finally {
+      if(isTemporary) {
+        log.info(s"Deleting temporary $imageFile")
+        imageFile.delete()
+      }
+    }
   }
 }
 

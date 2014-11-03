@@ -105,8 +105,7 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
       properties,
       imageFile,
       kamakiCloud,
-      imageTransformers,
-      false
+      imageTransformers
     )
   }
 

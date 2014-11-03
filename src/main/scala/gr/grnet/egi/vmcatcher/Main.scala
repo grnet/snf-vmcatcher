@@ -333,14 +333,21 @@ object Main extends {
 
   def do_transform(args: Args.Transform): Unit = {
     val imageURL = args.url
-    val imageFile = Sys.createTempImageFile(imageURL)
-    Sys.downloadToFile(Log, imageURL, imageFile)
-    val tramsformedFileOpt = ImageTransformers.transform(None, imageFile)
-    for {
-      transformedFile ← tramsformedFileOpt
-    } {
-      Log.info(s"Transformed $imageURL to $transformedFile.")
-      transformedFile.delete()
+    val GetImage(isTemporary, imageFile) = Sys.getImage(Log, imageURL)
+
+    try {
+      val tramsformedFileOpt = ImageTransformers.transform(None, imageFile)
+      for {
+        transformedFile ← tramsformedFileOpt
+      } {
+        Log.info(s"do_transform(): Transformed $imageURL to $transformedFile.")
+      }
+    }
+    finally {
+      if(isTemporary){
+        Log.info(s"do_transform(): Deleting temporary $imageFile")
+        imageFile.delete()
+      }
     }
   }
 
@@ -378,10 +385,12 @@ object Main extends {
         EXIT(1)
 
       case e: Exception ⇒
+        System.err.println(e.getMessage)
         Log.error("", e)
         EXIT(2)
 
       case e: Throwable ⇒
+        System.err.println(e.getMessage)
         Log.error("", e)
         EXIT(3)
     }

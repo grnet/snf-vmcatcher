@@ -36,8 +36,6 @@ trait ImageTransformer {
 
   protected def canTransformImpl(fixedFormat: String): Boolean
 
-  def isRaw: Boolean = false
-
   def canTransform(format: String): Boolean = {
     val fixedFormat = Sys.fixFormat(format)
     canTransformImpl(fixedFormat)
@@ -49,8 +47,13 @@ trait ImageTransformer {
     log.info(s"BEGIN $callInfo")
 
     try {
-      val extension = Sys.fileExtension(file).toLowerCase(Locale.ENGLISH)
-      if(canTransform(extension)) {
+      val extension = Sys.fixFormat(Sys.fileExtension(file))
+
+      if(ImageTransformers.isRaw(extension)) {
+        log.info(s"Is already raw by extension. Returning same file")
+        Some(file)
+      }
+      else if(canTransform(extension)) {
         log.info(s"Transforming by extension '$extension'")
         transformImpl(registry, extension, file)
       }
@@ -63,7 +66,12 @@ trait ImageTransformer {
           case Some(format0) ⇒
             val format = Sys.fixFormat(format0)
             log.info(s"Could not transform by extension '$extension', see if can transform by format '$format'")
-            if(canTransform(format)) {
+
+            if(ImageTransformers.isRaw(format)) {
+              log.info(s"Is already in raw format. Returning same file")
+              Some(file)
+            }
+            else if(canTransform(format)) {
               log.info(s"Transforming by format '$format'")
               transformImpl(registry, format, file)
             }

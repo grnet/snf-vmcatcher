@@ -67,29 +67,47 @@ trait ImageTransformers extends ImageTransformer {
 
   protected def canTransformImpl(fixedFormat: String): Boolean = find(fixedFormat).isDefined
   
-  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File] = {
+  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File] =
+    transformImpl(registry, format, file, deleteFileAfterTransform = false)
+
+  private[image] def transformImpl(
+    registry: ImageTransformers,
+    format: String,
+    file: File,
+    deleteFileAfterTransform: Boolean
+  ): Option[File] = {
     find(format) match {
-      case None ⇒ None
+      case None ⇒
+        None
+
       case Some(transformer) ⇒
         transformer.transformImpl(registry, format, file) match {
           case None ⇒
             log.error(s"$transformer should have transformed $file via format '$format'")
+            log.error(s"Not deleting untransformed $file")
             None
 
-          case some@Some(transformed) ⇒
-            if(!transformer.isRaw) {
-              val extension = Sys.fileExtension(transformed)
-              transformImpl(registry, extension, transformed) match {
-                case None ⇒
-                  some
+          case some0 @ Some(transformed0) ⇒
+            val extension = Sys.fixFormat(Sys.fileExtension(transformed0))
+            transformImpl(registry, extension, transformed0, deleteFileAfterTransform = true) match {
+              case None ⇒
+                if(deleteFileAfterTransform) {
+                  log.info(s"Deleting file $file")
+                  file.delete()
+                }
+                some0
 
-                case finalSome@Some(finalTransformed) ⇒
-                  log.info(s"Deleting intermediate $finalTransformed")
-                  transformed.delete()
-                  finalSome
-              }
+              case some1 @ Some(transformed1) ⇒
+                if(deleteFileAfterTransform) {
+                  log.info(s"Deleting file $file")
+                  file.delete()
+                }
+                if(transformed0 != file) {
+                  log.info(s"Deleting transformed0 $file")
+                  transformed0.delete()
+                }
+                some1
             }
-            else some
         }
     }
   }
@@ -100,10 +118,11 @@ trait ImageTransformers extends ImageTransformer {
 
 object ImageTransformers extends ImageTransformers {
   final val transformers = List(
-    new RawTransformer,
     new AllQemuTransformer,
     new GzTransformer,
     new Bz2Transformer,
     new OvaSimpleTransformer
   )
+
+  def isRaw(format: String): Boolean = Sys.fixFormat(format) == ".raw"
 }
