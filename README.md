@@ -100,6 +100,8 @@ Usage: gr.grnet.egi.vmcatcher.Main [options] [command] [command options]
     register-now      Directly register the corresponding VM instance. This is helpful in debugging
       Usage: register-now [options]
         Options:
+          -format
+             Use this VM format if none can be automatically discovered
         * -kamaki-cloud
              The name of the cloud from ~/.kamakirc that will be used by kamaki
              for VM upload
