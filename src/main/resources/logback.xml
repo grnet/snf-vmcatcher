@@ -19,7 +19,7 @@
 <configuration>
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>
-      <pattern>%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%30.30class:%12.12method:%3.3line] | %msg%n</pattern>
+      <pattern>%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%30.30class:%3.3line] | %msg%n</pattern>
     </encoder>
   </appender>
 
@@ -31,7 +31,7 @@
       <maxHistory>30</maxHistory>
     </rollingPolicy>
     <encoder>
-      <pattern>%-5level %d{yyyyMMdd HHmmss.SSS} [%30.30class:%12.12method:%3.3line] | %msg%n</pattern>
+      <pattern>%-5level %d{yyyyMMdd HHmmss.SSS} [%30.30class:%3.3line] | %msg%n</pattern>
     </encoder>
   </appender>
 
