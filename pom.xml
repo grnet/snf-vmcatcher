@@ -145,7 +145,7 @@
       <resource>
         <directory>${basedir}/src/main/resources</directory>
         <excludes>
-          <exclude>aquarium.properties</exclude>
+          <exclude>foobar.properties</exclude>
         </excludes>
       </resource>
       <resource>
