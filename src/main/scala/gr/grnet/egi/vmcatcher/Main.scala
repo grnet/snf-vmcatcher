@@ -341,6 +341,8 @@ object Main extends {
         transformedFile ← tramsformedFileOpt
       } {
         Log.info(s"do_transform(): Transformed $imageURL to $transformedFile.")
+        System.out.println(s"Transformed $imageURL to $transformedFile. Do not forget to delete the temporary file.")
+        System.out.println(s"$transformedFile")
       }
     }
     finally {
