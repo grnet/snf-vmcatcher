@@ -328,7 +328,9 @@ object Main extends {
     }
 
     val howmany = drainLoop(0)
-    Log.info(s"Drained $howmany messages")
+    val msg = s"Drained $howmany messages"
+    Log.info(msg)
+    System.out.println(msg)
   }
 
   def do_transform(args: Args.Transform): Unit = {
