@@ -26,7 +26,7 @@ import com.typesafe.config.ConfigRenderOptions
 import gr.grnet.egi.vmcatcher.cmdline.Args
 import gr.grnet.egi.vmcatcher.cmdline.Args.ParsedCmdLine
 import gr.grnet.egi.vmcatcher.event._
-import gr.grnet.egi.vmcatcher.image.ImageTransformers
+import gr.grnet.egi.vmcatcher.image.transformer.ImageTransformers
 import gr.grnet.egi.vmcatcher.rabbit.{Rabbit, RabbitConnector}
 import okio.Okio
 import org.slf4j.LoggerFactory

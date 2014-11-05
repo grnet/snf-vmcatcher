@@ -19,7 +19,7 @@ package gr.grnet.egi.vmcatcher.cmdline
 
 import com.beust.jcommander.IStringConverter
 import gr.grnet.egi.vmcatcher.Main
-import gr.grnet.egi.vmcatcher.handler.DequeueHandler
+import gr.grnet.egi.vmcatcher.image.handler.DequeueHandler
 
 /**
  *

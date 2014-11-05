@@ -84,9 +84,9 @@ Usage: gr.grnet.egi.vmcatcher.Main [options] [command] [command options]
              The configuration file the application uses
           -handler
              The Java class that will handle a message from RabbitMQ. Use
-             gr.grnet.egi.vmcatcher.handler.SynnefoVMRegistrationHandler for the standard behavior. Other values are
-             gr.grnet.egi.vmcatcher.handler.JustLogHandler and gr.grnet.egi.vmcatcher.handler.ThrowingHandler
-             Default: gr.grnet.egi.vmcatcher.handler.SynnefoVMRegistrationHandler
+             gr.grnet.egi.vmcatcher.image.handler.SynnefoVMRegistrationHandler for the standard behavior. Other values are
+             gr.grnet.egi.vmcatcher.image.handler.JustLogHandler and gr.grnet.egi.vmcatcher.image.handler.ThrowingHandler
+             Default: gr.grnet.egi.vmcatcher.image.handler.SynnefoVMRegistrationHandler
         * -kamaki-cloud
              The name of the cloud from ~/.kamakirc that will be used by kamaki
              for VM upload

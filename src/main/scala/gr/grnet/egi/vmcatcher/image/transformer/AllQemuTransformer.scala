@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.image
+package gr.grnet.egi.vmcatcher.image.transformer
 
 import java.io.File
 

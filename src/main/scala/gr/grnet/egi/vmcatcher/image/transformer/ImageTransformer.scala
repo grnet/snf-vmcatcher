@@ -15,10 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.image
+package gr.grnet.egi.vmcatcher.image.transformer
 
 import java.io.File
-import java.util.Locale
 
 import gr.grnet.egi.vmcatcher.{Main, Sys}
 import org.slf4j.Logger

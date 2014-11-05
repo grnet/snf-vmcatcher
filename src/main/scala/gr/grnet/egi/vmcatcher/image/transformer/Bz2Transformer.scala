@@ -15,22 +15,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.handler
+package gr.grnet.egi.vmcatcher.image.transformer
 
-import gr.grnet.egi.vmcatcher.event.Event
-import gr.grnet.egi.vmcatcher.image.ImageTransformers
-import org.slf4j.Logger
+import java.io.File
+
+import gr.grnet.egi.vmcatcher.Sys
 
 /**
  *
  */
-class JustLogHandler extends DequeueHandler {
-  def handle(
-    log: Logger,
-    event: Event,
-    kamakiCloud: String,
-    imageTransformers: ImageTransformers
-  ): Unit = {
-    log.info(s"event = $event")
+class Bz2Transformer extends ImageTransformer {
+  protected def canTransformImpl(fixedFormat: String): Boolean = fixedFormat == ".bz2"
+
+  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File] = {
+    val dropBz2 = Sys.dropFileExtension(file)
+    val tmpFile =  Sys.createTempFile("." + dropBz2)
+    val exitCode = Sys.bunzip2(log, file, tmpFile)
+
+    if(exitCode != 0) {
+      log.error(s"EXEC exit code $exitCode")
+      log.error(s"IGNORE $file")
+      return None
+    }
+
+    Some(tmpFile)
   }
 }

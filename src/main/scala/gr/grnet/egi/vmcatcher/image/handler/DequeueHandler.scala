@@ -15,10 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.handler
+package gr.grnet.egi.vmcatcher.image.handler
 
 import gr.grnet.egi.vmcatcher.event.Event
-import gr.grnet.egi.vmcatcher.image.ImageTransformers
+import gr.grnet.egi.vmcatcher.image.transformer.ImageTransformers
 import org.slf4j.Logger
 
 /**

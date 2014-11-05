@@ -23,7 +23,7 @@ import java.nio.file.Files
 import java.util.Locale
 
 import gr.grnet.egi.vmcatcher.event.{Event, ImageEventField}
-import gr.grnet.egi.vmcatcher.image.ImageTransformers
+import gr.grnet.egi.vmcatcher.image.transformer.ImageTransformers
 import okio.{Buffer, ByteString, Okio}
 import org.slf4j.Logger
 import org.zeroturnaround.exec.ProcessExecutor

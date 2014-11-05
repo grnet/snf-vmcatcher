@@ -21,7 +21,7 @@ import java.net.URL
 
 import com.beust.jcommander._
 import gr.grnet.egi.vmcatcher.Main
-import gr.grnet.egi.vmcatcher.handler.DequeueHandler
+import gr.grnet.egi.vmcatcher.image.handler.DequeueHandler
 
 /**
  *
@@ -163,11 +163,11 @@ object Args {
 
     @Parameter(
       names = Array("-handler"),
-      description = "The Java class that will handle a message from RabbitMQ. Use gr.grnet.egi.vmcatcher.handler.SynnefoVMRegistrationHandler for the standard behavior. Other values are gr.grnet.egi.vmcatcher.handler.JustLogHandler and gr.grnet.egi.vmcatcher.handler.ThrowingHandler",
+      description = "The Java class that will handle a message from RabbitMQ. Use gr.grnet.egi.vmcatcher.image.handler.SynnefoVMRegistrationHandler for the standard behavior. Other values are gr.grnet.egi.vmcatcher.image.handler.JustLogHandler and gr.grnet.egi.vmcatcher.image.handler.ThrowingHandler",
       validateValueWith = classOf[NotNullValueValidator[_]],
       converter = classOf[DequeueHandlerClassConverter]
     )
-    val handler: DequeueHandler = new gr.grnet.egi.vmcatcher.handler.SynnefoVMRegistrationHandler
+    val handler: DequeueHandler = new gr.grnet.egi.vmcatcher.image.handler.SynnefoVMRegistrationHandler
 
     @ParametersDelegate
     val kamakiCloudDelegate = new KamakiCloudDelegate

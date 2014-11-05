@@ -15,17 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.handler
+package gr.grnet.egi.vmcatcher.image.handler
 
 import java.io.File
 import java.net.URL
 import java.util.Locale
 
 import gr.grnet.egi.vmcatcher.Sys
-import gr.grnet.egi.vmcatcher.event.{ImageEventField, Event}
+import gr.grnet.egi.vmcatcher.event.Event
 import gr.grnet.egi.vmcatcher.event.ExternalEventField._
 import gr.grnet.egi.vmcatcher.event.ImageEventField._
-import gr.grnet.egi.vmcatcher.image.ImageTransformers
+import gr.grnet.egi.vmcatcher.image.transformer.ImageTransformers
 import org.slf4j.Logger
 
 /**

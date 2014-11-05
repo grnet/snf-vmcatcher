@@ -15,12 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher
+package gr.grnet.egi.vmcatcher.transformer
 
 import java.io.File
-import java.util.Locale
 
-import gr.grnet.egi.vmcatcher.image.{IdentityTransformer, ImageTransformers}
+import gr.grnet.egi.vmcatcher.image.transformer.{IdentityTransformer, ImageTransformers}
 import org.junit.{Assert, Test}
 import org.slf4j.LoggerFactory
 

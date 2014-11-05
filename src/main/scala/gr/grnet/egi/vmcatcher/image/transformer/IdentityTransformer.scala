@@ -15,21 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.handler
+package gr.grnet.egi.vmcatcher.image.transformer
 
-import gr.grnet.egi.vmcatcher.event.Event
-import gr.grnet.egi.vmcatcher.image.ImageTransformers
-import org.slf4j.Logger
+import java.io.File
 
 /**
  *
  */
-class ThrowingHandler extends DequeueHandler {
-  def handle(
-    log: Logger,
-    event: Event,
-    kamakiCloud: String,
-    imageTransformers: ImageTransformers
-  ): Unit =
-    throw new Exception(s"event = $event")
+class IdentityTransformer extends ImageTransformer {
+  protected def canTransformImpl(fixedFormat: String): Boolean = true
+
+  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File] = {
+    log.info(s"Assume $file is a raw image file")
+    Some(file)
+  }
 }
