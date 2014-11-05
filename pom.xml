@@ -46,7 +46,7 @@
   </developers>
 
   <properties>
-    <scala.version>2.11.2</scala.version>
+    <scala.version>2.11.4</scala.version>
     <jackson.version>2.4.2</jackson.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>${project.build.sourceEncoding}</project.reporting.outputEncoding>
