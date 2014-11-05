@@ -285,7 +285,7 @@ object Main extends {
     val osfamily = args.osfamily
     val users = args.users
     val format = args.format
-    val formatOpt = Option(format).map(f ⇒ if(f.startsWith(".")) f else s".$f")
+    val formatOpt = Option(format).map(Sys.fixFormat)
 
     val properties = Sys.minimumImageProperties(osfamily, users)
 
