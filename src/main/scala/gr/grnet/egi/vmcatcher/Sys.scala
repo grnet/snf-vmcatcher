@@ -28,6 +28,7 @@ import okio.{Buffer, ByteString, Okio}
 import org.slf4j.Logger
 import org.zeroturnaround.exec.ProcessExecutor
 import org.zeroturnaround.exec.stream.slf4j.Slf4jStream
+import scala.collection.immutable.Seq
 
 import scala.annotation.tailrec
 
@@ -75,8 +76,7 @@ class Sys {
     val metaFile = createTempFile(".meta")
     val metaSink = Okio.sink(metaFile)
     val metaString = ByteString.encodeUtf8(metaJson)
-    val buffer = new Buffer()
-    buffer.write(metaString)
+    val buffer = new Buffer().write(metaString)
     metaSink.write(buffer, metaString.size())
     metaSink.close()
 
@@ -106,6 +106,40 @@ class Sys {
 
     log.info(s"Deleting tmp metafile $metaFile")
     metaFile.delete()
+
+    result
+  }
+
+  val SnfExcludeTasks = Seq(
+    "EXCLUDE_TASK_DELETESSHKEYS",
+    "EXCLUDE_TASK_FILESYSTEMRESIZEMOUNTED",
+    "EXCLUDE_TASK_FIXPARTITIONTABLE",
+    "EXCLUDE_TASK_FILESYSTEMRESIZEUNMOUNTED",
+    "EXCLUDE_TASK_SELINUXAUTORELABEL",
+    "EXCLUDE_TASK_ASSIGNHOSTNAME",
+    "EXCLUDE_TASK_ADDSWAP",
+    "EXCLUDE_TASK_CHANGEPASSWORD"
+  )
+
+  // The command-line form, in case you would like to try it directly:
+  // -m EXCLUDE_TASK_DELETESSHKEYS=yes -m EXCLUDE_TASK_FILESYSTEMRESIZEMOUNTED=yes -m EXCLUDE_TASK_FIXPARTITIONTABLE=yes -m EXCLUDE_TASK_FILESYSTEMRESIZEUNMOUNTED=yes -m EXCLUDE_TASK_SELINUXAUTORELABEL=yes -m EXCLUDE_TASK_ASSIGNHOSTNAME=yes -m EXCLUDE_TASK_ADDSWAP=yes -m EXCLUDE_TASK_CHANGEPASSWORD=yes
+  val SnfExcludeTasksParams = (for(task ← SnfExcludeTasks) yield Seq("-m", s"$task=yes")).flatten
+
+  def snfMkImageRegister(log: Logger, rcCloudName: String, properties: Map[ByteString, String], imageFile: File, name: String): Int = {
+    // Beware, it needs to be run as root.
+    val snfmkimage = "snf-mkimage"
+    log.info(s"Registering $imageFile using $snfmkimage")
+
+    val paramsFront = Seq(
+      snfmkimage,
+      "-c", rcCloudName,
+      "-u", name,
+      "-r", name
+    )
+    val paramsBack = Seq(imageFile.getAbsolutePath)
+
+    val params = paramsFront ++ SnfExcludeTasksParams ++ paramsBack
+    val result = exec(log, params:_*)
 
     result
   }
@@ -273,11 +307,11 @@ class Sys {
           )
 
         if(kamakiExitCode != 0) {
-          log.error(s"Could not register image $imageFile to $kamakiCloud")
+          log.error(s"publishVmImageFile(): Could not register image $imageFile to $kamakiCloud")
         }
 
         if(transformedImageFile != imageFile) {
-          log.info(s"Deleting transformed published file $transformedImageFile")
+          log.info(s"publishVmImageFile(): Deleting transformed published file $transformedImageFile")
           transformedImageFile.delete()
         }
     }
@@ -331,7 +365,7 @@ class Sys {
       case _ ⇒
         val imageFile = Sys.createTempImageFile(url)
         Sys.downloadToFile(log, url, imageFile)
-        GetImage(isTemporary = true, imageFile)
+        GetImage(isTemporary = true, file = imageFile)
     }
   }
 
@@ -345,7 +379,7 @@ class Sys {
   ): Unit = {
     val GetImage(isTemporary, imageFile) = Sys.getImage(log, url)
 
-    try     Sys.publishVmImageFile(log, formatOpt, properties, imageFile, kamakiCloud, imageTransformers)
+    try Sys.publishVmImageFile(log, formatOpt, properties, imageFile, kamakiCloud, imageTransformers)
     finally {
       if(isTemporary) {
         log.info(s"Deleting temporary $imageFile")
