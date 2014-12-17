@@ -139,7 +139,12 @@ class Sys {
     )
     val paramsBack = Seq(imageFile.getAbsolutePath)
 
-    val params = paramsFront ++ SnfExcludeTasksParams ++ paramsBack
+    val propertiesParams =
+      (for {
+        (k, v) ← properties
+      } yield Seq("-m", s"$k=$v")).flatten
+
+    val params = paramsFront ++ SnfExcludeTasksParams ++ propertiesParams ++ paramsBack
     val result = exec(log, params:_*)
 
     result
