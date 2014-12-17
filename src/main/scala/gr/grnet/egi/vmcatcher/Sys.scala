@@ -82,34 +82,7 @@ class Sys {
 
     metaFile
   }
-
-  def kamakiRegisterRawImage(log: Logger, rcCloudName: String, properties: Map[String, String], imageFile: File, name: String): Int = {
-    // Make the file for --metafile parameter
-    log.info(s"Image properties (map ) = $properties")
-    val metaFile = createRegistrationMetafile(log, properties)
-    val kamaki = "kamaki"
-    log.info(s"Registering $imageFile using $kamaki")
-
-    val result =
-      exec(
-        log,
-        kamaki,
-        "image", "register",
-        "--cloud", rcCloudName,
-        "--public",
-        "--force",
-        "--metafile", metaFile.getAbsolutePath,
-        "--upload-image-file", imageFile.getAbsolutePath,
-        "--name", name,
-        "--location", s"/images/$name"
-      )
-
-    log.info(s"Deleting tmp metafile $metaFile")
-    metaFile.delete()
-
-    result
-  }
-
+  
   val SnfExcludeTasks = Seq(
     "EXCLUDE_TASK_DELETESSHKEYS",
     "EXCLUDE_TASK_FILESYSTEMRESIZEMOUNTED",
@@ -125,7 +98,7 @@ class Sys {
   // -m EXCLUDE_TASK_DELETESSHKEYS=yes -m EXCLUDE_TASK_FILESYSTEMRESIZEMOUNTED=yes -m EXCLUDE_TASK_FIXPARTITIONTABLE=yes -m EXCLUDE_TASK_FILESYSTEMRESIZEUNMOUNTED=yes -m EXCLUDE_TASK_SELINUXAUTORELABEL=yes -m EXCLUDE_TASK_ASSIGNHOSTNAME=yes -m EXCLUDE_TASK_ADDSWAP=yes -m EXCLUDE_TASK_CHANGEPASSWORD=yes
   val SnfExcludeTasksParams = (for(task ← SnfExcludeTasks) yield Seq("-m", s"$task=yes")).flatten
 
-  def snfMkImageRegister(log: Logger, rcCloudName: String, properties: Map[ByteString, String], imageFile: File, name: String): Int = {
+  def snfMkImageRegister(log: Logger, rcCloudName: String, properties: Map[String, String], imageFile: File, name: String): Int = {
     // Beware, it needs to be run as root.
     val snfmkimage = "snf-mkimage"
     log.info(s"Registering $imageFile using $snfmkimage")
@@ -303,8 +276,8 @@ class Sys {
         val tname = tnamePrefix + Sys.dropFileExtension(tname1)
         log.info(s"publishVmImageFile(): Name of image to upload is $tname")
 
-        val kamakiExitCode =
-          Sys.kamakiRegisterRawImage(
+        val registrationExitCode =
+          Sys.snfMkImageRegister(
             log,
             kamakiCloud,
             properties,
@@ -312,7 +285,7 @@ class Sys {
             tname
           )
 
-        if(kamakiExitCode != 0) {
+        if(registrationExitCode != 0) {
           log.error(s"publishVmImageFile(): Could not register image $imageFile to $kamakiCloud")
         }
 
