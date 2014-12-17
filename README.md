@@ -24,6 +24,14 @@ For the actual upload to Synnefo, we assume the installation of the relevant com
 ### System Installation
 Please read [Installation](INSTALLATION.md)
 
+Also, we use [`snf-mkimage`](https://www.synnefo.org/docs/snf-image-creator/latest/) via `sudo`,
+so this line must be added (via running `visudo`):
+
+```
+vmcatcher ALL = NOPASSWD: /usr/bin/snf-mkimage
+```
+
+where we assume that `snf-vmcatcher` runs under user `vmcatcher` and `snf-mkimage` is installed under `/usr/bin`.
 
 ### Using snf-vmcatcher
 
