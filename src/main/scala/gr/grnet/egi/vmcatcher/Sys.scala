@@ -131,6 +131,7 @@ class Sys {
     log.info(s"Registering $imageFile using $snfmkimage")
 
     val paramsFront = Seq(
+      "sudo",
       snfmkimage,
       "-c", rcCloudName,
       "-u", name,
