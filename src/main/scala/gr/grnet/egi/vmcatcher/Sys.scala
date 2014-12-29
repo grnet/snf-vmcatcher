@@ -82,7 +82,7 @@ class Sys {
 
     metaFile
   }
-  
+
   val SnfExcludeTasks = Seq(
     "EXCLUDE_TASK_DELETESSHKEYS",
     "EXCLUDE_TASK_FILESYSTEMRESIZEMOUNTED",

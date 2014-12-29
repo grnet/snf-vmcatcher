@@ -51,6 +51,16 @@ object Args {
     val kamakiCloud: String = null
   }
 
+  class PersonalAccessTokenDelegate {
+    @Parameter(
+      names = Array("-token"),
+      description = "The Personal Access Token (from https://appdb.egi.eu) to use for protected image lists & images",
+      required = false,
+      validateWith = classOf[NotEmptyStringValidator]
+    )
+    val token: String = null
+  }
+
   class ImageListUrlDelegate {
     @Parameter(
       names = Array("-image-list-url"),
@@ -127,6 +137,10 @@ object Args {
     val imageListUrlDelegate = new ImageListUrlDelegate
     def imageListUrl = imageListUrlDelegate.imageListUrl
 
+    @ParametersDelegate
+    val tokenDelegate = new PersonalAccessTokenDelegate
+    def token = tokenDelegate.token
+
     @Parameter(
       names = Array("-image-identifier"),
       description = "The 'dc:identifier' of the specific VM image you want to enqueue. If not given, then all VM images given in the list are enqueued.",
@@ -143,6 +157,10 @@ object Args {
     @ParametersDelegate
     val imageListUrlDelegate = new ImageListUrlDelegate
     def imageListUrl = imageListUrlDelegate.imageListUrl
+
+    @ParametersDelegate
+    val tokenDelegate = new PersonalAccessTokenDelegate
+    def token = tokenDelegate.token
   }
 
   @Parameters(

@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets
 import java.util.Scanner
 
 import com.beust.jcommander.ParameterException
+import com.squareup.okhttp._
 import com.typesafe.config.ConfigRenderOptions
 import gr.grnet.egi.vmcatcher.cmdline.Args
 import gr.grnet.egi.vmcatcher.cmdline.Args.ParsedCmdLine
@@ -133,8 +134,23 @@ object Main extends {
     buffer.toString
   }
 
-  def urlToUtf8(url: URL): String = {
-    val stream = url.openStream()
+  def urlToUtf8(url: URL, tokenOpt: Option[String]): String = {
+    val urlConnection = url.openConnection()
+    for(token ← tokenOpt) {
+
+      // The password seems to be fixed, as described in
+      //   https://wiki.appdb.egi.eu/main:faq:how_to_subscribe_to_a_private_image_list_using_the_vmcatcher
+      // TODO Make configurable
+      val username = token
+      val password = "x-oauth-basic"
+
+      val credential = Credentials.basic(username, password)
+      urlConnection.setRequestProperty("Authorization", credential)
+    }
+
+    urlConnection.connect()
+    val stream = urlConnection.getInputStream
+
     val source = Okio.source(stream)
     val buffer = Okio.buffer(source)
     val str = buffer.readUtf8()
@@ -144,7 +160,8 @@ object Main extends {
 
   def do_parse_image_list(args: Args.ParseImageList): Unit = {
     val imageListContainerURL = args.imageListUrl
-    val rawImageListContainer = urlToUtf8(imageListContainerURL)
+    val token = args.token
+    val rawImageListContainer = urlToUtf8(imageListContainerURL, Option(token))
     Log.info (s"imageListContainer (URL ) = $imageListContainerURL")
     Log.debug(s"imageListContainer (raw ) =\n$rawImageListContainer")
     val imageListContainerJson = parseImageListContainerJson(rawImageListContainer)
@@ -158,8 +175,9 @@ object Main extends {
   def do_enqueue_from_image_list(args: Args.EnqueueFromImageList): Unit = {
     val imageListURL = args.imageListUrl
     val imageIdentifier = args.imageIdentifier
+    val tokenOpt = Option(args.token)
 
-    val rawImageList = urlToUtf8(imageListURL)
+    val rawImageList = urlToUtf8(imageListURL, tokenOpt)
     Log.info(s"imageList (URL) = $imageListURL")
     Log.info(s"imageList (raw) = $rawImageList")
     val jsonImageList = parseImageListContainerJson(rawImageList)
