@@ -62,6 +62,7 @@ object Main extends {
     Args.nameOf( ParsedCmdLine.dequeue              ) → DEFER { do_dequeue                ( ParsedCmdLine.dequeue              ) },
     Args.nameOf( ParsedCmdLine.registerNow          ) → DEFER { do_register_now           ( ParsedCmdLine.registerNow          ) },
     Args.nameOf( ParsedCmdLine.parseImageList       ) → DEFER { do_parse_image_list       ( ParsedCmdLine.parseImageList       ) },
+    Args.nameOf( ParsedCmdLine.getImageList         ) → DEFER { do_get_image_list         ( ParsedCmdLine.getImageList         ) },
     Args.nameOf( ParsedCmdLine.drainQueue           ) → DEFER { do_drain_queue            ( ParsedCmdLine.drainQueue           ) },
     Args.nameOf( ParsedCmdLine.transform            ) → DEFER { do_transform              ( ParsedCmdLine.transform            ) }
   )
@@ -170,6 +171,15 @@ object Main extends {
     Log.info(s"Found ${events0.size} events")
     val identifiers = events0.map(_(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER))
     Log.info(s"Image identifiers are: ${identifiers.mkString(", ")}")
+  }
+
+  def do_get_image_list(args: Args.GetImageList): Unit = {
+    val imageListContainerURL = args.imageListUrl
+    val token = args.token
+    val rawImageListContainer = urlToUtf8(imageListContainerURL, Option(token))
+    Log.info (s"imageListContainer (URL ) = $imageListContainerURL")
+    Log.debug(s"imageListContainer (raw ) =\n$rawImageListContainer")
+    System.err.println(rawImageListContainer)
   }
 
   def do_enqueue_from_image_list(args: Args.EnqueueFromImageList): Unit = {

@@ -164,6 +164,20 @@ object Args {
   }
 
   @Parameters(
+    commandNames = Array("get-image-list"),
+    commandDescription = "Retrieves a vmcatcher-compatible, JSON-encoded image list. Helpful for debugging."
+  )
+  class GetImageList {
+    @ParametersDelegate
+    val imageListUrlDelegate = new ImageListUrlDelegate
+    def imageListUrl = imageListUrlDelegate.imageListUrl
+
+    @ParametersDelegate
+    val tokenDelegate = new PersonalAccessTokenDelegate
+    def token = tokenDelegate.token
+  }
+
+  @Parameters(
     commandNames = Array("dequeue"),
     commandDescription = "Dequeue one message from RabbitMQ and register the corresponding VM instance"
   )
@@ -276,6 +290,7 @@ object Args {
     val dequeue = new Dequeue
     val registerNow = new RegisterNow
     val parseImageList = new ParseImageList
+    val getImageList = new GetImageList
     val drainQueue = new DrainQueue
     val transform = new Transform
   }
@@ -296,6 +311,7 @@ object Args {
     jc.addCommand(ParsedCmdLine.dequeue)
     jc.addCommand(ParsedCmdLine.registerNow)
     jc.addCommand(ParsedCmdLine.parseImageList)
+    jc.addCommand(ParsedCmdLine.getImageList)
     jc.addCommand(ParsedCmdLine.drainQueue)
     jc.addCommand(ParsedCmdLine.transform)
 
