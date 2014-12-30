@@ -41,8 +41,9 @@ object Main extends {
   final val ProgName = getClass.getName.stripSuffix("$")
   final val Log = LoggerFactory.getLogger(getClass)
   
-  def EXIT(status: Int): Nothing = {
-    Log.warn(s"Exiting with $status")
+  def EXIT(status: Int, alsoDo: () ⇒ Any = () ⇒ ()): Nothing = {
+    Log.warn(s"Exiting with status $status")
+    alsoDo()
     sys.exit(status)
   }
 
@@ -167,10 +168,33 @@ object Main extends {
     Log.debug(s"imageListContainer (raw ) =\n$rawImageListContainer")
     val imageListContainerJson = parseImageListContainerJson(rawImageListContainer)
     Log.info (s"imageListContainer (json) =\n$imageListContainerJson")
+
     val events0 = Events.ofImageListContainer(imageListContainerJson, Map())
     Log.info(s"Found ${events0.size} events")
-    val identifiers = events0.map(_(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER))
-    Log.info(s"Image identifiers are: ${identifiers.mkString(", ")}")
+    System.err.println(s"Found ${events0.size} events")
+    if(events0.isEmpty) { return }
+
+    // Sort by size ascending and print basic info
+    val sortedEvents =
+      try events0.sortBy(_(ImageEventField.VMCATCHER_EVENT_HV_SIZE).toLong)
+      catch {
+        case e: Exception ⇒
+          Log.warn(s"Could not sort events", e)
+          events0
+      }
+
+    val miniKeys = Seq(
+      ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER,
+      ImageEventField.VMCATCHER_EVENT_AD_MPURI,
+      ImageEventField.VMCATCHER_EVENT_HV_URI,
+      ImageEventField.VMCATCHER_EVENT_HV_SIZE)
+
+    for(event ← sortedEvents) {
+      val miniMap = Map((for(key ← miniKeys) yield (key, event(key))):_*)
+      val miniInfo = miniMap.mkString("[", ", ", "]")
+      Log.info(s"Found: $miniInfo")
+      System.err.println(s"Found: $miniInfo")
+    }
   }
 
   def do_get_image_list(args: Args.GetImageList): Unit = {
@@ -224,8 +248,9 @@ object Main extends {
           event ← events
         } {
           val imageIdent = event(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER)
-          val imageURI = event(ImageEventField.VMCATCHER_EVENT_HV_URI)
-          Log.info(s"Enqueueing event for dc:identifier = $imageIdent, hv:uri = $imageURI")
+          val image_HV_URI = event(ImageEventField.VMCATCHER_EVENT_HV_URI)
+          val image_AD_MPURI = event(ImageEventField.VMCATCHER_EVENT_AD_MPURI)
+          Log.info(s"Enqueueing event for dc:identifier = $imageIdent, hv:uri = $image_HV_URI, ad:mpuri = $image_AD_MPURI")
           Log.info(s"event (image) = $event")
 
           rabbit.publish(event.toJson)
@@ -235,81 +260,71 @@ object Main extends {
     }
   }
 
-  def do_dequeue(connector: RabbitConnector, kamakiCloud: String): Unit = {
-    /**
-     * This is the main server loop.
-     */
-    @tailrec
-    def serverLoop(rabbit: Rabbit, isEmpty: Boolean): Unit = {
-      val newIsEmpty =
-        rabbit.getAndAck {
-          if(!isEmpty) { Log.info("Queue is empty") }
-          true
-        } { response ⇒
-          val jsonMsgBytes = response.getBody
-          val jsonMsg = new String(jsonMsgBytes, StandardCharsets.UTF_8)
-          val event = Event.ofJson(jsonMsg)
+  def do_dequeue(connector: RabbitConnector, kamakiCloud: String, insecureSSL: Boolean): Unit = {
+    def doOnce(rabbit: Rabbit): Unit = {
+      rabbit.getAndAck {} { response ⇒
+        val jsonMsgBytes = response.getBody
+        val jsonMsg = new String(jsonMsgBytes, StandardCharsets.UTF_8)
+        val event = Event.ofJson(jsonMsg)
 
-          Log.info(s"dequeueHandler = ${dequeueHandler.getClass.getName}")
-          dequeueHandler.handle(
-            Log,
-            event,
-            kamakiCloud,
-            ImageTransformers
-          )
-          false
-        }
-
-      if(isServer) {
-        Thread.sleep(serverSleepMillis)
-        serverLoop(rabbit, newIsEmpty)
+        Log.info(s"dequeueHandler = ${dequeueHandler.getClass.getName}")
+        dequeueHandler.handle(
+          Log,
+          event,
+          kamakiCloud,
+          ImageTransformers,
+          insecureSSL
+        )
       }
     }
 
-    var lastErrorMillis = System.currentTimeMillis()
-
     @tailrec
-    def healthLoop(): Unit = {
-      val dtMax = 10 * serverSleepMillis
-
-      def checkMillis(): Boolean = {
-        val dt = System.currentTimeMillis() - lastErrorMillis
-        val retval = dt >= dtMax
-
-        if(retval) { lastErrorMillis = System.currentTimeMillis() }
-        retval
-      }
-
-      def checkMillisAndPrint(e: Exception) = if(checkMillis()) { Log.info(f"$lastErrorMillis%-13d $e") }
-
-      try {
-        val rabbit = connector.connect()
-        serverLoop(rabbit, isEmpty = false)
-        if(!isServer) { rabbit.close() }
-      }
+    def connectToRabbit(): Rabbit = {
+      try connector.connect()
       catch {
-        case e: java.net.ConnectException ⇒
-          checkMillisAndPrint(e)
-          Thread.sleep(serverSleepMillis)
-
         case e: Exception ⇒
-          checkMillisAndPrint(e)
+          Log.error(s"$e")
+          Thread.sleep(serverSleepMillis)
+          connectToRabbit()
       }
-
-      if(isServer) healthLoop()
     }
 
-    healthLoop()
+    @tailrec
+    def doOnceOrLoop(): Unit = {
+      try doOnce(connectToRabbit())
+      catch {
+        case unrelated: Exception ⇒
+          Log.error("", unrelated)
+          if(!isServer) throw unrelated
+      }
+      if(isServer) { doOnceOrLoop() }
+    }
+
+    doOnceOrLoop()
   }
 
   def do_dequeue(args: Args.Dequeue): Unit = {
     val kamakiCloud = args.kamakiCloud
+    val insecureSSL = args.insecureSSL
+
+    if(insecureSSL) {
+      Log.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+      Log.warn(s"Insecure SSL mode. This is provided as a debugging aid only!")
+      Log.warn(s"If you trust a (possibly self-signed) certificate, add it to the trust store")
+      Log.warn(s"Do not ignore SSL validation errors!")
+      Log.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+
+
+    }
+
+
     val connector = RabbitConnector(configOfPath(args.conf))
-    do_dequeue(connector, kamakiCloud)
+    do_dequeue(connector, kamakiCloud, insecureSSL)
   }
 
   def do_register_now(args: Args.RegisterNow): Unit = {
     val url = args.url
+    val insecureSSL = args.insecureSSL
     val kamakiCloud = args.kamakiCloud
     val osfamily = args.osfamily
     val users = args.users
@@ -324,7 +339,8 @@ object Main extends {
       properties,
       kamakiCloud,
       url,
-      ImageTransformers
+      ImageTransformers,
+      insecureSSL
     )
   }
 
@@ -364,7 +380,8 @@ object Main extends {
 
   def do_transform(args: Args.Transform): Unit = {
     val imageURL = args.url
-    val GetImage(isTemporary, imageFile) = Sys.getImage(Log, imageURL)
+    val insecureSSL = args.insecureSSL
+    val GetImage(isTemporary, imageFile) = Sys.getImage(Log, imageURL, insecureSSL)
 
     try {
       val tramsformedFileOpt = ImageTransformers.transform(None, imageFile)
@@ -387,6 +404,14 @@ object Main extends {
   def main(args: Array[String]): Unit = {
     val t0 = System.currentTimeMillis()
     val argsDebugStr = args.mkString(" ")
+
+    def endSequence(): Unit = {
+      val t1 = System.currentTimeMillis()
+      val dtms = t1 - t0
+      Log.info(s"END snf-vmcatcher ($dtms ms) [$argsDebugStr]")
+      Log.info("=" * 30)
+    }
+
     Log.info("=" * 30)
     Log.info(s"BEGIN snf-vmcatcher [$argsDebugStr]")
     val jc = Args.jc
@@ -406,32 +431,33 @@ object Main extends {
       val command = jc.getParsedCommand
       val isNoCommand = command eq null
 
-      if(isHelp || isNoCommand)
+      if(isHelp || isNoCommand) {
         jc.usage()
-      else
+        EXIT(1, endSequence)
+      }
+      else {
         commandMap(command)()
+        EXIT(0, endSequence)
+      }
     }
     catch {
       case e: ParameterException ⇒
         System.err.println(e.getMessage)
         Log.error(e.getMessage)
-        EXIT(1)
+        endSequence()
+        EXIT(2, endSequence)
 
       case e: Exception ⇒
         System.err.println(e.getMessage)
         Log.error("", e)
-        EXIT(2)
+        e.printStackTrace(System.err)
+        EXIT(3, endSequence)
 
       case e: Throwable ⇒
         System.err.println(e.getMessage)
         Log.error("", e)
-        EXIT(3)
-    }
-    finally {
-      val t1 = System.currentTimeMillis()
-      val dtms = t1 - t0
-      Log.info(s"END snf-vmcatcher ($dtms ms) [$argsDebugStr]")
-      Log.info("=" * 30)
+        e.printStackTrace(System.err)
+        EXIT(4, endSequence)
     }
   }
 }

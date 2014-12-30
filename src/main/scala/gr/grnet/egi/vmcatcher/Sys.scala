@@ -18,9 +18,12 @@
 package gr.grnet.egi.vmcatcher
 
 import java.io.File
-import java.net.URL
+import java.net.{URLConnection, URL}
 import java.nio.file.Files
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
 import java.util.Locale
+import javax.net.ssl._
 
 import gr.grnet.egi.vmcatcher.event.{Event, ImageEventField}
 import gr.grnet.egi.vmcatcher.image.transformer.ImageTransformers
@@ -296,20 +299,58 @@ class Sys {
     }
   }
 
-  def downloadToFile(log: Logger, url: URL, file: File): Unit = {
+  val NotSoTrustManager = new X509TrustManager {
+    def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
+
+    def getAcceptedIssuers: Array[X509Certificate] = Array()
+
+    def checkServerTrusted(chain: Array[X509Certificate], authType: String): Unit = {
+      for(cert ← chain) {
+        val principal = cert.getIssuerX500Principal
+        Main.Log.warn(s"X509TrustManager: Force server trusted: $principal")
+      }
+    }
+  }
+
+  val HostnameNoVerifier = new HostnameVerifier {
+    def verify(hostname: String, session: SSLSession): Boolean = {
+      Main.Log.warn(s"Not verifying hostname $hostname")
+      true
+    }
+  }
+
+  def urlConnection(url: URL, insecureSSL: Boolean): URLConnection = {
+    val urlConn = url.openConnection()
+
+    if(insecureSSL) {
+      urlConn match {
+        case httpsConn: HttpsURLConnection ⇒
+          val ctx = SSLContext.getInstance("TLS")
+          ctx.init(null, Array(NotSoTrustManager), null)
+          val factory = ctx.getSocketFactory
+          httpsConn.setSSLSocketFactory(factory)
+          httpsConn.setHostnameVerifier(HostnameNoVerifier)
+
+        case _ ⇒
+      }
+    }
+
+    urlConn
+  }
+
+  def downloadToFile(log: Logger, url: URL, file: File, insecureSSL: Boolean): Unit = {
     log.info(s"Downloading $url to $file")
-    val in = url.openStream()
+    val urlConn = urlConnection(url, insecureSSL)
+    log.info(s"Got connection to $url")
+    val in = urlConn.getInputStream
     try {
       val urlSource = Okio.source(in)
       val urlBuffer = Okio.buffer(urlSource)
       val fileSink = Okio.sink(file)
 
       urlBuffer.readAll(fileSink)
-    }
-    finally {
-      in.close()
 
-      // not the best efficiency but the best of fun
+      // not the best of efficiency ...
       val length = file.length()
       val sizeB = length → "bytes"
       val sizeKB = (length / 1024) → "KB"
@@ -322,6 +363,7 @@ class Sys {
 
       log.info(s"Size of $file is $sizeStr")
     }
+    finally in.close()
   }
 
   def createTempImageFile(filename: String): File = Sys.createTempFile("." + filename)
@@ -332,7 +374,7 @@ class Sys {
     Sys.createTempImageFile(filename)
   }
 
-  def getImage(log: Logger, url: URL): GetImage = {
+  def getImage(log: Logger, url: URL, insecureSSL: Boolean): GetImage = {
     url.getProtocol match {
       case "file" ⇒
         val file = new File(url.getFile)
@@ -343,7 +385,11 @@ class Sys {
 
       case _ ⇒
         val imageFile = Sys.createTempImageFile(url)
-        Sys.downloadToFile(log, url, imageFile)
+        Sys.downloadToFile(log, url, imageFile, insecureSSL)
+        val imageSize = imageFile.length()
+        if(imageSize == 0L) {
+          log.warn(s"Downloaded image file $imageFile is 0 bytes!")
+        }
         GetImage(isTemporary = true, file = imageFile)
     }
   }
@@ -354,9 +400,10 @@ class Sys {
     properties: Map[String, String],
     kamakiCloud: String,
     url: URL,
-    imageTransformers: ImageTransformers
+    imageTransformers: ImageTransformers,
+    insecureSSL: Boolean
   ): Unit = {
-    val GetImage(isTemporary, imageFile) = Sys.getImage(log, url)
+    val GetImage(isTemporary, imageFile) = Sys.getImage(log, url, insecureSSL)
 
     try Sys.publishVmImageFile(log, formatOpt, properties, imageFile, kamakiCloud, imageTransformers)
     finally {

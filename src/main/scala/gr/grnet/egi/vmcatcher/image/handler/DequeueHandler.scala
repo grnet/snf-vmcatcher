@@ -30,7 +30,8 @@ trait DequeueHandler {
     log: Logger,
     event: Event,
     kamakiCloud: String,
-    imageTransformers: ImageTransformers
+    imageTransformers: ImageTransformers,
+    insecureSSL: Boolean
   ): Unit
 
   override def toString: String = this.getClass.getName

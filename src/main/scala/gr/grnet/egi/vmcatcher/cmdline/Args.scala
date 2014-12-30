@@ -61,6 +61,17 @@ object Args {
     val token: String = null
   }
 
+  class InsecureSSLDelegate {
+    @Parameter(
+      names = Array("-insecure-ssl", "-insecure-SSL"),
+      description = "If set to true, SSL validation errors are ignored." +
+                    " This might be useful for images that are behind self-signed SSL certificates." +
+                    " Use at your own risk !",
+      required = false
+    )
+    val insecureSSL = false
+  }
+
   class ImageListUrlDelegate {
     @Parameter(
       names = Array("-image-list-url"),
@@ -185,8 +196,11 @@ object Args {
   )
   class Dequeue {
     @ParametersDelegate
-    val confDelegate = new ConfDelegate
+    val insecureSSLDelegate = new InsecureSSLDelegate
+    def insecureSSL = insecureSSLDelegate.insecureSSL
 
+    @ParametersDelegate
+    val confDelegate = new ConfDelegate
     def conf = confDelegate.conf
 
     @Parameter(names = Array("-server"), description = "Run in server mode and dequeue a message at a time")
@@ -223,6 +237,10 @@ object Args {
       converter = classOf[URLStringConverter]
     )
     val url: URL = null
+
+    @ParametersDelegate
+    val insecureSSLDelegate = new InsecureSSLDelegate
+    def insecureSSL = insecureSSLDelegate.insecureSSL
 
     @ParametersDelegate
     val kamakiCloudDelegate = new KamakiCloudDelegate
@@ -280,6 +298,10 @@ object Args {
       converter = classOf[URLStringConverter]
     )
     val url: URL = null
+
+    @ParametersDelegate
+    val insecureSSLDelegate = new InsecureSSLDelegate
+    def insecureSSL = insecureSSLDelegate.insecureSSL
   }
 
   class ParsedCmdLine {

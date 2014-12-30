@@ -29,7 +29,8 @@ class JustLogHandler extends DequeueHandler {
     log: Logger,
     event: Event,
     kamakiCloud: String,
-    imageTransformers: ImageTransformers
+    imageTransformers: ImageTransformers,
+    insecureSSL: Boolean
   ): Unit = {
     log.info(s"event = $event")
   }

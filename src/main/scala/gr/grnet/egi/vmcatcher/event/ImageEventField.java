@@ -34,11 +34,17 @@ public enum ImageEventField implements IEventField {
     VMCATCHER_EVENT_HV_URI("hv:uri"),
     VMCATCHER_EVENT_HV_VERSION("hv:version"),
     VMCATCHER_EVENT_HV_FORMAT("hv:format"),
-    VMCATCHER_EVENT_SL_ARCH("sl:arch"),
     VMCATCHER_EVENT_SL_CHECKSUM_SHA512("sl:checksum:sha512"),
     VMCATCHER_EVENT_SL_COMMENTS("sl:comments"),
     VMCATCHER_EVENT_SL_OS("sl:os"),
-    VMCATCHER_EVENT_SL_OSVERSION("sl:osversion");
+    VMCATCHER_EVENT_SL_ARCH("sl:arch"),
+    VMCATCHER_EVENT_SL_OSVERSION("sl:osversion"),
+    VMCATCHER_EVENT_SL_OSNAME("sl:osname"),
+    VMCATCHER_EVENT_AD_GROUP("ad:group"),
+    VMCATCHER_EVENT_AD_MPURI("ad:mpuri"),
+    VMCATCHER_EVENT_AD_USER_FULLNAME("ad:user:fullname"),
+    VMCATCHER_EVENT_AD_USER_GUID("ad:user:guid"),
+    VMCATCHER_EVENT_AD_USER_URI("ad:mpuri");
 
     private static final Map<String, ImageEventField> reverseMap;
     static {

@@ -29,7 +29,8 @@ class ThrowingHandler extends DequeueHandler {
     log: Logger,
     event: Event,
     kamakiCloud: String,
-    imageTransformers: ImageTransformers
+    imageTransformers: ImageTransformers,
+    insecureSSL: Boolean
   ): Unit =
     throw new Exception(s"event = $event")
 }
