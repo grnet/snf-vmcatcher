@@ -178,8 +178,9 @@ object Main extends {
     val token = args.token
     val rawImageListContainer = urlToUtf8(imageListContainerURL, Option(token))
     Log.info (s"imageListContainer (URL ) = $imageListContainerURL")
-    Log.debug(s"imageListContainer (raw ) =\n$rawImageListContainer")
-    System.err.println(rawImageListContainer)
+    val imageListContainerJson = parseImageListContainerJson(rawImageListContainer)
+    Log.info (s"imageListContainer (json) =\n$imageListContainerJson")
+    System.err.println(imageListContainerJson)
   }
 
   def do_enqueue_from_image_list(args: Args.EnqueueFromImageList): Unit = {
