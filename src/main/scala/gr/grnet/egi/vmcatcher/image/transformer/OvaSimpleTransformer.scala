@@ -23,9 +23,11 @@ import java.util.Locale
 import gr.grnet.egi.vmcatcher.Sys
 
 /**
- * Given an OVA file, extracts the VM image file.
- * In the OVA archive we assume a) no directory structure and b) only two files present.
- * One of the present files is an .ovf metadata file and the other one is the image itself.
+ * Given an OVA file, extracts the VM image file which is included.
+ * The OVF descriptor (.ovf), any manifests (.mf), certificates (.cert) and utility
+ * files (.xml) are ignored.
+ * If there are more than one VM images, only one is selected but we do not
+ * specify which one.
  *
  */
 class OvaSimpleTransformer extends ImageTransformer {
@@ -42,16 +44,28 @@ class OvaSimpleTransformer extends ImageTransformer {
       return None
     }
 
-    // For now, assume a simple structure:
-    //  1) One .OVF file (metadata) and another one that is the VM image
-    //  2) We do not parse the OVF.
-    //  3) The image does not need some "extraction"
+    // Based on
+    //   http://dmtf.org/sites/default/files/standards/documents/DSP0243_1.1.0.pdf
+    //   page 10, section 5.1
+    // we ignore .ovf, .mf, .cert and .xml files
+    // and assume everything else is an image.
+    val extsToIgnore = Set(".ovf", ".mf", ".cert", ".xml")
+    val ovaFiles = tmpDir.listFiles().toSet
+    val imageFileCandidates =
+      for {
+        file ← tmpDir.listFiles() if !extsToIgnore(Sys.fileExtension(file).toLowerCase(Locale.ENGLISH))
+      } yield file
 
-    // Now, inside the dir, get the file that is not .OVF
-    val imageFileOpt = tmpDir.
-      listFiles().
-      find { child ⇒ !child.getName.toLowerCase(Locale.ENGLISH).endsWith(".ovf") }
+    val ignoredFiles = ovaFiles -- imageFileCandidates
+    for { ignored ← ignoredFiles } {
+      log.info(s"Ignoring non-image file: $ignored")
+    }
+    for { candidate ← imageFileCandidates } {
+      log.info(s"Candidate image file: $candidate")
+    }
 
+    // We just use one image!
+    val imageFileOpt = imageFileCandidates.headOption
     try {
       imageFileOpt match {
         case None ⇒

@@ -18,9 +18,8 @@
 package gr.grnet.egi.vmcatcher
 
 import java.io.File
-import java.net.{URLConnection, URL}
+import java.net.{URL, URLConnection}
 import java.nio.file.Files
-import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.Locale
 import javax.net.ssl._
@@ -31,12 +30,15 @@ import okio.{Buffer, ByteString, Okio}
 import org.slf4j.Logger
 import org.zeroturnaround.exec.ProcessExecutor
 import org.zeroturnaround.exec.stream.slf4j.Slf4jStream
-import scala.collection.immutable.Seq
 
 import scala.annotation.tailrec
+import scala.collection.immutable.Seq
 
 class Sys {
   def exec(log: Logger, args: String*): Int = {
+    val cmdline = args.mkString("$ ", " ", "")
+    log.info(cmdline)
+    
     val pe = new ProcessExecutor().
       command(args:_*).
       exitValueAny().
@@ -120,8 +122,9 @@ class Sys {
         (k, v) ← properties
       } yield Seq("-m", s"$k=$v")).flatten
 
-    val params = paramsFront ++ SnfExcludeTasksParams ++ propertiesParams ++ paramsBack
-    val result = exec(log, params:_*)
+    val cmdline = paramsFront ++ SnfExcludeTasksParams ++ propertiesParams ++ paramsBack
+    log.info(cmdline.mkString("$ ", " ", ""))
+    val result = exec(log, cmdline:_*)
 
     result
   }
