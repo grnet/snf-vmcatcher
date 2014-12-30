@@ -115,7 +115,9 @@ object Args {
 
   @Parameters(
     commandNames = Array("enqueue-from-env"),
-    commandDescription = "Use environment variables to enqueue a VM instance message to RabbitMQ"
+    commandDescription = "Use environment variables to enqueue a VM instance message to RabbitMQ." +
+                         " This is the original use-case and reflects how vmcatcher (the original software)" +
+                         " works."
   )
   class EnqueueFromEnv {
     @ParametersDelegate
