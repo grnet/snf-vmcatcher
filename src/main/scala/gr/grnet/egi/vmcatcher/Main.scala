@@ -220,12 +220,16 @@ object Main extends {
 
     events0 match {
       case Nil ⇒
-        Log.error(s"Could not parse events from image list")
+        val errMsg = s"Could not parse events from image list"
+        Log.error(errMsg)
+        System.err.println(errMsg)
         EXIT(4)
 
       case event :: _ ⇒
         val dcIdentifier = event(ImageListEventField.VMCATCHER_EVENT_IL_DC_IDENTIFIER)
-        Log.info(s"Parsed image list dc:identifier = $dcIdentifier")
+        val parsedMsg = s"Parsed image list dc:identifier = $dcIdentifier"
+        Log.info(parsedMsg)
+        System.err.println(parsedMsg)
         val events =
           if(imageIdentifier eq null)
             events0
@@ -233,13 +237,19 @@ object Main extends {
             events0.filter(_(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER) == imageIdentifier)
 
         if(events.isEmpty) {
-          Log.error(s"Image identifier $imageIdentifier not found")
+          val errMsg = s"Image identifier $imageIdentifier not found"
+          Log.error(errMsg)
+          System.err.println(errMsg)
           val identifiers = events0.map(_(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER))
-          Log.info(s"Available identifiers are: ${identifiers.mkString(", ")}")
+          val availableMsg = s"Available identifiers are: ${identifiers.mkString(", ")}"
+          Log.info(availableMsg)
+          System.err.println(availableMsg)
           EXIT(3)
         }
 
-        Log.info(s"Matched ${events.size} event(s)")
+        val matchMsg = s"Matched ${events.size} event(s)"
+        Log.info(matchMsg)
+        System.err.println(matchMsg)
 
         val connector = RabbitConnector(configOfPath(args.confDelegate.conf))
         val rabbit = connector.connect()
@@ -250,7 +260,9 @@ object Main extends {
           val imageIdent = event(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER)
           val image_HV_URI = event(ImageEventField.VMCATCHER_EVENT_HV_URI)
           val image_AD_MPURI = event(ImageEventField.VMCATCHER_EVENT_AD_MPURI)
-          Log.info(s"Enqueueing event for dc:identifier = $imageIdent, hv:uri = $image_HV_URI, ad:mpuri = $image_AD_MPURI")
+          val eventMsg = s"Enqueueing event for dc:identifier = $imageIdent, hv:uri = $image_HV_URI, ad:mpuri = $image_AD_MPURI"
+          Log.info(eventMsg)
+          System.err.println(eventMsg)
           Log.info(s"event (image) = $event")
 
           rabbit.publish(event.toJson)
@@ -308,15 +320,12 @@ object Main extends {
     val insecureSSL = args.insecureSSL
 
     if(insecureSSL) {
-      Log.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-      Log.warn(s"Insecure SSL mode. This is provided as a debugging aid only!")
-      Log.warn(s"If you trust a (possibly self-signed) certificate, add it to the trust store")
-      Log.warn(s"Do not ignore SSL validation errors!")
-      Log.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-
-
+      Log.warn(s"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+      Log.warn(s"! Insecure SSL mode. This is provided as a debugging aid only !!")
+      Log.warn(s"! If you trust a (possibly self-signed) certificate, add it to !")
+      Log.warn(s"! the trust store. Do not ignore SSL validation errors !!!!!!!!!")
+      Log.warn(s"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     }
-
 
     val connector = RabbitConnector(configOfPath(args.conf))
     do_dequeue(connector, kamakiCloud, insecureSSL)
