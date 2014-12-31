@@ -68,7 +68,7 @@ Usage: gr.grnet.egi.vmcatcher.Main [options] [command] [command options]
         * -conf
              The configuration file the application uses
 
-    enqueue-from-env      Use environment variables to enqueue a VM instance message to RabbitMQ
+    enqueue-from-env      Use environment variables to enqueue a VM instance message to RabbitMQ. This is the original use-case and reflects how vmcatcher (the original software) works.
       Usage: enqueue-from-env [options]
         Options:
         * -conf
@@ -84,6 +84,9 @@ Usage: gr.grnet.egi.vmcatcher.Main [options] [command] [command options]
              If not given, then all VM images given in the list are enqueued.
         * -image-list-url
              The URL of the image list. You can use an http(s) or file URL.
+          -token
+             The Personal Access Token (from https://appdb.egi.eu) to use for
+             protected image lists & images
 
     dequeue      Dequeue one message from RabbitMQ and register the corresponding VM instance
       Usage: dequeue [options]
@@ -95,6 +98,11 @@ Usage: gr.grnet.egi.vmcatcher.Main [options] [command] [command options]
              gr.grnet.egi.vmcatcher.image.handler.SynnefoVMRegistrationHandler for the standard behavior. Other values are
              gr.grnet.egi.vmcatcher.image.handler.JustLogHandler and gr.grnet.egi.vmcatcher.image.handler.ThrowingHandler
              Default: gr.grnet.egi.vmcatcher.image.handler.SynnefoVMRegistrationHandler
+          -insecure-ssl, -insecure-SSL
+             If set to true, SSL validation errors are ignored. This might be
+             useful for images that are behind self-signed SSL certificates. Use at
+             your own risk !
+             Default: false
         * -kamaki-cloud
              The name of the cloud from ~/.kamakirc that will be used by kamaki
              for VM upload
@@ -110,6 +118,11 @@ Usage: gr.grnet.egi.vmcatcher.Main [options] [command] [command options]
         Options:
           -format
              Use this VM format if none can be automatically discovered
+          -insecure-ssl, -insecure-SSL
+             If set to true, SSL validation errors are ignored. This might be
+             useful for images that are behind self-signed SSL certificates. Use at
+             your own risk !
+             Default: false
         * -kamaki-cloud
              The name of the cloud from ~/.kamakirc that will be used by kamaki
              for VM upload
@@ -127,6 +140,18 @@ Usage: gr.grnet.egi.vmcatcher.Main [options] [command] [command options]
         Options:
         * -image-list-url
              The URL of the image list. You can use an http(s) or file URL.
+          -token
+             The Personal Access Token (from https://appdb.egi.eu) to use for
+             protected image lists & images
+
+    get-image-list      Retrieves a vmcatcher-compatible, JSON-encoded image list. Helpful for debugging.
+      Usage: get-image-list [options]
+        Options:
+        * -image-list-url
+             The URL of the image list. You can use an http(s) or file URL.
+          -token
+             The Personal Access Token (from https://appdb.egi.eu) to use for
+             protected image lists & images
 
     drain-queue      Remove all events from the queue and do nothing with them.
       Usage: drain-queue [options]
@@ -137,6 +162,11 @@ Usage: gr.grnet.egi.vmcatcher.Main [options] [command] [command options]
     transform      Transform a VM image to raw format
       Usage: transform [options]
         Options:
+          -insecure-ssl, -insecure-SSL
+             If set to true, SSL validation errors are ignored. This might be
+             useful for images that are behind self-signed SSL certificates. Use at
+             your own risk !
+             Default: false
         * -url
              The URL from where to fetch the VM.
 ```
