@@ -38,7 +38,7 @@ class Sys {
   def exec(log: Logger, args: String*): Int = {
     val cmdline = args.mkString("$ ", " ", "")
     log.info(cmdline)
-    
+
     val pe = new ProcessExecutor().
       command(args:_*).
       exitValueAny().
@@ -124,7 +124,6 @@ class Sys {
       } yield Seq("-m", s"$k=$v")).flatten
 
     val cmdline = paramsFront ++ SnfExcludeTasksParams ++ propertiesParams ++ paramsBack
-    log.info(cmdline.mkString("$ ", " ", ""))
     val result = exec(log, cmdline:_*)
 
     result
