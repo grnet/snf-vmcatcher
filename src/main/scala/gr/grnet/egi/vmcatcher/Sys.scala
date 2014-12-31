@@ -111,6 +111,7 @@ class Sys {
     val paramsFront = Seq(
       "sudo",
       snfmkimage,
+      "--force", // always update existing images
       "-c", rcCloudName,
       "-u", name,
       "-r", name
