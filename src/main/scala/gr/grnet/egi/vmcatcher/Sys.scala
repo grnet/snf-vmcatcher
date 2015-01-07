@@ -259,7 +259,8 @@ class Sys {
     formatOpt: Option[String],
     properties: Map[String, String],
     imageFile: File,
-    data: HandlerData
+    data: HandlerData,
+    eventOpt: Option[Event]
   ): Unit = {
     val log = data.log
     val imageTransformers = data.imageTransformers
@@ -299,8 +300,24 @@ class Sys {
             tname
           )
 
-        if(registrationExitCode != 0) {
-          log.error(s"publishVmImageFile(): Could not register image $imageFile to $kamakiCloud")
+        val uriInfo =
+          eventOpt match {
+            case None ⇒ ""
+            case Some(event) ⇒
+              val hvURI = ImageEventField.VMCATCHER_EVENT_HV_URI
+              val mpURI = ImageEventField.VMCATCHER_EVENT_AD_MPURI
+              val v1 = event(hvURI)
+              val v2 = event(mpURI)
+
+              val mapStr = Map(hvURI → v1, mpURI → v2).mkString("{", ", ", "}")
+              s" from $mapStr"
+          }
+
+        if(registrationExitCode == 0) {
+          log.info(s"publishVmImageFile(): Registered image $imageFile$uriInfo to $kamakiCloud as $tname")
+        }
+        else {
+          log.error(s"publishVmImageFile(): Could not register image $imageFile$uriInfo to $kamakiCloud")
         }
 
         if(transformedImageFile != imageFile) {
@@ -413,12 +430,13 @@ class Sys {
     formatOpt: Option[String],
     properties: Map[String, String],
     url: URL,
-    data: HandlerData
+    data: HandlerData,
+    eventOpt: Option[Event]
   ): Unit = {
     val log = data.log
     val GetImage(isTemporary, imageFile) = Sys.getImage(url, data)
 
-    try Sys.publishVmImageFile(formatOpt, properties, imageFile, data)
+    try Sys.publishVmImageFile(formatOpt, properties, imageFile, data, eventOpt)
     finally {
       if(isTemporary) {
         log.info(s"Deleting temporary $imageFile")

@@ -93,7 +93,8 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
       Some(format),
       properties,
       imageFile,
-      data
+      data,
+      Some(event)
     )
   }
 
@@ -141,7 +142,8 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
       formatOpt,
       properties,
       url,
-      data
+      data,
+      Some(event)
     )
 
     log.info("#< handleImageJSON")
