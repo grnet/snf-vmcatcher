@@ -18,19 +18,10 @@
 package gr.grnet.egi.vmcatcher.image.handler
 
 import gr.grnet.egi.vmcatcher.event.Event
-import gr.grnet.egi.vmcatcher.image.transformer.ImageTransformers
-import org.slf4j.Logger
 
 /**
  *
  */
 class ThrowingHandler extends DequeueHandler {
-  def handle(
-    log: Logger,
-    event: Event,
-    kamakiCloud: String,
-    imageTransformers: ImageTransformers,
-    insecureSSL: Boolean
-  ): Unit =
-    throw new Exception(s"event = $event")
+  def handle(event: Event, data: HandlerData): Unit = throw new Exception(s"event = $event")
 }

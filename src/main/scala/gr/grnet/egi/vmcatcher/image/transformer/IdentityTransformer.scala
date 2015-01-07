@@ -25,7 +25,7 @@ import java.io.File
 class IdentityTransformer extends ImageTransformer {
   protected def canTransformImpl(fixedFormat: String): Boolean = true
 
-  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File] = {
+  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File, workingFolder: String): Option[File] = {
     log.info(s"Assume $file is a raw image file")
     Some(file)
   }

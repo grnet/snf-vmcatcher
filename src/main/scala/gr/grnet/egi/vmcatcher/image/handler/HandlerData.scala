@@ -17,14 +17,16 @@
 
 package gr.grnet.egi.vmcatcher.image.handler
 
-import gr.grnet.egi.vmcatcher.event.Event
+import gr.grnet.egi.vmcatcher.image.transformer.ImageTransformers
+import org.slf4j.Logger
 
 /**
- * Handles one event from the queue.
  *
  */
-trait DequeueHandler {
-  def handle(event: Event, data: HandlerData): Unit
-
-  override def toString: String = this.getClass.getName
-}
+case class HandlerData(
+  log: Logger,
+  kamakiCloud: String,
+  imageTransformers: ImageTransformers,
+  insecureSSL: Boolean,
+  workingFolder: String
+)

@@ -40,7 +40,7 @@ trait ImageTransformer {
     canTransformImpl(fixedFormat)
   }
 
-  def transform(registry: ImageTransformers, formatOpt: Option[String], file: File): Option[File] = {
+  def transform(registry: ImageTransformers, formatOpt: Option[String], file: File, workingFolder: String): Option[File] = {
     val myClass = this.getClass.getSimpleName
     val callInfo = s"$myClass.transform($formatOpt, $file)"
     log.info(s"BEGIN $callInfo")
@@ -54,7 +54,7 @@ trait ImageTransformer {
       }
       else if(canTransform(extension)) {
         log.info(s"Transforming by extension '$extension'")
-        transformImpl(registry, extension, file)
+        transformImpl(registry, extension, file, workingFolder)
       }
       else {
         formatOpt match {
@@ -72,7 +72,7 @@ trait ImageTransformer {
             }
             else if(canTransform(format)) {
               log.info(s"Transforming by format '$format'")
-              transformImpl(registry, format, file)
+              transformImpl(registry, format, file, workingFolder)
             }
             else {
               log.info(s"Could not transform by extension '$extension' or format '$format'")
@@ -84,7 +84,7 @@ trait ImageTransformer {
     finally log.info(s"END   $callInfo")
   }
 
-  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File]
+  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File, workingFolder: String): Option[File]
 
   def suggestTransformedFilename(formatOpt: Option[String], filename: String): String =
     Sys.dropFileExtension(formatOpt, filename)

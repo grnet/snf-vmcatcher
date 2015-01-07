@@ -27,6 +27,7 @@ import com.typesafe.config.ConfigRenderOptions
 import gr.grnet.egi.vmcatcher.cmdline.Args
 import gr.grnet.egi.vmcatcher.cmdline.Args.ParsedCmdLine
 import gr.grnet.egi.vmcatcher.event._
+import gr.grnet.egi.vmcatcher.image.handler.HandlerData
 import gr.grnet.egi.vmcatcher.image.transformer.ImageTransformers
 import gr.grnet.egi.vmcatcher.rabbit.{Rabbit, RabbitConnector}
 import okio.Okio
@@ -268,11 +269,15 @@ object Main extends {
           rabbit.publish(event.toJson)
         }
 
+        val enqueuedMsg = s"Enqueued ${events.size} event(s)"
+        Log.info(enqueuedMsg)
+        System.err.println(enqueuedMsg)
+
         rabbit.close()
     }
   }
 
-  def do_dequeue(connector: RabbitConnector, kamakiCloud: String, insecureSSL: Boolean): Unit = {
+  def do_dequeue(connector: RabbitConnector, data: HandlerData): Unit = {
     def doOnce(rabbit: Rabbit): Unit = {
       rabbit.getAndAck {} { response ⇒
         val jsonMsgBytes = response.getBody
@@ -280,13 +285,7 @@ object Main extends {
         val event = Event.ofJson(jsonMsg)
 
         Log.info(s"dequeueHandler = ${dequeueHandler.getClass.getName}")
-        dequeueHandler.handle(
-          Log,
-          event,
-          kamakiCloud,
-          ImageTransformers,
-          insecureSSL
-        )
+        dequeueHandler.handle(event, data)
       }
     }
 
@@ -318,6 +317,8 @@ object Main extends {
   def do_dequeue(args: Args.Dequeue): Unit = {
     val kamakiCloud = args.kamakiCloud
     val insecureSSL = args.insecureSSL
+    val workingFolder = ParsedCmdLine.globalOptions.workingFolder
+    val data = HandlerData(Log, kamakiCloud, ImageTransformers, insecureSSL, workingFolder)
 
     if(insecureSSL) {
       Log.warn(s"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -328,7 +329,7 @@ object Main extends {
     }
 
     val connector = RabbitConnector(configOfPath(args.conf))
-    do_dequeue(connector, kamakiCloud, insecureSSL)
+    do_dequeue(connector, data)
   }
 
   def do_register_now(args: Args.RegisterNow): Unit = {
@@ -339,17 +340,16 @@ object Main extends {
     val users = args.users
     val format = args.format
     val formatOpt = Option(format).map(Sys.fixFormat)
+    val workingFolder = ParsedCmdLine.globalOptions.workingFolder
+    val data = HandlerData(Log, kamakiCloud, ImageTransformers, insecureSSL, workingFolder)
 
     val properties = Sys.minimumImageProperties(osfamily, users)
 
     Sys.downloadAndPublishImageFile(
-      Log,
       formatOpt,
       properties,
-      kamakiCloud,
       url,
-      ImageTransformers,
-      insecureSSL
+      data
     )
   }
 
@@ -390,10 +390,12 @@ object Main extends {
   def do_transform(args: Args.Transform): Unit = {
     val imageURL = args.url
     val insecureSSL = args.insecureSSL
-    val GetImage(isTemporary, imageFile) = Sys.getImage(Log, imageURL, insecureSSL)
+    val workingFolder = ParsedCmdLine.globalOptions.workingFolder
+    val data = HandlerData(Log, "", ImageTransformers, insecureSSL, workingFolder)
+    val GetImage(isTemporary, imageFile) = Sys.getImage(imageURL, data)
 
     try {
-      val tramsformedFileOpt = ImageTransformers.transform(None, imageFile)
+      val tramsformedFileOpt = ImageTransformers.transform(None, imageFile, workingFolder)
       for {
         transformedFile ← tramsformedFileOpt
       } {

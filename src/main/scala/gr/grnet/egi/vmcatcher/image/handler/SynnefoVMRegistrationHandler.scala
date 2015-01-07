@@ -25,32 +25,20 @@ import gr.grnet.egi.vmcatcher.Sys
 import gr.grnet.egi.vmcatcher.event.Event
 import gr.grnet.egi.vmcatcher.event.ExternalEventField._
 import gr.grnet.egi.vmcatcher.event.ImageEventField._
-import gr.grnet.egi.vmcatcher.image.transformer.ImageTransformers
-import org.slf4j.Logger
 
 /**
  * Registers a VM to Synnefo, using `snf-mkimage`
  *
  */
 class SynnefoVMRegistrationHandler extends DequeueHandler {
-  def expireVM(
-    log: Logger,
-    event: Event,
-    kamakiCloud: String,
-    imageTransformers: ImageTransformers,
-    insecureSSL: Boolean
-  ): Unit = {
+  def expireVM(event: Event, data: HandlerData): Unit = {
     // vmcatcher moves the image file to the $VMCATCHER_CACHE_DIR_EXPIRE folder
-    log.info("Expiring VM (nothing to do)")
+    data.log.info("Expiring VM (nothing to do)")
   }
 
-  def availableVM(
-    log: Logger,
-    event: Event,
-    kamakiCloud: String,
-    imageTransformers: ImageTransformers,
-    insecureSSL: Boolean
-  ): Unit = {
+  def availableVM(event: Event, data: HandlerData): Unit = {
+    val log = data.log
+
     // vmcatcher has downloaded the image in $VMCATCHER_CACHE_DIR_CACHE.
     // the image filename is $VMCATCHER_EVENT_FILENAME
     // the full path to the image file is $VMCATCHER_CACHE_DIR_CACHE/$VMCATCHER_EVENT_FILENAME
@@ -102,27 +90,20 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     val properties = synnefoProperties ++ vmCatcherProperties
 
     Sys.publishVmImageFile(
-      log,
       Some(format),
       properties,
       imageFile,
-      kamakiCloud,
-      imageTransformers
+      data
     )
   }
 
-  def handleOther(log: Logger, verb: String, event: Event, kamakiCloud: String, insecureSSL: Boolean): Unit = {
-    log.info(s"verb = $verb (nothing to do)")
+  def handleOther(verb: String, event: Event, data: HandlerData): Unit = {
+    data.log.info(s"verb = $verb (nothing to do)")
   }
 
-  def handleVmCatcherScriptJSON(
-    log: Logger,
-    event: Event,
-    eventType: String,
-    kamakiCloud: String,
-    imageTransformers: ImageTransformers,
-    insecureSSL: Boolean
-  ): Unit = {
+  def handleVmCatcherScriptJSON(event: Event, eventType: String, data: HandlerData): Unit = {
+    val log = data.log
+
     log.info("#> handleVmCatcherScriptJSON")
     log.info(s"eventType = $eventType")
     val eventTypeL = eventType.toLowerCase(Locale.ENGLISH)
@@ -134,24 +115,19 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     eventTypeL.stripSuffix("postfix") match {
       case "available" ⇒
         // "available" is the interesting message
-        availableVM(log, event, kamakiCloud, imageTransformers, insecureSSL)
+        availableVM(event, data)
 
       case "expire" ⇒
-        expireVM(log, event, kamakiCloud, imageTransformers, insecureSSL)
+        expireVM(event, data)
 
       case other ⇒
-        handleOther(log, other, event, kamakiCloud, insecureSSL)
+        handleOther(other, event, data)
     }
     log.info("#< handleVmCatcherScriptJSON")
   }
 
-  def handleImageJSON(
-    log: Logger,
-    event: Event,
-    kamakiCloud: String,
-    imageTransformers: ImageTransformers,
-    insecureSSL: Boolean
-  ): Unit = {
+  def handleImageJSON(event: Event, data: HandlerData): Unit = {
+    val log = data.log
     log.info("#> handleImageJSON")
 
     val url = new URL(event(VMCATCHER_EVENT_HV_URI))
@@ -162,27 +138,18 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     val properties = Sys.newImageProperties(event, users, rootPartition)
 
     Sys.downloadAndPublishImageFile(
-      log,
       formatOpt,
       properties,
-      kamakiCloud,
       url,
-      imageTransformers,
-      insecureSSL
+      data
     )
 
     log.info("#< handleImageJSON")
   }
 
-  def handle(
-    log: Logger,
-    event: Event,
-    kamakiCloud: String,
-    imageTransformers: ImageTransformers,
-    insecureSSL: Boolean
-  ): Unit = {
+  def handle(event: Event, data: HandlerData): Unit = {
     val sh = new JustLogHandler
-    sh.handle(log, event, kamakiCloud, imageTransformers, insecureSSL)
+    sh.handle(event, data)
 
     // There are two types of JSON messages going in the queue:
     //  1) The JSON message that vmcatcher creates
@@ -192,10 +159,10 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     event.get(VMCATCHER_EVENT_TYPE) match {
       case None ⇒
         // not from vmcatcher since it always sets VMCATCHER_EVENT_TYPE
-        handleImageJSON(log, event, kamakiCloud, imageTransformers, insecureSSL)
+        handleImageJSON(event, data)
 
       case Some(eventType) ⇒
-        handleVmCatcherScriptJSON(log, event, eventType, kamakiCloud, imageTransformers, insecureSSL)
+        handleVmCatcherScriptJSON(event, eventType, data)
     }
   }
 }

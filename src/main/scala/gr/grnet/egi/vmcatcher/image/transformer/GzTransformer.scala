@@ -27,9 +27,9 @@ import gr.grnet.egi.vmcatcher.Sys
 class GzTransformer extends ImageTransformer {
   protected def canTransformImpl(fixedFormat: String): Boolean = fixedFormat == ".gz"
 
-  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File] = {
+  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File, workingFolder: String): Option[File] = {
     val dropGz = Sys.dropFileExtension(file.getName)
-    val tmpFile =  Sys.createTempFile("." + dropGz)
+    val tmpFile =  Sys.createTempFile("." + dropGz, workingFolder)
     val exitCode = Sys.gunzip(log, file, tmpFile)
 
     if(exitCode != 0) {

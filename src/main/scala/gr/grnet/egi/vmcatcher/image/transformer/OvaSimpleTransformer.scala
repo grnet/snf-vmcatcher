@@ -33,8 +33,8 @@ import gr.grnet.egi.vmcatcher.Sys
 class OvaSimpleTransformer extends ImageTransformer {
   protected def canTransformImpl(fixedFormat: String): Boolean = fixedFormat == ".ova"
 
-  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File] = {
-    val tmpDir    = Sys.createTempDirectory()
+  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File, workingFolder: String): Option[File] = {
+    val tmpDir    = Sys.createTempDirectory(workingFolder)
     log.info(s"Extract $file to $tmpDir")
     val untarCode = Sys.untar(log, file, tmpDir)
 
@@ -75,7 +75,7 @@ class OvaSimpleTransformer extends ImageTransformer {
 
         case Some(imageFile) ⇒
           log.info(s"Found image $imageFile")
-          registry.transform(None, imageFile) match {
+          registry.transform(None, imageFile, workingFolder) match {
             case None ⇒
               log.error(s"Unknown transformer for $imageFile from OVA archive $file")
               None

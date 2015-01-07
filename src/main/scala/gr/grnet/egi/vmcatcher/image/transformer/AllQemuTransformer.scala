@@ -28,10 +28,10 @@ import gr.grnet.egi.vmcatcher.Sys
 class AllQemuTransformer extends ImageTransformer {
   protected def canTransformImpl(fixedFormat: String): Boolean = AllQemuTransformer.SupportedExtensions(fixedFormat)
 
-  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File] = {
+  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File, workingFolder: String): Option[File] = {
     val inFormatStripped = Sys.fixFormat(format).substring(1) // remove '.'
     val outFormatStripped = "raw"
-    val tmpFile = Sys.createTempFile("." + Sys.dropFileExtension(file) + "." + outFormatStripped)
+    val tmpFile = Sys.createTempFile("." + Sys.dropFileExtension(file) + "." + outFormatStripped, workingFolder)
     log.info(s"Transforming $file from $inFormatStripped to $outFormatStripped at $tmpFile")
     Sys.qemuImgConvert(log, inFormatStripped, outFormatStripped, file, tmpFile) match {
       case n if n != 0 ⇒

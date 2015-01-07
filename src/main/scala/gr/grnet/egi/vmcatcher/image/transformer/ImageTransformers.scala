@@ -67,21 +67,22 @@ trait ImageTransformers extends ImageTransformer {
 
   protected def canTransformImpl(fixedFormat: String): Boolean = find(fixedFormat).isDefined
   
-  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File] =
-    transformImpl(registry, format, file, deleteFileAfterTransform = false)
+  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File, workingFolder: String): Option[File] =
+    transformImpl(registry, format, file, deleteFileAfterTransform = false, workingFolder)
 
   private[image] def transformImpl(
     registry: ImageTransformers,
     format: String,
     file: File,
-    deleteFileAfterTransform: Boolean
+    deleteFileAfterTransform: Boolean,
+    workingFolder: String
   ): Option[File] = {
     find(format) match {
       case None ⇒
         None
 
       case Some(transformer) ⇒
-        transformer.transformImpl(registry, format, file) match {
+        transformer.transformImpl(registry, format, file, workingFolder) match {
           case None ⇒
             log.error(s"$transformer should have transformed $file via format '$format'")
             log.error(s"Not deleting untransformed $file")
@@ -89,7 +90,7 @@ trait ImageTransformers extends ImageTransformer {
 
           case some0 @ Some(transformed0) ⇒
             val extension = Sys.fixFormat(Sys.fileExtension(transformed0))
-            transformImpl(registry, extension, transformed0, deleteFileAfterTransform = true) match {
+            transformImpl(registry, extension, transformed0, deleteFileAfterTransform = true, workingFolder) match {
               case None ⇒
                 if(deleteFileAfterTransform) {
                   log.info(s"Deleting file $file")
@@ -112,8 +113,8 @@ trait ImageTransformers extends ImageTransformer {
     }
   }
 
-  def transform(formatOpt: Option[String], file: File): Option[File] =
-    transform(this, formatOpt, file)
+  def transform(formatOpt: Option[String], file: File, workingFolder: String): Option[File] =
+    transform(this, formatOpt, file, workingFolder)
 }
 
 object ImageTransformers extends ImageTransformers {

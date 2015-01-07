@@ -90,6 +90,9 @@ object Args {
 
     @Parameter(names = Array("-v"), description = "Be verbose")
     val verbose = false
+
+    @Parameter(names = Array("-working-folder"), description = "The working folder were images are downloaded and transformed")
+    val workingFolder = "/mnt/tmp"
   }
 
   @Parameters(

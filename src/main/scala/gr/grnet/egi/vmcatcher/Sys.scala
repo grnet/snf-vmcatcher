@@ -25,7 +25,7 @@ import java.util.Locale
 import javax.net.ssl._
 
 import gr.grnet.egi.vmcatcher.event.{Event, ImageEventField}
-import gr.grnet.egi.vmcatcher.image.transformer.ImageTransformers
+import gr.grnet.egi.vmcatcher.image.handler.HandlerData
 import okio.{Buffer, ByteString, Okio}
 import org.slf4j.Logger
 import org.zeroturnaround.exec.ProcessExecutor
@@ -52,9 +52,15 @@ class Sys {
     exitCode
   }
 
-  def createTempFile(suffix: String): File = Files.createTempFile("snf", suffix).toFile.getAbsoluteFile
+  def createTempFile(suffix: String, folderPath: String): File = {
+    val folder = new File(folderPath)
+    Files.createTempFile(folder.toPath, "snf", suffix).toFile.getAbsoluteFile
+  }
 
-  def createTempDirectory(): File = Files.createTempDirectory("snf").toFile.getAbsoluteFile
+  def createTempDirectory(folderPath: String): File = {
+    val folder = new File(folderPath)
+    Files.createTempDirectory(folder.toPath, "snf").toFile.getAbsoluteFile
+  }
 
   def rmrf(log: Logger, dir: File): Unit = {
     if(dir.isDirectory && dir.isAbsolute) {
@@ -74,11 +80,11 @@ class Sys {
     )
   }
 
-  def createRegistrationMetafile(log: Logger, properties: Map[String, String]): File = {
+  def createRegistrationMetafile(log: Logger, properties: Map[String, String], workingFolder: String): File = {
     val metaMap = Map("properties" → properties)
     val metaJson = Json.jsonOfMap(metaMap)
     log.info(s"Image meta       (json) = $metaJson")
-    val metaFile = createTempFile(".meta")
+    val metaFile = createTempFile(".meta", workingFolder)
     val metaSink = Okio.sink(metaFile)
     val metaString = ByteString.encodeUtf8(metaJson)
     val buffer = new Buffer().write(metaString)
@@ -250,15 +256,17 @@ class Sys {
     ) ++ event.toMap
 
   def publishVmImageFile(
-    log: Logger,
     formatOpt: Option[String],
     properties: Map[String, String],
     imageFile: File,
-    kamakiCloud: String,
-    imageTransformers: ImageTransformers
+    data: HandlerData
   ): Unit = {
+    val log = data.log
+    val imageTransformers = data.imageTransformers
+    val kamakiCloud = data.kamakiCloud
+    val workingFolder = data.workingFolder
 
-    val transformedImageFileOpt = imageTransformers.transform(formatOpt, imageFile)
+    val transformedImageFileOpt = imageTransformers.transform(formatOpt, imageFile, workingFolder)
     transformedImageFileOpt match {
       case None ⇒
         log.error(s"publishVmImageFile(): Unknown (unexpected) transformer for $imageFile")
@@ -369,15 +377,19 @@ class Sys {
     finally in.close()
   }
 
-  def createTempImageFile(filename: String): File = Sys.createTempFile("." + filename)
+  def createTempImageFile(filename: String, workingFolder: String): File = Sys.createTempFile("." + filename, workingFolder)
 
-  def createTempImageFile(imageURL: URL): File = {
+  def createTempImageFile(imageURL: URL, workingFolder: String): File = {
     // We want to preserve the remote filename
     val filename = new File(imageURL.getFile).getName
-    Sys.createTempImageFile(filename)
+    Sys.createTempImageFile(filename, workingFolder)
   }
 
-  def getImage(log: Logger, url: URL, insecureSSL: Boolean): GetImage = {
+  def getImage(url: URL, data: HandlerData): GetImage = {
+    val log = data.log
+    val insecureSSL = data.insecureSSL
+    val workingFolder = data.workingFolder
+
     url.getProtocol match {
       case "file" ⇒
         val file = new File(url.getFile)
@@ -387,7 +399,7 @@ class Sys {
         GetImage(isTemporary = false, file = file)
 
       case _ ⇒
-        val imageFile = Sys.createTempImageFile(url)
+        val imageFile = Sys.createTempImageFile(url, workingFolder)
         Sys.downloadToFile(log, url, imageFile, insecureSSL)
         val imageSize = imageFile.length()
         if(imageSize == 0L) {
@@ -398,17 +410,15 @@ class Sys {
   }
 
   def downloadAndPublishImageFile(
-    log: Logger,
     formatOpt: Option[String],
     properties: Map[String, String],
-    kamakiCloud: String,
     url: URL,
-    imageTransformers: ImageTransformers,
-    insecureSSL: Boolean
+    data: HandlerData
   ): Unit = {
-    val GetImage(isTemporary, imageFile) = Sys.getImage(log, url, insecureSSL)
+    val log = data.log
+    val GetImage(isTemporary, imageFile) = Sys.getImage(url, data)
 
-    try Sys.publishVmImageFile(log, formatOpt, properties, imageFile, kamakiCloud, imageTransformers)
+    try Sys.publishVmImageFile(formatOpt, properties, imageFile, data)
     finally {
       if(isTemporary) {
         log.info(s"Deleting temporary $imageFile")

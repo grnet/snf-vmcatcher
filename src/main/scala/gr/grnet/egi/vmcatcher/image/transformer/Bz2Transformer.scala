@@ -27,9 +27,9 @@ import gr.grnet.egi.vmcatcher.Sys
 class Bz2Transformer extends ImageTransformer {
   protected def canTransformImpl(fixedFormat: String): Boolean = fixedFormat == ".bz2"
 
-  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File): Option[File] = {
+  private[image] def transformImpl(registry: ImageTransformers, format: String, file: File, workingFolder: String): Option[File] = {
     val dropBz2 = Sys.dropFileExtension(file)
-    val tmpFile =  Sys.createTempFile("." + dropBz2)
+    val tmpFile =  Sys.createTempFile("." + dropBz2, workingFolder)
     val exitCode = Sys.bunzip2(log, file, tmpFile)
 
     if(exitCode != 0) {
