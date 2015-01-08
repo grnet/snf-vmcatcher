@@ -44,7 +44,7 @@ case class RabbitConnector(config: Config) {
 
     val conn = f.newConnection(addresses)
     val chan = conn.createChannel()
-    //chan.basicQos(1, true) // This throws an exception with a NOT IMPLEMENTED message somewhere
+    chan.basicQos(1, true)
     val exch = chan.exchangeDeclare(exchange, "topic", true, false, Collections.emptyMap())
     val queu = chan.queueDeclare(queue, true, false, false, Collections.emptyMap())
     val bind = chan.queueBind(queue, exchange, routingKey)
