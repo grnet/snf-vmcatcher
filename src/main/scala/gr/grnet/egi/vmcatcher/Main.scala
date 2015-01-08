@@ -17,6 +17,7 @@
 
 package gr.grnet.egi.vmcatcher
 
+import java.io.IOException
 import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.util.Scanner
@@ -66,7 +67,8 @@ object Main extends {
     Args.nameOf( ParsedCmdLine.parseImageList       ) → DEFER { do_parse_image_list       ( ParsedCmdLine.parseImageList       ) },
     Args.nameOf( ParsedCmdLine.getImageList         ) → DEFER { do_get_image_list         ( ParsedCmdLine.getImageList         ) },
     Args.nameOf( ParsedCmdLine.drainQueue           ) → DEFER { do_drain_queue            ( ParsedCmdLine.drainQueue           ) },
-    Args.nameOf( ParsedCmdLine.transform            ) → DEFER { do_transform              ( ParsedCmdLine.transform            ) }
+    Args.nameOf( ParsedCmdLine.transform            ) → DEFER { do_transform              ( ParsedCmdLine.transform            ) },
+    Args.nameOf( ParsedCmdLine.testQueue            ) → DEFER { do_test_queue             ( ParsedCmdLine.testQueue            ) }
   )
 
   def stringOfConfig(config: com.typesafe.config.Config) = config.root().render(configRenderOptions)
@@ -410,6 +412,25 @@ object Main extends {
         Log.info(s"do_transform(): Deleting temporary $imageFile")
         imageFile.delete()
       }
+    }
+  }
+
+  def do_test_queue(args: Args.TestQueue): Unit = {
+    val conf = args.conf
+    val config = configOfPath(conf)
+    val connector = RabbitConnector(config)
+    try {
+      val rabbit = connector.connect()
+      rabbit.close()
+      val successMsg = s"Successfully connected to queue using $conf"
+      Log.info(successMsg)
+      System.out.println(successMsg)
+    }
+    catch {
+      case e: IOException ⇒
+        val errMsg = s"Could not connect to queue using $conf"
+        Log.error(errMsg, e)
+        System.err.println(errMsg)
     }
   }
 

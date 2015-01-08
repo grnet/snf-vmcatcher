@@ -279,7 +279,7 @@ object Args {
 
   @Parameters(
     commandNames = Array("drain-queue"),
-    commandDescription = "Remove all events from the queue and do nothing with them. "
+    commandDescription = "Remove all events from the queue and do nothing with them"
   )
   class DrainQueue {
     @ParametersDelegate
@@ -307,6 +307,16 @@ object Args {
     def insecureSSL = insecureSSLDelegate.insecureSSL
   }
 
+  @Parameters(
+    commandNames = Array("test-queue"),
+    commandDescription = "Test connectivity with the queue"
+  )
+  class TestQueue {
+    @ParametersDelegate
+    val confDelegate = new ConfDelegate
+    def conf = confDelegate.conf
+  }
+
   class ParsedCmdLine {
     val globalOptions = new GlobalOptions
     val usage = new Usage
@@ -320,6 +330,7 @@ object Args {
     val getImageList = new GetImageList
     val drainQueue = new DrainQueue
     val transform = new Transform
+    val testQueue = new TestQueue
   }
 
   object ParsedCmdLine extends ParsedCmdLine
@@ -341,6 +352,7 @@ object Args {
     jc.addCommand(ParsedCmdLine.getImageList)
     jc.addCommand(ParsedCmdLine.drainQueue)
     jc.addCommand(ParsedCmdLine.transform)
+    jc.addCommand(ParsedCmdLine.testQueue)
 
     jc
   }
