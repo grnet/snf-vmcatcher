@@ -35,6 +35,8 @@ import scala.annotation.tailrec
 import scala.collection.immutable.Seq
 
 class Sys {
+  final val TmpFilePrefix = "snf" + java.lang.Long.toString(System.currentTimeMillis(), Character.MAX_RADIX)
+
   def exec(log: Logger, args: String*): Int = {
     val cmdline = args.mkString("$ ", " ", "")
     log.info(cmdline)
@@ -54,12 +56,12 @@ class Sys {
 
   def createTempFile(suffix: String, folderPath: String): File = {
     val folder = new File(folderPath)
-    Files.createTempFile(folder.toPath, "snf", suffix).toFile.getAbsoluteFile
+    Files.createTempFile(folder.toPath, TmpFilePrefix, suffix).toFile.getAbsoluteFile
   }
 
   def createTempDirectory(folderPath: String): File = {
     val folder = new File(folderPath)
-    Files.createTempDirectory(folder.toPath, "snf").toFile.getAbsoluteFile
+    Files.createTempDirectory(folder.toPath, TmpFilePrefix).toFile.getAbsoluteFile
   }
 
   def rmrf(log: Logger, dir: File): Unit = {
@@ -255,6 +257,23 @@ class Sys {
       rootPartition
     ) ++ event.toMap
 
+  def mkImageNameToUpload(imageFile: File): String = {
+    val name0 = imageFile.getName
+    val name1 =
+    // IN snf7708633662105303961.CentOS-6.5-20141029.ova
+      if(name0.startsWith(TmpFilePrefix))
+        name0.dropWhile(_ != '.').dropWhile(_ == '.')
+      else
+        name0
+    // OUT CentOS-6.5-20141029.ova
+    val name2 = Sys.dropFileExtension(name1)
+    val now = System.currentTimeMillis()
+    val now36 = java.lang.Long.toString(now / 1000, Character.MAX_RADIX)
+    val name = s"vmcatcher-$now36-$name2"
+
+    name
+  }
+
   def publishVmImageFile(
     formatOpt: Option[String],
     properties: Map[String, String],
@@ -266,6 +285,9 @@ class Sys {
     val imageTransformers = data.imageTransformers
     val kamakiCloud = data.kamakiCloud
     val workingFolder = data.workingFolder
+    val nameToUpload = mkImageNameToUpload(imageFile)
+
+    log.info(s"If all goes well, image will be uploaded as $nameToUpload")
 
     val transformedImageFileOpt = imageTransformers.transform(formatOpt, imageFile, workingFolder)
     transformedImageFileOpt match {
@@ -280,16 +302,7 @@ class Sys {
           log.info(s"publishVmImageFile(): Transformed $imageFile to $transformedImageFile")
         }
 
-        // Now make a better name
-        val tname0 = transformedImageFile.getName
-        val tname1 =
-          if(tname0.startsWith("snf"))
-            tname0.substring(tname0.indexOf('.') + 1)
-          else
-            tname0
-        val tnamePrefix = "vmcatcher-" // TODO Make it configurable
-        val tname = tnamePrefix + Sys.dropFileExtension(tname1)
-        log.info(s"publishVmImageFile(): Name of image to upload is $tname")
+        log.info(s"publishVmImageFile(): Name of image to upload is $nameToUpload")
 
         val registrationExitCode =
           Sys.snfMkImageRegister(
@@ -297,7 +310,7 @@ class Sys {
             kamakiCloud,
             properties,
             transformedImageFile,
-            tname
+            nameToUpload
           )
 
         val uriInfo =
@@ -314,7 +327,7 @@ class Sys {
           }
 
         if(registrationExitCode == 0) {
-          log.info(s"publishVmImageFile(): Registered image $imageFile$uriInfo to $kamakiCloud as $tname")
+          log.info(s"publishVmImageFile(): Registered image $imageFile$uriInfo to $kamakiCloud as $nameToUpload")
         }
         else {
           log.error(s"publishVmImageFile(): Could not register image $imageFile$uriInfo to $kamakiCloud")
