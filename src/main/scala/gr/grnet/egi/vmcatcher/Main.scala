@@ -282,14 +282,17 @@ object Main extends {
 
   def do_dequeue(connector: RabbitConnector, data: HandlerData): Unit = {
     def doOnce(rabbit: Rabbit): Unit = {
-      rabbit.getAndAck {} { response ⇒
-        val jsonMsgBytes = response.getBody
-        val jsonMsg = new String(jsonMsgBytes, StandardCharsets.UTF_8)
-        val event = Event.ofJson(jsonMsg)
+      try {
+        rabbit.getAndAck {} { response ⇒
+          val jsonMsgBytes = response.getBody
+          val jsonMsg = new String(jsonMsgBytes, StandardCharsets.UTF_8)
+          val event = Event.ofJson(jsonMsg)
 
-        Log.info(s"dequeueHandler = ${dequeueHandler.getClass.getName}")
-        dequeueHandler.handle(event, data)
+          Log.info(s"dequeueHandler = ${dequeueHandler.getClass.getName}")
+          dequeueHandler.handle(event, data)
+        }
       }
+      finally rabbit.close()
     }
 
     @tailrec
@@ -304,8 +307,12 @@ object Main extends {
             Log.info(s"OK, successfully connected to Rabbit after $dtSec sec and $failedAttempts attempts")
 
           case QueueConnectFirstAttempt(firstAttemptMillis) ⇒
-            val dtMillis = System.currentTimeMillis() - firstAttemptMillis
-            Log.info(s"OK, successfully connected to Rabbit after $dtMillis ms")
+            if(!isServer) {
+              val dtMillis = System.currentTimeMillis() - firstAttemptMillis
+              Log.info(s"OK, successfully connected to Rabbit after $dtMillis ms")
+            }
+
+          case _ ⇒
         }
 
         rabbit
@@ -326,13 +333,22 @@ object Main extends {
 
     @tailrec
     def doOnceOrLoop(): Unit = {
-      try doOnce(connectToRabbit(QueueConnectFirstAttempt(System.currentTimeMillis())))
+      try {
+        val attempt = QueueConnectFirstAttempt(System.currentTimeMillis())
+        val rabbit = connectToRabbit(attempt)
+        doOnce(rabbit)
+      }
       catch {
         case unrelated: Exception ⇒
           Log.error("", unrelated)
           if(!isServer) throw unrelated
       }
-      if(isServer) { doOnceOrLoop() }
+
+      if(isServer) {
+        // DO not reconnect too often
+        Thread.sleep(serverSleepMillis)
+        doOnceOrLoop()
+      }
     }
 
     doOnceOrLoop()

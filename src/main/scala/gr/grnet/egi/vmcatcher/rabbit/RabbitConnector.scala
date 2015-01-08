@@ -38,6 +38,9 @@ case class RabbitConnector(config: Config) {
     val addresses = servers.map(Address.parseAddress).toArray
 
     val f = new ConnectionFactory
+//    f.setAutomaticRecoveryEnabled(true)
+//    f.setTopologyRecoveryEnabled(true)  // this is the default anyway
+//    f.setNetworkRecoveryInterval(250)
     f.setUsername(username)
     f.setPassword(password)
     f.setVirtualHost(vhost)
