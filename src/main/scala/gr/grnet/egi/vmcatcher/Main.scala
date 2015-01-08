@@ -30,6 +30,7 @@ import gr.grnet.egi.vmcatcher.cmdline.Args.ParsedCmdLine
 import gr.grnet.egi.vmcatcher.event._
 import gr.grnet.egi.vmcatcher.image.handler.HandlerData
 import gr.grnet.egi.vmcatcher.image.transformer.ImageTransformers
+import gr.grnet.egi.vmcatcher.queue.{QueueConnectFirstAttempt, QueueConnectFailedAttempt, QueueConnectAttempt}
 import gr.grnet.egi.vmcatcher.rabbit.{Rabbit, RabbitConnector}
 import okio.Okio
 import org.slf4j.LoggerFactory
@@ -292,19 +293,40 @@ object Main extends {
     }
 
     @tailrec
-    def connectToRabbit(): Rabbit = {
-      try connector.connect()
+    def connectToRabbit(lastStatus: QueueConnectAttempt): Rabbit = {
+      try {
+        val rabbit = connector.connect()
+
+        lastStatus match {
+          case QueueConnectFailedAttempt(firstAttemptMillis, failedAttempts) ⇒
+            val dtMillis = System.currentTimeMillis() - firstAttemptMillis
+            val dtSec = dtMillis / 1000
+            Log.info(s"OK, successfully connected to Rabbit after $dtSec sec and $failedAttempts attempts")
+
+          case QueueConnectFirstAttempt(firstAttemptMillis) ⇒
+            val dtMillis = System.currentTimeMillis() - firstAttemptMillis
+            Log.info(s"OK, successfully connected to Rabbit after $dtMillis ms")
+        }
+
+        rabbit
+      }
       catch {
         case e: Exception ⇒
-          Log.error(s"$e")
+          if(lastStatus.isFirstAttempt) {
+            Log.error("First failed attempt to connect to the queue", e)
+          }
+          else {
+            val failedAttempts = lastStatus.failedAttempts + 1
+            Log.error(s"Successive ($failedAttempts) failed attempt to connect to the queue: $e")
+          }
           Thread.sleep(serverSleepMillis)
-          connectToRabbit()
+          connectToRabbit(lastStatus.toFailed)
       }
     }
 
     @tailrec
     def doOnceOrLoop(): Unit = {
-      try doOnce(connectToRabbit())
+      try doOnce(connectToRabbit(QueueConnectFirstAttempt(System.currentTimeMillis())))
       catch {
         case unrelated: Exception ⇒
           Log.error("", unrelated)
