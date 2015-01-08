@@ -40,7 +40,7 @@ public enum ImageEventField implements IEventField {
     VMCATCHER_EVENT_SL_ARCH("sl:arch"),
     VMCATCHER_EVENT_SL_OSVERSION("sl:osversion"),
     VMCATCHER_EVENT_SL_OSNAME("sl:osname"),
-    VMCATCHER_EVENT_AD_GROUP("ad:group"),
+//    VMCATCHER_EVENT_AD_GROUP("ad:group"),
     VMCATCHER_EVENT_AD_MPURI("ad:mpuri"),
 //    VMCATCHER_EVENT_AD_USER_FULLNAME("ad:user:fullname"),
 //    VMCATCHER_EVENT_AD_USER_GUID("ad:user:guid"),

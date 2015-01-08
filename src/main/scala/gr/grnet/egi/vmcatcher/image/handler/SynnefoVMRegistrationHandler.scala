@@ -22,7 +22,7 @@ import java.net.URL
 import java.util.Locale
 
 import gr.grnet.egi.vmcatcher.Sys
-import gr.grnet.egi.vmcatcher.event.Event
+import gr.grnet.egi.vmcatcher.event.{ImageEventField, Event}
 import gr.grnet.egi.vmcatcher.event.ExternalEventField._
 import gr.grnet.egi.vmcatcher.event.ImageEventField._
 
@@ -129,7 +129,8 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
 
   def handleImageJSON(event: Event, data: HandlerData): Unit = {
     val log = data.log
-    log.info("#> handleImageJSON")
+    val hvURI = event(ImageEventField.VMCATCHER_EVENT_HV_URI)
+    log.info(s"#> handleImageJSON($hvURI)")
 
     val url = new URL(event(VMCATCHER_EVENT_HV_URI))
     val formatOpt = Some(Sys.fixFormat(event(VMCATCHER_EVENT_HV_FORMAT)))
@@ -138,7 +139,7 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     val rootPartition = "1"
     val properties = Sys.newImageProperties(event, users, rootPartition)
 
-    Sys.downloadAndPublishImageFile(
+    val result = Sys.downloadAndPublishImageFile(
       formatOpt,
       properties,
       url,
@@ -146,7 +147,8 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
       Some(event)
     )
 
-    log.info("#< handleImageJSON")
+    log.info(s"Registration result for $hvURI: $result")
+    log.info(s"#< handleImageJSON($hvURI)")
   }
 
   def handle(event: Event, data: HandlerData): Unit = {

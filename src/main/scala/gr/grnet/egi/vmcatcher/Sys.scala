@@ -111,7 +111,14 @@ class Sys {
   // -m EXCLUDE_TASK_DELETESSHKEYS=yes -m EXCLUDE_TASK_FILESYSTEMRESIZEMOUNTED=yes -m EXCLUDE_TASK_FIXPARTITIONTABLE=yes -m EXCLUDE_TASK_FILESYSTEMRESIZEUNMOUNTED=yes -m EXCLUDE_TASK_SELINUXAUTORELABEL=yes -m EXCLUDE_TASK_ASSIGNHOSTNAME=yes -m EXCLUDE_TASK_ADDSWAP=yes -m EXCLUDE_TASK_CHANGEPASSWORD=yes
   val SnfExcludeTasksParams = (for(task ← SnfExcludeTasks) yield Seq("-m", s"$task=yes")).flatten
 
-  def snfMkImageRegister(log: Logger, rcCloudName: String, properties: Map[String, String], imageFile: File, name: String): Int = {
+  def snfMkImageRegister(
+    data: HandlerData,
+    properties: Map[String, String],
+    imageFile: File,
+    name: String
+  ): RegistrationResult = {
+    val log = data.log
+    val rcCloudName = data.kamakiCloud
     // Beware, it needs to be run as root.
     val snfmkimage = "snf-mkimage"
     log.info(s"Registering $imageFile using $snfmkimage")
@@ -134,7 +141,10 @@ class Sys {
     val cmdline = paramsFront ++ SnfExcludeTasksParams ++ propertiesParams ++ paramsBack
     val result = exec(log, cmdline:_*)
 
-    result
+    result match {
+      case 0 ⇒ ImageRegistered
+      case n ⇒ ImageNotRegistered(result, "")
+    }
   }
 
   def untar(log: Logger, tarFile: File, where: File): Int = {
@@ -280,7 +290,7 @@ class Sys {
     imageFile: File,
     data: HandlerData,
     eventOpt: Option[Event]
-  ): Unit = {
+  ): RegistrationResult = {
     val log = data.log
     val imageTransformers = data.imageTransformers
     val kamakiCloud = data.kamakiCloud
@@ -293,6 +303,7 @@ class Sys {
     transformedImageFileOpt match {
       case None ⇒
         log.error(s"publishVmImageFile(): Unknown (unexpected) transformer for $imageFile")
+        NoTransformerFound
 
       case Some(transformedImageFile) ⇒
         if(imageFile == transformedImageFile) {
@@ -304,14 +315,7 @@ class Sys {
 
         log.info(s"publishVmImageFile(): Name of image to upload is $nameToUpload")
 
-        val registrationExitCode =
-          Sys.snfMkImageRegister(
-            log,
-            kamakiCloud,
-            properties,
-            transformedImageFile,
-            nameToUpload
-          )
+        val registrationResult = Sys.snfMkImageRegister(data, properties, transformedImageFile, nameToUpload)
 
         val uriInfo =
           eventOpt match {
@@ -326,7 +330,7 @@ class Sys {
               s" from $mapStr"
           }
 
-        if(registrationExitCode == 0) {
+        if(registrationResult.isSuccess) {
           log.info(s"publishVmImageFile(): Registered image $imageFile$uriInfo to $kamakiCloud as $nameToUpload")
         }
         else {
@@ -337,6 +341,8 @@ class Sys {
           log.info(s"publishVmImageFile(): Deleting transformed published file $transformedImageFile")
           transformedImageFile.delete()
         }
+
+        registrationResult
     }
   }
 
@@ -445,7 +451,7 @@ class Sys {
     url: URL,
     data: HandlerData,
     eventOpt: Option[Event]
-  ): Unit = {
+  ): RegistrationResult = {
     val log = data.log
     val GetImage(isTemporary, imageFile) = Sys.getImage(url, data)
 
