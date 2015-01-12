@@ -37,6 +37,10 @@ import scala.collection.immutable.Seq
 class Sys {
   final val TmpFilePrefix = "snf" + java.lang.Long.toString(System.currentTimeMillis(), Character.MAX_RADIX)
 
+  final val OSFAMILY = "OSFAMILY"
+  final val ROOT_PARTITION = "ROOT_PARTITION"
+  final val USERS = "USERS"
+
   def exec(log: Logger, args: String*): Int = {
     val cmdline = args.mkString("$ ", " ", "")
     log.info(cmdline)
@@ -255,9 +259,9 @@ class Sys {
   // Constructs the minimum set of image properties (--metafile) and their values.
   def minimumImageProperties(osfamily: String, users: String, rootPartition: String = "1") =
     Map(
-      "osfamily" → osfamily,
-      "users" → users,
-      "ROOT_PARTITION" → rootPartition
+      OSFAMILY       → osfamily,
+      USERS          → users,
+      ROOT_PARTITION → rootPartition
     )
 
   def newImageProperties(event: Event, users: String, rootPartition: String = "1") =
