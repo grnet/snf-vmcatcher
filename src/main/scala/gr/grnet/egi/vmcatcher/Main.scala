@@ -57,19 +57,25 @@ object Main extends {
       setFormatted(true).
       setJson(true)
 
+  def mkcmd[A <: AnyRef](c: A, f: (A) ⇒ Unit): (String, () ⇒ Unit) = {
+    val name = Args.nameOf(c)
+    val command = () ⇒ f(c)
+    name → command
+  } 
+  
   val commandMap = Map(
-    Args.nameOf( ParsedCmdLine.usage                ) → DEFER { do_usage                  ( ParsedCmdLine.usage                ) },
-    Args.nameOf( ParsedCmdLine.showEnv              ) → DEFER { do_show_env               ( ParsedCmdLine.showEnv              ) },
-    Args.nameOf( ParsedCmdLine.showConf             ) → DEFER { do_show_conf              ( ParsedCmdLine.showConf             ) },
-    Args.nameOf( ParsedCmdLine.enqueueFromEnv       ) → DEFER { do_enqueue_from_env       ( ParsedCmdLine.enqueueFromEnv       ) },
-    Args.nameOf( ParsedCmdLine.enqueueFromImageList ) → DEFER { do_enqueue_from_image_list( ParsedCmdLine.enqueueFromImageList ) },
-    Args.nameOf( ParsedCmdLine.dequeue              ) → DEFER { do_dequeue                ( ParsedCmdLine.dequeue              ) },
-    Args.nameOf( ParsedCmdLine.registerNow          ) → DEFER { do_register_now           ( ParsedCmdLine.registerNow          ) },
-    Args.nameOf( ParsedCmdLine.parseImageList       ) → DEFER { do_parse_image_list       ( ParsedCmdLine.parseImageList       ) },
-    Args.nameOf( ParsedCmdLine.getImageList         ) → DEFER { do_get_image_list         ( ParsedCmdLine.getImageList         ) },
-    Args.nameOf( ParsedCmdLine.drainQueue           ) → DEFER { do_drain_queue            ( ParsedCmdLine.drainQueue           ) },
-    Args.nameOf( ParsedCmdLine.transform            ) → DEFER { do_transform              ( ParsedCmdLine.transform            ) },
-    Args.nameOf( ParsedCmdLine.testQueue            ) → DEFER { do_test_queue             ( ParsedCmdLine.testQueue            ) }
+    mkcmd(ParsedCmdLine.usage, do_usage),
+    mkcmd(ParsedCmdLine.showEnv, do_show_env),
+    mkcmd(ParsedCmdLine.showConf, do_show_conf),
+    mkcmd(ParsedCmdLine.enqueueFromEnv, do_enqueue_from_env),
+    mkcmd(ParsedCmdLine.enqueueFromImageList, do_enqueue_from_image_list),
+    mkcmd(ParsedCmdLine.dequeue, do_dequeue),
+    mkcmd(ParsedCmdLine.registerNow, do_register_now),
+    mkcmd(ParsedCmdLine.parseImageList, do_parse_image_list),
+    mkcmd(ParsedCmdLine.getImageList, do_get_image_list),
+    mkcmd(ParsedCmdLine.drainQueue, do_drain_queue),
+    mkcmd(ParsedCmdLine.transform, do_transform),
+    mkcmd(ParsedCmdLine.testQueue, do_test_queue)
   )
 
   def stringOfConfig(config: com.typesafe.config.Config) = config.root().render(configRenderOptions)
@@ -280,7 +286,7 @@ object Main extends {
     }
   }
 
-  def do_dequeue(connector: RabbitConnector, data: HandlerData): Unit = {
+  def do_dequeue_(connector: RabbitConnector, data: HandlerData): Unit = {
     def doOnce(rabbit: Rabbit): Unit = {
       try {
         rabbit.getAndAck {} { response ⇒
@@ -369,7 +375,7 @@ object Main extends {
     }
 
     val connector = RabbitConnector(configOfPath(args.conf))
-    do_dequeue(connector, data)
+    do_dequeue_(connector, data)
   }
 
   def do_register_now(args: Args.RegisterNow): Unit = {
