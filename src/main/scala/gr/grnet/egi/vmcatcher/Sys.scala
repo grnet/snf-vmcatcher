@@ -24,6 +24,7 @@ import java.security.cert.X509Certificate
 import java.util.Locale
 import javax.net.ssl._
 
+import com.squareup.okhttp.Credentials
 import gr.grnet.egi.vmcatcher.event.{Event, ImageEventField}
 import gr.grnet.egi.vmcatcher.image.handler.HandlerData
 import okio.{Buffer, ByteString, Okio}
@@ -467,6 +468,60 @@ class Sys {
         imageFile.delete()
       }
     }
+  }
+
+  def urlToUtf8(url: URL, tokenOpt: Option[String]): String = {
+    val urlConnection = url.openConnection()
+    for(token ← tokenOpt) {
+      // The password seems to be fixed, as described in
+      //   https://wiki.appdb.egi.eu/main:faq:how_to_subscribe_to_a_private_image_list_using_the_vmcatcher
+      // TODO Make configurable
+      val username = token
+      val password = "x-oauth-basic"
+
+      val credential = Credentials.basic(username, password)
+      urlConnection.setRequestProperty("Authorization", credential)
+    }
+
+    urlConnection.connect()
+    val stream = urlConnection.getInputStream
+
+    val source = Okio.source(stream)
+    val buffer = Okio.buffer(source)
+    val str = buffer.readUtf8()
+    stream.close()
+    str
+  }
+
+  def getRawImageList(url: URL, tokenOpt: Option[String]): String = {
+    ////////////////////////////////////////////////////////////
+    // This is the image list JSON with a header and a footer.
+    // The header is like:
+    ////////////////////////////////////////////////////////////
+    // MIME-Version: 1.0
+    // Content-Type: multipart/signed; protocol="application/x-pkcs7-signature"; micalg="sha1"; boundary="----842099D61D9D967FA11C0562C70A8E03"
+    //
+    // This is an S/MIME signed message
+    //
+    // ------842099D61D9D967FA11C0562C70A8E03
+    //
+    ////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////
+    // and the footer is like:
+    ////////////////////////////////////////////////////////////
+    // ------842099D61D9D967FA11C0562C70A8E03
+    // Content-Type: application/x-pkcs7-signature; name="smime.p7s"
+    // Content-Transfer-Encoding: base64
+    // Content-Disposition: attachment; filename="smime.p7s"
+
+    // MIIHbQYJKoZIhvcNAQcCoIIHXjCCB1oCAQExCzAJBgUrDgMCGgUAMAsGCSqGSIb3
+    // DQEHAaCCBOQwggTgMIIDyKADAgECAgEjMA0GCSqGSIb3DQEBCwUAMEoxEzARBgoJ
+    // kiaJk/IsZAEZFgNPUkcxGDAWBgoJkiaJk/IsZAEZFghTRUUtR1JJRDEZMBcGA1UE
+    //
+    // ------842099D61D9D967FA11C0562C70A8E03--
+    ////////////////////////////////////////////////////////////
+    urlToUtf8(url, tokenOpt)
   }
 }
 
