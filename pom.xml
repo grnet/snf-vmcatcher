@@ -46,7 +46,11 @@
   </developers>
 
   <properties>
-    <scala.version>2.11.4</scala.version>
+    <scala.major.version>2.11</scala.major.version>
+    <scala.minor.version>4</scala.minor.version>
+    <scala.version>${scala.major.version}.${scala.minor.version}</scala.version>
+
+    <lift.version>3.0-M3</lift.version>
     <jackson.version>2.4.2</jackson.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>${project.build.sourceEncoding}</project.reporting.outputEncoding>
@@ -117,6 +121,12 @@
       <groupId>com.beust</groupId>
       <artifactId>jcommander</artifactId>
       <version>1.35</version>
+    </dependency>
+
+    <dependency>
+      <groupId>net.liftweb</groupId>
+      <artifactId>lift-mapper_${scala.major.version}</artifactId>
+      <version>${lift.version}</version>
     </dependency>
 
     <dependency>
