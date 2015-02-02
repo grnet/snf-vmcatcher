@@ -15,23 +15,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.event;
-
-import static gr.grnet.egi.vmcatcher.event.EventFieldSection.External;
+package gr.grnet.egi.vmcatcher.cmdline
 
 /**
  *
  */
-public enum ExternalEventField implements IEventField {
-    VMCATCHER_EVENT_TYPE,
-    VMCATCHER_EVENT_AD_MPURI,
-    VMCATCHER_EVENT_FILENAME,
-    VMCATCHER_CACHE_DIR_CACHE,
-    VMCATCHER_EVENT_UUID_SESSION,
-    VMCATCHER_EVENT_VO,
-    VMCATCHER_X_EVENT_IMAGE_LIST_URL; // Custom, not present in original vmcatcher
+class ParsedCmdLine {
+  val globalOptions = new GlobalOptions
+  val usage = new Usage
 
-    public EventFieldSection section() { return External; }
+  val showEnv = new ShowEnv
+  val showConf = new ShowConf
 
-    public String jsonField() { return ""; }
+  val enqueueFromEnv = new EnqueueFromEnv
+  val enqueueFromImageList = new EnqueueFromImageList
+  val dequeue = new Dequeue
+  val drainQueue = new DrainQueue
+  val testQueue = new TestQueue
+
+  val parseImageList = new ParseImageList
+  val getImageList = new GetImageList
+
+  val registerNow = new RegisterNow
+
+  val transform = new Transform
 }
+
+object ParsedCmdLine extends ParsedCmdLine

@@ -18,21 +18,17 @@
 package gr.grnet.egi.vmcatcher
 
 import java.io.IOException
-import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.util.Scanner
 
 import com.beust.jcommander.ParameterException
-import com.squareup.okhttp._
 import com.typesafe.config.ConfigRenderOptions
-import gr.grnet.egi.vmcatcher.cmdline.Args
-import gr.grnet.egi.vmcatcher.cmdline.Args.ParsedCmdLine
+import gr.grnet.egi.vmcatcher.cmdline._
 import gr.grnet.egi.vmcatcher.event._
 import gr.grnet.egi.vmcatcher.image.handler.HandlerData
 import gr.grnet.egi.vmcatcher.image.transformer.ImageTransformers
-import gr.grnet.egi.vmcatcher.queue.{QueueConnectFirstAttempt, QueueConnectFailedAttempt, QueueConnectAttempt}
+import gr.grnet.egi.vmcatcher.queue.{QueueConnectAttempt, QueueConnectFailedAttempt, QueueConnectFirstAttempt}
 import gr.grnet.egi.vmcatcher.rabbit.{Rabbit, RabbitConnector}
-import okio.Okio
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
@@ -95,11 +91,11 @@ object Main extends {
     Config.ofFilePath(path)
   }
 
-  def do_usage(args: Args.Usage): Unit = Args.jc.usage()
+  def do_usage(args: Usage): Unit = Args.jc.usage()
 
-  def do_show_env(args: Args.ShowEnv): Unit = println(envAsPrettyJson)
+  def do_show_env(args: ShowEnv): Unit = println(envAsPrettyJson)
 
-  def do_show_conf(args: Args.ShowConf): Unit = println(stringOfConfig(configOfPath(args.conf)))
+  def do_show_conf(args: ShowConf): Unit = println(stringOfConfig(configOfPath(args.conf)))
 
   def do_enqueue(connector: RabbitConnector): Unit = {
     val event = Event.ofSysEnv
@@ -112,7 +108,7 @@ object Main extends {
     rabbit.close()
   }
   
-  def do_enqueue_from_env(args: Args.EnqueueFromEnv): Unit = {
+  def do_enqueue_from_env(args: EnqueueFromEnv): Unit = {
     val connector = RabbitConnector(configOfPath(args.conf))
     do_enqueue(connector)
   }
@@ -147,7 +143,7 @@ object Main extends {
   }
 
 
-  def do_parse_image_list(args: Args.ParseImageList): Unit = {
+  def do_parse_image_list(args: ParseImageList): Unit = {
     val imageListContainerURL = args.imageListUrl
     val token = args.token
     val rawImageListContainer = Sys.getRawImageList(imageListContainerURL, Option(token))
@@ -184,7 +180,7 @@ object Main extends {
     }
   }
 
-  def do_get_image_list(args: Args.GetImageList): Unit = {
+  def do_get_image_list(args: GetImageList): Unit = {
     val url = args.url
     val token = args.token
     val rawImageListContainer = Sys.getRawImageList(url, Option(token))
@@ -194,7 +190,7 @@ object Main extends {
     System.err.println(imageListContainerJson)
   }
 
-  def do_enqueue_from_image_list(args: Args.EnqueueFromImageList): Unit = {
+  def do_enqueue_from_image_list(args: EnqueueFromImageList): Unit = {
     val imageListURL = args.imageListUrl
     val imageIdentifier = args.imageIdentifier
     val tokenOpt = Option(args.token)
@@ -203,7 +199,11 @@ object Main extends {
     Log.info(s"imageList (URL) = $imageListURL")
     Log.info(s"imageList (raw) = $rawImageList")
     val jsonImageList = parseImageListContainerJson(rawImageList)
-    val events0 = Events.ofImageListContainer(jsonImageList, Map())
+    val events0 = Events.ofImageListContainer(
+      jsonImageList,
+      //Map(ExternalEventField.VMCATCHER_X_EVENT_IMAGE_LIST_URL → imageListURL.toString)
+      Map()
+    )
 
     events0 match {
       case Nil ⇒
@@ -337,7 +337,7 @@ object Main extends {
     doOnceOrLoop()
   }
 
-  def do_dequeue(args: Args.Dequeue): Unit = {
+  def do_dequeue(args: Dequeue): Unit = {
     val kamakiCloud = args.kamakiCloud
     val insecureSSL = args.insecureSSL
     val workingFolder = ParsedCmdLine.globalOptions.workingFolder
@@ -355,7 +355,7 @@ object Main extends {
     do_dequeue_(connector, data)
   }
 
-  def do_register_now(args: Args.RegisterNow): Unit = {
+  def do_register_now(args: RegisterNow): Unit = {
     val url = args.url
     val insecureSSL = args.insecureSSL
     val kamakiCloud = args.kamakiCloud
@@ -377,7 +377,7 @@ object Main extends {
     )
   }
 
-  def do_drain_queue(args: Args.DrainQueue): Unit = {
+  def do_drain_queue(args: DrainQueue): Unit = {
     val connector = RabbitConnector(configOfPath(args.conf))
     val rabbit = connector.connect()
 
@@ -411,7 +411,7 @@ object Main extends {
     System.out.println(msg)
   }
 
-  def do_transform(args: Args.Transform): Unit = {
+  def do_transform(args: Transform): Unit = {
     val imageURL = args.url
     val insecureSSL = args.insecureSSL
     val workingFolder = ParsedCmdLine.globalOptions.workingFolder
@@ -436,7 +436,7 @@ object Main extends {
     }
   }
 
-  def do_test_queue(args: Args.TestQueue): Unit = {
+  def do_test_queue(args: TestQueue): Unit = {
     val conf = args.conf
     val config = configOfPath(conf)
     val connector = RabbitConnector(config)

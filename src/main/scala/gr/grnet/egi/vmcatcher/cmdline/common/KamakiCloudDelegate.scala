@@ -15,23 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.event;
+package gr.grnet.egi.vmcatcher.cmdline.common
 
-import static gr.grnet.egi.vmcatcher.event.EventFieldSection.External;
+import com.beust.jcommander.Parameter
+import gr.grnet.egi.vmcatcher.cmdline.helper.NotEmptyStringValidator
 
 /**
  *
  */
-public enum ExternalEventField implements IEventField {
-    VMCATCHER_EVENT_TYPE,
-    VMCATCHER_EVENT_AD_MPURI,
-    VMCATCHER_EVENT_FILENAME,
-    VMCATCHER_CACHE_DIR_CACHE,
-    VMCATCHER_EVENT_UUID_SESSION,
-    VMCATCHER_EVENT_VO,
-    VMCATCHER_X_EVENT_IMAGE_LIST_URL; // Custom, not present in original vmcatcher
-
-    public EventFieldSection section() { return External; }
-
-    public String jsonField() { return ""; }
+class KamakiCloudDelegate {
+  @Parameter(
+    names = Array("-kamaki-cloud"),
+    description = "The name of the cloud from ~/.kamakirc that will be used by kamaki for VM upload",
+    required = true,
+    validateWith = classOf[NotEmptyStringValidator]
+  )
+  val kamakiCloud: String = null
 }

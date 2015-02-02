@@ -113,7 +113,14 @@ class Sys {
   )
 
   // The command-line form, in case you would like to try it directly:
-  // -m EXCLUDE_TASK_DELETESSHKEYS=yes -m EXCLUDE_TASK_FILESYSTEMRESIZEMOUNTED=yes -m EXCLUDE_TASK_FIXPARTITIONTABLE=yes -m EXCLUDE_TASK_FILESYSTEMRESIZEUNMOUNTED=yes -m EXCLUDE_TASK_SELINUXAUTORELABEL=yes -m EXCLUDE_TASK_ASSIGNHOSTNAME=yes -m EXCLUDE_TASK_ADDSWAP=yes -m EXCLUDE_TASK_CHANGEPASSWORD=yes
+  // -m EXCLUDE_TASK_DELETESSHKEYS=yes
+  // -m EXCLUDE_TASK_FILESYSTEMRESIZEMOUNTED=yes
+  // -m EXCLUDE_TASK_FIXPARTITIONTABLE=yes
+  // -m EXCLUDE_TASK_FILESYSTEMRESIZEUNMOUNTED=yes
+  // -m EXCLUDE_TASK_SELINUXAUTORELABEL=yes
+  // -m EXCLUDE_TASK_ASSIGNHOSTNAME=yes
+  // -m EXCLUDE_TASK_ADDSWAP=yes
+  // -m EXCLUDE_TASK_CHANGEPASSWORD=yes
   val SnfExcludeTasksParams = (for(task ← SnfExcludeTasks) yield Seq("-m", s"$task=yes")).flatten
 
   def snfMkImageRegister(
@@ -259,11 +266,11 @@ class Sys {
 
 
   // Constructs the minimum set of image properties (--metafile) and their values.
-  def minimumImageProperties(osfamily: String, users: String, rootPartition: String = "1") =
+  def minimumImageProperties(osfamily: String, users: String, rootPartition: String = "1"): Map[String, String] =
     Map(
-      OSFAMILY       → osfamily,
-      USERS          → users,
-      ROOT_PARTITION → rootPartition
+//      OSFAMILY       → osfamily,
+//      USERS          → users,
+//      ROOT_PARTITION → rootPartition
     )
 
   def newImageProperties(event: Event, users: String, rootPartition: String = "1") =

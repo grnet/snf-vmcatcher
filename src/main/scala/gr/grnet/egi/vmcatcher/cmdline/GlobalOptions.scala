@@ -15,23 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.event;
+package gr.grnet.egi.vmcatcher.cmdline
 
-import static gr.grnet.egi.vmcatcher.event.EventFieldSection.External;
+import com.beust.jcommander.Parameter
 
 /**
  *
  */
-public enum ExternalEventField implements IEventField {
-    VMCATCHER_EVENT_TYPE,
-    VMCATCHER_EVENT_AD_MPURI,
-    VMCATCHER_EVENT_FILENAME,
-    VMCATCHER_CACHE_DIR_CACHE,
-    VMCATCHER_EVENT_UUID_SESSION,
-    VMCATCHER_EVENT_VO,
-    VMCATCHER_X_EVENT_IMAGE_LIST_URL; // Custom, not present in original vmcatcher
+class GlobalOptions {
+  @Parameter(names = Array("-h", "-help", "--help"), help = true)
+  val help = false
 
-    public EventFieldSection section() { return External; }
+  @Parameter(names = Array("-v"), description = "Be verbose")
+  val verbose = false
 
-    public String jsonField() { return ""; }
+  @Parameter(names = Array("-working-folder"), description = "The working folder were images are downloaded and transformed")
+  val workingFolder = "/mnt/tmp"
 }

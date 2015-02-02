@@ -15,15 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.cmdline
-
-import java.net.URL
-
-import com.beust.jcommander.IStringConverter
+package gr.grnet.egi.vmcatcher
 
 /**
  *
  */
-class URLStringConverter extends IStringConverter[URL] {
-  def convert(value: String): URL = new URL(value)
-}
+sealed trait RegistrationResult { def isSuccess: Boolean = false }
+
+case object NoTransformerFound extends RegistrationResult
+case object ImageRegistered extends RegistrationResult { override def isSuccess = true }
+case class ImageNotRegistered(exitCode: Int, error: String) extends RegistrationResult

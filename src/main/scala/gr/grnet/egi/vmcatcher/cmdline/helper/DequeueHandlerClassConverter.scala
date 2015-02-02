@@ -15,23 +15,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.event;
+package gr.grnet.egi.vmcatcher.cmdline.helper
 
-import static gr.grnet.egi.vmcatcher.event.EventFieldSection.External;
+import com.beust.jcommander.IStringConverter
+import gr.grnet.egi.vmcatcher.Main
+import gr.grnet.egi.vmcatcher.image.handler.DequeueHandler
 
 /**
  *
  */
-public enum ExternalEventField implements IEventField {
-    VMCATCHER_EVENT_TYPE,
-    VMCATCHER_EVENT_AD_MPURI,
-    VMCATCHER_EVENT_FILENAME,
-    VMCATCHER_CACHE_DIR_CACHE,
-    VMCATCHER_EVENT_UUID_SESSION,
-    VMCATCHER_EVENT_VO,
-    VMCATCHER_X_EVENT_IMAGE_LIST_URL; // Custom, not present in original vmcatcher
-
-    public EventFieldSection section() { return External; }
-
-    public String jsonField() { return ""; }
+class DequeueHandlerClassConverter extends IStringConverter[DequeueHandler] {
+  def convert(className: String): DequeueHandler = {
+    try {
+      val cl = Class.forName(className)
+      cl.newInstance().asInstanceOf[DequeueHandler]
+    }
+    catch {
+      case e: Exception ⇒
+        val typeName = classOf[DequeueHandler].getSimpleName
+        val error = s"Could not instantiate $typeName class $className"
+        Main.Log.error(error, e)
+        throw e
+    }
+  }
 }

@@ -15,23 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.event;
+package gr.grnet.egi.vmcatcher.cmdline
 
-import static gr.grnet.egi.vmcatcher.event.EventFieldSection.External;
+import com.beust.jcommander.{ParametersDelegate, Parameters}
+import gr.grnet.egi.vmcatcher.cmdline.common.PersonalAccessTokenDelegate
+import gr.grnet.egi.vmcatcher.cmdline.helper.ImageListUrlDelegate
 
 /**
  *
  */
-public enum ExternalEventField implements IEventField {
-    VMCATCHER_EVENT_TYPE,
-    VMCATCHER_EVENT_AD_MPURI,
-    VMCATCHER_EVENT_FILENAME,
-    VMCATCHER_CACHE_DIR_CACHE,
-    VMCATCHER_EVENT_UUID_SESSION,
-    VMCATCHER_EVENT_VO,
-    VMCATCHER_X_EVENT_IMAGE_LIST_URL; // Custom, not present in original vmcatcher
+@Parameters(
+  commandNames = Array("get-image-list"),
+  commandDescription = "Retrieves a vmcatcher-compatible, JSON-encoded image list. Helpful for debugging."
+)
+class GetImageList {
+  @ParametersDelegate
+  val urlDelegate = new ImageListUrlDelegate
+  def url = urlDelegate.url
 
-    public EventFieldSection section() { return External; }
-
-    public String jsonField() { return ""; }
+  @ParametersDelegate
+  val tokenDelegate = new PersonalAccessTokenDelegate
+  def token = tokenDelegate.token
 }

@@ -23,7 +23,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>gr.grnet</groupId>
   <artifactId>snf-vmcatcher</artifactId>
-  <version>0.5.0</version>
+  <version>0.6.0</version>
 
   <!-- Project details-->
   <name>snf-vmcatcher</name>
@@ -60,6 +60,11 @@
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
+      <version>${scala.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-compiler</artifactId>
       <version>${scala.version}</version>
     </dependency>
 
@@ -130,6 +135,18 @@
     </dependency>
 
     <dependency>
+      <groupId>net.liftweb</groupId>
+      <artifactId>lift-db_${scala.major.version}</artifactId>
+      <version>${lift.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>net.liftweb</groupId>
+      <artifactId>lift-common_${scala.major.version}</artifactId>
+      <version>${lift.version}</version>
+    </dependency>
+
+    <dependency>
       <groupId>org.zeroturnaround</groupId>
       <artifactId>zt-exec</artifactId>
       <version>1.6</version>
@@ -141,6 +158,11 @@
       </exclusions>
     </dependency>
 
+    <dependency>
+      <groupId>org.xerial</groupId>
+      <artifactId>sqlite-jdbc</artifactId>
+      <version>3.8.7</version>
+    </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>

@@ -24,12 +24,12 @@ import net.liftweb.mapper.{MappedLongForeignKey, IdPK, LongKeyedMapper, LongKeye
  */
 class MImage extends LongKeyedMapper[MImage] with IdPK {
   def getSingleton = MImage
-}
-
-object MImage extends MImage with LongKeyedMetaMapper[MImage] {
-  override def dbTableName = "IMAGE"
 
   object f_imageList extends MappedLongForeignKey(this, MImageList) {
     override def dbColumnName = "image_list_id"
   }
+}
+
+object MImage extends MImage with LongKeyedMetaMapper[MImage] {
+  override def dbTableName = "IMAGE"
 }

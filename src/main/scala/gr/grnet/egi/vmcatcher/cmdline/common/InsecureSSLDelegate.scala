@@ -15,19 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.cmdline
+package gr.grnet.egi.vmcatcher.cmdline.common
 
-import com.beust.jcommander.{IParameterValidator, ParameterException}
+import com.beust.jcommander.Parameter
 
 /**
  *
  */
-class NotEmptyStringValidator extends IParameterValidator {
-  def validate(name: String, value: String): Unit =
-    value match {
-      case null ⇒ throw new ParameterException(s"Parameter $name is null")
-      case ""   ⇒ throw new ParameterException(s"Parameter $name is empty")
-      case s if s.trim.isEmpty ⇒ throw new ParameterException(s"Parameter $name is empty (just spaces)")
-      case _ ⇒
-    }
+class InsecureSSLDelegate {
+  @Parameter(
+    names = Array("-insecure-ssl", "-insecure-SSL"),
+    description = "If set to true, SSL validation errors are ignored." +
+      " This might be useful for images that are behind self-signed SSL certificates." +
+      " Use at your own risk !",
+    required = false
+  )
+  val insecureSSL = false
 }

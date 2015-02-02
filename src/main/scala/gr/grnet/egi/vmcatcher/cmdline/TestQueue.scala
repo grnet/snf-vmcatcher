@@ -17,15 +17,18 @@
 
 package gr.grnet.egi.vmcatcher.cmdline
 
-import com.beust.jcommander.{ParameterException, IValueValidator}
+import com.beust.jcommander.{ParametersDelegate, Parameters}
+import gr.grnet.egi.vmcatcher.cmdline.common.ConfDelegate
 
 /**
  *
  */
-class NotNullValueValidator[T <: AnyRef] extends IValueValidator[T] {
-  def validate(name: String, value: T): Unit =
-    value match {
-      case null ⇒ throw new ParameterException(s"Parameter $name is null")
-      case _    ⇒
-    }
+@Parameters(
+  commandNames = Array("test-queue"),
+  commandDescription = "Test connectivity with the queue"
+)
+class TestQueue {
+  @ParametersDelegate
+  val confDelegate = new ConfDelegate
+  def conf = confDelegate.conf
 }

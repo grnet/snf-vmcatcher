@@ -15,27 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.cmdline
+package gr.grnet.egi.vmcatcher.cmdline.helper
 
-import com.beust.jcommander.IStringConverter
-import gr.grnet.egi.vmcatcher.Main
-import gr.grnet.egi.vmcatcher.image.handler.DequeueHandler
+import com.beust.jcommander.{IValueValidator, ParameterException}
 
 /**
  *
  */
-class DequeueHandlerClassConverter extends IStringConverter[DequeueHandler] {
-  def convert(className: String): DequeueHandler = {
-    try {
-      val cl = Class.forName(className)
-      cl.newInstance().asInstanceOf[DequeueHandler]
+class NotNullValueValidator[T <: AnyRef] extends IValueValidator[T] {
+  def validate(name: String, value: T): Unit =
+    value match {
+      case null ⇒ throw new ParameterException(s"Parameter $name is null")
+      case _    ⇒
     }
-    catch {
-      case e: Exception ⇒
-        val typeName = classOf[DequeueHandler].getSimpleName
-        val error = s"Could not instantiate $typeName class $className"
-        Main.Log.error(error, e)
-        throw e
-    }
-  }
 }

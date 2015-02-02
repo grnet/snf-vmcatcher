@@ -15,23 +15,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.event;
+package gr.grnet.egi.vmcatcher.cmdline.helper
 
-import static gr.grnet.egi.vmcatcher.event.EventFieldSection.External;
+import com.beust.jcommander.{IParameterValidator, ParameterException}
 
 /**
  *
  */
-public enum ExternalEventField implements IEventField {
-    VMCATCHER_EVENT_TYPE,
-    VMCATCHER_EVENT_AD_MPURI,
-    VMCATCHER_EVENT_FILENAME,
-    VMCATCHER_CACHE_DIR_CACHE,
-    VMCATCHER_EVENT_UUID_SESSION,
-    VMCATCHER_EVENT_VO,
-    VMCATCHER_X_EVENT_IMAGE_LIST_URL; // Custom, not present in original vmcatcher
-
-    public EventFieldSection section() { return External; }
-
-    public String jsonField() { return ""; }
+class NotEmptyStringValidator extends IParameterValidator {
+  def validate(name: String, value: String): Unit =
+    value match {
+      case null ⇒ throw new ParameterException(s"Parameter $name is null")
+      case ""   ⇒ throw new ParameterException(s"Parameter $name is empty")
+      case s if s.trim.isEmpty ⇒ throw new ParameterException(s"Parameter $name is empty (just spaces)")
+      case _ ⇒
+    }
 }

@@ -15,23 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.event;
+package gr.grnet.egi.vmcatcher.cmdline
 
-import static gr.grnet.egi.vmcatcher.event.EventFieldSection.External;
+import com.beust.jcommander.{ParametersDelegate, Parameters}
+import gr.grnet.egi.vmcatcher.cmdline.common.ConfDelegate
 
 /**
  *
  */
-public enum ExternalEventField implements IEventField {
-    VMCATCHER_EVENT_TYPE,
-    VMCATCHER_EVENT_AD_MPURI,
-    VMCATCHER_EVENT_FILENAME,
-    VMCATCHER_CACHE_DIR_CACHE,
-    VMCATCHER_EVENT_UUID_SESSION,
-    VMCATCHER_EVENT_VO,
-    VMCATCHER_X_EVENT_IMAGE_LIST_URL; // Custom, not present in original vmcatcher
+@Parameters(
+  commandNames = Array("enqueue-from-env"),
+  commandDescription = "Use environment variables to enqueue a VM instance message to RabbitMQ." +
+    " This is the original use-case and reflects how vmcatcher (the original software)" +
+    " works."
+)
+class EnqueueFromEnv {
+  @ParametersDelegate
+  val confDelegate = new ConfDelegate
 
-    public EventFieldSection section() { return External; }
-
-    public String jsonField() { return ""; }
+  def conf = confDelegate.conf
 }
+
