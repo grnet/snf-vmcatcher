@@ -5,3 +5,4 @@ target/
 application.conf
 *.log
 snf-vmcatcher*.jar
+__gitstats/
