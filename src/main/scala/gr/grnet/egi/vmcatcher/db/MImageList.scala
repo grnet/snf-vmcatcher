@@ -25,8 +25,8 @@ import net.liftweb.mapper._
 class MImageList extends LongKeyedMapper[MImageList] with IdPK {
   def getSingleton = MImageList
 
-  object f_imageListAccess extends MappedLongForeignKey(this, MImageListAccess) {
-    override def dbColumnName = "image_list_access_id"
+  object f_imageListRef extends MappedLongForeignKey(this, MImageListRef) {
+    override def dbColumnName = "image_list_ref_id"
   }
 
   object whenAccessed extends MappedDateTime(this) {

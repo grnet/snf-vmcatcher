@@ -1,0 +1,18 @@
+{
+  "rabbitConfig": {
+    "servers": [ "localhost:5672" ],
+    "username": "vmcatcher",
+    "password": "******",
+    "queue": "vmcatcher",
+    "exchange": "vmcatcher",
+    "routingKey": "vmcatcher",
+    "vhost": "/"
+  },
+
+  "dbConfig": {
+    "jdbcDriver": "com.mysql.jdbc.Driver",
+    "jdbcURL": "jdbc:mysql://localhost:3306/snfvmcatcher",
+    "jdbcUsername": "vmcatcher",
+    "jdbcPassword": "*********"
+  }
+}

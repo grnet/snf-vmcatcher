@@ -17,18 +17,24 @@
 
 package gr.grnet.egi.vmcatcher
 
-import java.io.IOException
+import java.io.{File, IOException}
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.util.Scanner
 
 import com.beust.jcommander.ParameterException
-import com.typesafe.config.ConfigRenderOptions
+import gr.grnet.egi.vmcatcher.cmdline.CmdLine._
 import gr.grnet.egi.vmcatcher.cmdline._
+import gr.grnet.egi.vmcatcher.config.{Config, RabbitMQConfig}
+import gr.grnet.egi.vmcatcher.db.{MDB, MImageListRef}
 import gr.grnet.egi.vmcatcher.event._
 import gr.grnet.egi.vmcatcher.image.handler.HandlerData
 import gr.grnet.egi.vmcatcher.image.transformer.ImageTransformers
 import gr.grnet.egi.vmcatcher.queue.{QueueConnectAttempt, QueueConnectFailedAttempt, QueueConnectFirstAttempt}
 import gr.grnet.egi.vmcatcher.rabbit.{Rabbit, RabbitConnector}
+import gr.grnet.egi.vmcatcher.util.GetImage
+import org.apache.avro.io.DecoderFactory
+import org.apache.avro.specific.SpecificDatumReader
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
@@ -37,65 +43,88 @@ import scala.annotation.tailrec
  *
  */
 object Main extends {
+  val t0 = System.currentTimeMillis()
+  var _args = Array[String]()
+  lazy val argsDebugStr = _args.mkString(" ")
+
   final val ProgName = getClass.getName.stripSuffix("$")
   final val Log = LoggerFactory.getLogger(getClass)
-  
+
+  def beginSequence(args: Array[String]): Unit = {
+    _args = args
+    Log.info("=" * 30)
+    Log.info(s"BEGIN snf-vmcatcher ($t0) [$argsDebugStr]")
+  }
+
+  def endSequence(): Unit = {
+    val t1 = System.currentTimeMillis()
+    val dtms = t1 - t0
+    Log.info(s"END snf-vmcatcher ($dtms ms) [$argsDebugStr]")
+    Log.info("=" * 30)
+  }
+
+  def ERROR(s: String): Unit = {
+    System.err.println(s)
+    Log.error(s)
+  }
+
+  def INFO(s: String): Unit = {
+    System.err.println(s)
+    Log.info(s)
+  }
+
   def EXIT(status: Int, alsoDo: () ⇒ Any = () ⇒ ()): Nothing = {
     Log.warn(s"Exiting with status $status")
     alsoDo()
     sys.exit(status)
   }
 
-  val configRenderOptions =
-    ConfigRenderOptions.defaults().
-      setComments(true).
-      setOriginComments(false).
-      setFormatted(true).
-      setJson(true)
-
   def mkcmd[A <: AnyRef](c: A, f: (A) ⇒ Unit): (String, () ⇒ Unit) = {
-    val name = Args.nameOf(c)
+    val name = nameOf(c)
     val command = () ⇒ f(c)
     name → command
   } 
   
   val commandMap = Map(
-    mkcmd(ParsedCmdLine.usage, do_usage),
-    mkcmd(ParsedCmdLine.showEnv, do_show_env),
-    mkcmd(ParsedCmdLine.showConf, do_show_conf),
-    mkcmd(ParsedCmdLine.enqueueFromEnv, do_enqueue_from_env),
-    mkcmd(ParsedCmdLine.enqueueFromImageList, do_enqueue_from_image_list),
-    mkcmd(ParsedCmdLine.dequeue, do_dequeue),
-    mkcmd(ParsedCmdLine.registerNow, do_register_now),
-    mkcmd(ParsedCmdLine.parseImageList, do_parse_image_list),
-    mkcmd(ParsedCmdLine.getImageList, do_get_image_list),
-    mkcmd(ParsedCmdLine.drainQueue, do_drain_queue),
-    mkcmd(ParsedCmdLine.transform, do_transform),
-    mkcmd(ParsedCmdLine.testQueue, do_test_queue)
-  )
+    mkcmd(CmdLine.usage, do_usage),
 
-  def stringOfConfig(config: com.typesafe.config.Config) = config.root().render(configRenderOptions)
+    // Debugging
+    mkcmd(CmdLine.showEnv, do_show_env),
+    mkcmd(CmdLine.showConf, do_show_conf),
+
+    // Queues
+    mkcmd(CmdLine.enqueueFromEnv, do_enqueue_from_env),
+    mkcmd(CmdLine.enqueueFromImageList, do_enqueue_from_image_list),
+    mkcmd(CmdLine.dequeue, do_dequeue),
+    mkcmd(CmdLine.drainQueue, do_drain_queue),
+    mkcmd(CmdLine.testQueue, do_test_queue),
+
+    // Image lists
+    mkcmd(CmdLine.registerImageList, do_register_image_list),
+    mkcmd(CmdLine.parseImageList, do_parse_image_list),
+    mkcmd(CmdLine.getImageList, do_get_image_list),
+
+    // Images
+    mkcmd(CmdLine.registerImageNow, do_register_now),
+
+    mkcmd(CmdLine.transform, do_transform)
+  )
 
   def env: Map[String, String] = sys.env
   def envAsJson = Json.jsonOfMap(env)
   def envAsPrettyJson: String =  Json.jsonOfMap(env)
 
-  def isVerbose = ParsedCmdLine.globalOptions.verbose
-  def isHelp    = ParsedCmdLine.globalOptions.help
-  def isServer  = ParsedCmdLine.dequeue.server
-  def serverSleepMillis = ParsedCmdLine.dequeue.sleepMillis max 0L min 1000L
-  def dequeueHandler = ParsedCmdLine.dequeue.handler
+  def isVerbose = CmdLine.globalOptions.verbose
+  def isHelp    = CmdLine.globalOptions.help
+  def isServer  = CmdLine.dequeue.server
+  def serverSleepMillis = CmdLine.dequeue.sleepMillis max 0L min 1000L
+  def dequeueHandler = CmdLine.dequeue.handler
 
-  def configOfPath(path: String) = {
-    Log.info(s"Load conf from $path")
-    Config.ofFilePath(path)
-  }
-
-  def do_usage(args: Usage): Unit = Args.jc.usage()
+  def do_usage(args: Usage): Unit = jc.usage()
 
   def do_show_env(args: ShowEnv): Unit = println(envAsPrettyJson)
 
-  def do_show_conf(args: ShowConf): Unit = println(stringOfConfig(configOfPath(args.conf)))
+  def do_show_conf(args: ShowConf): Unit = println(config.toString)
 
   def do_enqueue(connector: RabbitConnector): Unit = {
     val event = Event.ofSysEnv
@@ -109,7 +138,7 @@ object Main extends {
   }
   
   def do_enqueue_from_env(args: EnqueueFromEnv): Unit = {
-    val connector = RabbitConnector(configOfPath(args.conf))
+    val connector = RabbitConnector(config.getRabbitConfig)
     do_enqueue(connector)
   }
 
@@ -142,6 +171,29 @@ object Main extends {
     buffer.toString
   }
 
+  def do_register_image_list(args: RegisterImageList): Unit = {
+    val name = args.name
+    val url = args.url
+    val username = args.username
+    val password = args.password
+
+    MDB.init(config.getDbConfig)
+    MImageListRef.findByName(name) match {
+      case Some(ref) ⇒
+        ERROR(s"Image list with name '$name' already exists and points to ${ref.url.get}")
+        EXIT(10, endSequence)
+
+      case None ⇒
+        val ref = MImageListRef.create.
+          name(name).
+          url(url.toString).
+          username(username).
+          password(password).
+          saveMe()
+
+        Log.info(s"Saved $ref")
+    }
+  }
 
   def do_parse_image_list(args: ParseImageList): Unit = {
     val imageListContainerURL = args.imageListUrl
@@ -153,8 +205,7 @@ object Main extends {
     Log.info (s"imageListContainer (json) =\n$imageListContainerJson")
 
     val events0 = Events.ofImageListContainer(imageListContainerJson, Map())
-    Log.info(s"Found ${events0.size} events")
-    System.err.println(s"Found ${events0.size} events")
+    INFO(s"Found ${events0.size} events")
     if(events0.isEmpty) { return }
 
     // Sort by size ascending and print basic info
@@ -175,8 +226,7 @@ object Main extends {
     for(event ← sortedEvents) {
       val miniMap = Map((for(key ← miniKeys) yield (key, event(key))):_*)
       val miniInfo = miniMap.mkString("[", ", ", "]")
-      Log.info(s"Found: $miniInfo")
-      System.err.println(s"Found: $miniInfo")
+      INFO(s"Found: $miniInfo")
     }
   }
 
@@ -186,8 +236,7 @@ object Main extends {
     val rawImageListContainer = Sys.getRawImageList(url, Option(token))
     Log.info (s"imageListContainer (URL ) = $url")
     val imageListContainerJson = parseImageListContainerJson(rawImageListContainer)
-    Log.info (s"imageListContainer (json) =\n$imageListContainerJson")
-    System.err.println(imageListContainerJson)
+    INFO(s"imageListContainer (json) =\n$imageListContainerJson")
   }
 
   def do_enqueue_from_image_list(args: EnqueueFromImageList): Unit = {
@@ -208,15 +257,13 @@ object Main extends {
     events0 match {
       case Nil ⇒
         val errMsg = s"Could not parse events from image list"
-        Log.error(errMsg)
-        System.err.println(errMsg)
+        ERROR(errMsg)
         EXIT(4)
 
       case event :: _ ⇒
         val dcIdentifier = event(ImageListEventField.VMCATCHER_EVENT_IL_DC_IDENTIFIER)
         val parsedMsg = s"Parsed image list dc:identifier = $dcIdentifier"
-        Log.info(parsedMsg)
-        System.err.println(parsedMsg)
+        INFO(parsedMsg)
         val events =
           if(imageIdentifier eq null)
             events0
@@ -225,20 +272,17 @@ object Main extends {
 
         if(events.isEmpty) {
           val errMsg = s"Image identifier $imageIdentifier not found"
-          Log.error(errMsg)
-          System.err.println(errMsg)
+          ERROR(errMsg)
           val identifiers = events0.map(_(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER))
           val availableMsg = s"Available identifiers are: ${identifiers.mkString(", ")}"
-          Log.info(availableMsg)
-          System.err.println(availableMsg)
+          INFO(availableMsg)
           EXIT(3)
         }
 
         val matchMsg = s"Matched ${events.size} event(s)"
-        Log.info(matchMsg)
-        System.err.println(matchMsg)
+        INFO(matchMsg)
 
-        val connector = RabbitConnector(configOfPath(args.confDelegate.conf))
+        val connector = RabbitConnector(config.getRabbitConfig)
         val rabbit = connector.connect()
 
         for {
@@ -248,16 +292,14 @@ object Main extends {
           val image_HV_URI = event(ImageEventField.VMCATCHER_EVENT_HV_URI)
           val image_AD_MPURI = event(ImageEventField.VMCATCHER_EVENT_AD_MPURI)
           val eventMsg = s"Enqueueing event for dc:identifier = $imageIdent, hv:uri = $image_HV_URI, ad:mpuri = $image_AD_MPURI"
-          Log.info(eventMsg)
-          System.err.println(eventMsg)
+          INFO(eventMsg)
           Log.info(s"event (image) = $event")
 
           rabbit.publish(event.toJson)
         }
 
         val enqueuedMsg = s"Enqueued ${events.size} event(s)"
-        Log.info(enqueuedMsg)
-        System.err.println(enqueuedMsg)
+        INFO(enqueuedMsg)
 
         rabbit.close()
     }
@@ -340,7 +382,7 @@ object Main extends {
   def do_dequeue(args: Dequeue): Unit = {
     val kamakiCloud = args.kamakiCloud
     val insecureSSL = args.insecureSSL
-    val workingFolder = ParsedCmdLine.globalOptions.workingFolder
+    val workingFolder = CmdLine.globalOptions.workingFolder
     val data = HandlerData(Log, kamakiCloud, ImageTransformers, insecureSSL, workingFolder)
 
     if(insecureSSL) {
@@ -351,11 +393,11 @@ object Main extends {
       Log.warn(s"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     }
 
-    val connector = RabbitConnector(configOfPath(args.conf))
+    val connector = RabbitConnector(config.getRabbitConfig)
     do_dequeue_(connector, data)
   }
 
-  def do_register_now(args: RegisterNow): Unit = {
+  def do_register_now(args: RegisterImageNow): Unit = {
     val url = args.url
     val insecureSSL = args.insecureSSL
     val kamakiCloud = args.kamakiCloud
@@ -363,7 +405,7 @@ object Main extends {
     val users = args.users
     val format = args.format
     val formatOpt = Option(format).map(Sys.fixFormat)
-    val workingFolder = ParsedCmdLine.globalOptions.workingFolder
+    val workingFolder = CmdLine.globalOptions.workingFolder
     val data = HandlerData(Log, kamakiCloud, ImageTransformers, insecureSSL, workingFolder)
 
     val properties = Sys.minimumImageProperties(osfamily, users)
@@ -378,7 +420,7 @@ object Main extends {
   }
 
   def do_drain_queue(args: DrainQueue): Unit = {
-    val connector = RabbitConnector(configOfPath(args.conf))
+    val connector = RabbitConnector(config.getRabbitConfig)
     val rabbit = connector.connect()
 
     def drainLoop(count: Int): Int = {
@@ -414,7 +456,7 @@ object Main extends {
   def do_transform(args: Transform): Unit = {
     val imageURL = args.url
     val insecureSSL = args.insecureSSL
-    val workingFolder = ParsedCmdLine.globalOptions.workingFolder
+    val workingFolder = CmdLine.globalOptions.workingFolder
     val data = HandlerData(Log, "", ImageTransformers, insecureSSL, workingFolder)
     val GetImage(isTemporary, imageFile) = Sys.getImage(imageURL, data)
 
@@ -437,68 +479,84 @@ object Main extends {
   }
 
   def do_test_queue(args: TestQueue): Unit = {
-    val conf = args.conf
-    val config = configOfPath(conf)
-    val connector = RabbitConnector(config)
+    val rabbitConfig = config.getRabbitConfig
+    val maskedRabbitConfig = RabbitMQConfig.newBuilder(rabbitConfig).setPassword("***").build()
+    val connector = RabbitConnector(rabbitConfig)
     try {
       val rabbit = connector.connect()
       rabbit.close()
-      val successMsg = s"Successfully connected to queue using $conf"
+      val successMsg = s"Successfully connected to queue using $maskedRabbitConfig"
       Log.info(successMsg)
       System.out.println(successMsg)
     }
     catch {
       case e: IOException ⇒
-        val errMsg = s"Could not connect to queue using $conf"
+        val errMsg = s"Could not connect to queue using $maskedRabbitConfig"
         Log.error(errMsg, e)
         System.err.println(errMsg)
     }
   }
 
+  lazy val config: Config = {
+    val path = CmdLine.globalOptions.config
+    val file = new File(path)
+    if(!file.exists()) {
+      throw new IllegalArgumentException(s"Configuration file $path does not exist")
+    }
+    else if(!file.isFile) {
+      throw new IllegalArgumentException(s"Configuration file $path is not a file (!)")
+    }
+
+    val bytes = Files.readAllBytes(file.toPath)
+    val json = new String(bytes, StandardCharsets.UTF_8)
+    val instance = new Config()
+    val schema = instance.getSchema
+    val reader = new SpecificDatumReader[Config](schema)
+    val decoderFactory = DecoderFactory.get()
+    val jsonDecoder = decoderFactory.jsonDecoder(schema, json)
+    val validatingDecoder = decoderFactory.validatingDecoder(schema, jsonDecoder)
+
+    reader.read(instance, validatingDecoder)
+  }
+
+  def mainV(args: Array[String]): Unit = {
+    beginSequence(args)
+    jc.parse(args:_*)
+
+    val map = Map(
+      ("-v", isVerbose),
+      ("-h", isHelp),
+      ("-server", isServer),
+      ("-sleepMillis", serverSleepMillis),
+      ("-handler", dequeueHandler)
+    )
+
+    Log.info(map.mkString(", "))
+
+    val command = jc.getParsedCommand
+    val isNoCommand = command eq null
+
+    if(isHelp || isNoCommand) {
+      jc.usage()
+      EXIT(1, endSequence)
+    }
+    else {
+      commandMap(command)()
+      EXIT(0, endSequence)
+    }
+  }
+
   def main(args: Array[String]): Unit = {
-    val t0 = System.currentTimeMillis()
-    val argsDebugStr = args.mkString(" ")
-
-    def endSequence(): Unit = {
-      val t1 = System.currentTimeMillis()
-      val dtms = t1 - t0
-      Log.info(s"END snf-vmcatcher ($dtms ms) [$argsDebugStr]")
-      Log.info("=" * 30)
-    }
-
-    Log.info("=" * 30)
-    Log.info(s"BEGIN snf-vmcatcher [$argsDebugStr]")
-    val jc = Args.jc
-    try {
-      jc.parse(args:_*)
-
-      val map = Map(
-        ("-v", isVerbose),
-        ("-h", isHelp),
-        ("-server", isServer),
-        ("-sleepMillis", serverSleepMillis),
-        ("-handler", dequeueHandler)
-      )
-
-      Log.info(map.mkString(", "))
-
-      val command = jc.getParsedCommand
-      val isNoCommand = command eq null
-
-      if(isHelp || isNoCommand) {
-        jc.usage()
-        EXIT(1, endSequence)
-      }
-      else {
-        commandMap(command)()
-        EXIT(0, endSequence)
-      }
-    }
+    try mainV(args)
     catch {
       case e: ParameterException ⇒
         System.err.println(e.getMessage)
         Log.error(e.getMessage)
-        endSequence()
+        EXIT(2, endSequence)
+
+      case e: IllegalArgumentException ⇒
+        System.err.println(e.getMessage)
+        Log.error(e.getMessage)
         EXIT(2, endSequence)
 
       case e: Exception ⇒

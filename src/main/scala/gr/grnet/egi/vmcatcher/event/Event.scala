@@ -17,9 +17,10 @@
 
 package gr.grnet.egi.vmcatcher.event
 
-import com.typesafe.config.{Config ⇒ TConfig}
+import com.typesafe.config.{Config ⇒ TypesafeConfig}
 import gr.grnet.egi.vmcatcher.event.EventFieldSection.{Image, ImageList}
-import gr.grnet.egi.vmcatcher.{Main, Config, Json}
+import gr.grnet.egi.vmcatcher.util.TConfig
+import gr.grnet.egi.vmcatcher.{Main, Json}
 
 import scala.collection.JavaConverters._
 
@@ -77,7 +78,7 @@ object Event {
 
   // Fix the Key.
   // _       _
-  // the Config library does not like the ':' token inside keys, unless it is quoted.
+  // the TConfig library does not like the ':' token inside keys, unless it is quoted.
   def fk(key: String) = key.replaceAll(":", "\":\"")
 }
 
@@ -114,13 +115,13 @@ object Events {
 
     val externalMap = externalFieldsMap.map { case (k, v) ⇒ (k.name(), v) }
 
-    val imageListConfig = Config.ofString(json).getConfig(fk("hv:imagelist"))
+    val imageListConfig = TConfig.ofString(json).getConfig(fk("hv:imagelist"))
     val imageListMap = {
       val jsonFieldNames = ImageList.getJsonFieldNames.asScala.toSet
 
       // Keep only relevant field names as keys
       // and then translate them to vmcatcher variable names
-      Config.
+      TConfig.
         stringMapOfFilteredFields(imageListConfig, jsonFieldNames).
         map { case (k, v) ⇒ (ImageListEventField.ofJsonField(k).name(), v) }
     }
@@ -135,7 +136,7 @@ object Events {
 
       // Keep only relevant field names as keys
       // and then translate them to vmcatcher variable names
-      val imageMap = Config.
+      val imageMap = TConfig.
         stringMapOfFilteredFields(imageConfig, jsonFieldNames).
         map { case (k, v) ⇒ (ImageEventField.ofJsonField(k).name(), v) }
 

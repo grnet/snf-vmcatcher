@@ -17,10 +17,13 @@
 
 package gr.grnet.egi.vmcatcher.cmdline
 
+import com.beust.jcommander.{JCommander, Parameters}
+import gr.grnet.egi.vmcatcher.Main
+
 /**
  *
  */
-class ParsedCmdLine {
+class CmdLine {
   val globalOptions = new GlobalOptions
   val usage = new Usage
 
@@ -36,9 +39,51 @@ class ParsedCmdLine {
   val parseImageList = new ParseImageList
   val getImageList = new GetImageList
 
-  val registerNow = new RegisterNow
+  val registerImageNow = new RegisterImageNow
+  val registerImageList = new RegisterImageList
 
   val transform = new Transform
 }
 
-object ParsedCmdLine extends ParsedCmdLine
+object CmdLine extends CmdLine {
+  def nameOf(cmd: AnyRef): String = {
+    val p = cmd.getClass.getAnnotation(classOf[Parameters])
+    p.commandNames()(0)
+  }
+
+  private def makeJCommander: JCommander = {
+    val jc = new JCommander()
+
+    jc.setProgramName(Main.getClass.getName.dropRight(1))
+
+    jc.addObject(CmdLine.globalOptions)
+    jc.addCommand(CmdLine.usage)
+
+    // Debugging
+    jc.addCommand(CmdLine.showEnv)
+    jc.addCommand(CmdLine.showConf)
+
+    // Queues
+    jc.addCommand(CmdLine.enqueueFromEnv)
+    jc.addCommand(CmdLine.enqueueFromImageList)
+    jc.addCommand(CmdLine.dequeue)
+    jc.addCommand(CmdLine.drainQueue)
+    jc.addCommand(CmdLine.testQueue)
+
+    // Image lists
+    jc.addCommand(CmdLine.registerImageList)
+    jc.addCommand(CmdLine.parseImageList)
+    jc.addCommand(CmdLine.getImageList)
+
+    // Images
+    jc.addCommand(CmdLine.registerImageNow)
+
+
+    // Helpers
+    jc.addCommand(CmdLine.transform)
+
+    jc
+  }
+
+  val jc = makeJCommander
+}

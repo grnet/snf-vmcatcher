@@ -17,24 +17,24 @@
 
 package gr.grnet.egi.vmcatcher.rabbit
 
-import com.typesafe.config.Config
-import com.rabbitmq.client.{ConnectionFactory, Address}
 import java.util.Collections
+
+import com.rabbitmq.client.{Address, ConnectionFactory}
+import gr.grnet.egi.vmcatcher.config.RabbitMQConfig
 import scala.collection.JavaConverters._
 
 /**
  *
  */
-case class RabbitConnector(config: Config) {
+case class RabbitConnector(config: RabbitMQConfig) {
   def connect(): Rabbit = {
-    val rconf = config.getConfig("rabbitmq")
-    val username = rconf.getString("username")
-    val queue = rconf.getString("queue")
-    val exchange = rconf.getString("exchange")
-    val routingKey = rconf.getString("routingKey")
-    val vhost = rconf.getString("vhost")
-    val password = rconf.getString("password")
-    val servers = rconf.getStringList("servers").asScala
+    val username = config.getUsername
+    val queue = config.getQueue
+    val exchange = config.getExchange
+    val routingKey = config.getRoutingKey
+    val vhost = config.getVhost
+    val password = config.getPassword
+    val servers = config.getServers.asScala
     val addresses = servers.map(Address.parseAddress).toArray
 
     val f = new ConnectionFactory

@@ -22,12 +22,17 @@ import net.liftweb.mapper._
 /**
  *
  */
-class MImageListAccess extends LongKeyedMapper[MImageListAccess] with IdPK {
-  def getSingleton = MImageListAccess
+class MImageListRef extends LongKeyedMapper[MImageListRef] with IdPK {
+  def getSingleton = MImageListRef
+
+  object name extends MappedPoliteString(this, 64) {
+    override def dbColumnName = "name"
+    override def dbNotNull_? = true
+  }
 
   object url extends MappedPoliteString(this, 256) {
     override def dbColumnName = "url"
-    override def dbIndexed_? = true
+    override def dbNotNull_? = true
   }
 
   object username extends MappedPoliteString(this, 128) {
@@ -39,6 +44,8 @@ class MImageListAccess extends LongKeyedMapper[MImageListAccess] with IdPK {
   }
 }
 
-object MImageListAccess extends MImageListAccess with LongKeyedMetaMapper[MImageListAccess] {
-  override def dbTableName = "IMAGE_LIST_ACCESS"
+object MImageListRef extends MImageListRef with LongKeyedMetaMapper[MImageListRef] {
+  override def dbTableName = "IMAGE_LIST_REF"
+
+  def findByName(name: String) = MImageListRef.find(By(MImageListRef.name, name)).toOption
 }

@@ -27,8 +27,4 @@ import gr.grnet.egi.vmcatcher.cmdline.common.ConfDelegate
   commandNames = Array("test-queue"),
   commandDescription = "Test connectivity with the queue"
 )
-class TestQueue {
-  @ParametersDelegate
-  val confDelegate = new ConfDelegate
-  def conf = confDelegate.conf
-}
+class TestQueue

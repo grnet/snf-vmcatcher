@@ -18,15 +18,17 @@
 package gr.grnet.egi.vmcatcher.cmdline.common
 
 import com.beust.jcommander.Parameter
+import gr.grnet.egi.vmcatcher.cmdline.helper.NotEmptyStringValidator
 
 /**
  *
  */
 class ConfDelegate {
   @Parameter(
-    names = Array("-conf"),
+    names = Array("-conf", "-config"),
     description = "The configuration file the application uses",
-    required = true
+    validateWith = classOf[NotEmptyStringValidator],
+    required = false
   )
-  val conf: String = null
+  val conf = "./config.json"
 }

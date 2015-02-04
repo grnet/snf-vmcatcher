@@ -17,7 +17,7 @@
 
 package gr.grnet.egi.vmcatcher.db
 
-import com.typesafe.config.Config
+import gr.grnet.egi.vmcatcher.config.DBConfig
 import net.liftweb.common.{Empty, Full}
 import net.liftweb.db.StandardDBVendor
 import net.liftweb.mapper.{DB, MapperRules, Schemifier}
@@ -27,26 +27,31 @@ import net.liftweb.util.DefaultConnectionIdentifier
  *
  */
 object MDB {
-  def init(config: Config): Unit = {
-    val dbConfig = config.getConfig("db")
-    val driver = dbConfig.getString("driver")
-    val url = dbConfig.getString("url")
-    val username = dbConfig.getString("username")
-    val password = dbConfig.getString("password")
+  def empty_?(s: String) = (s eq null) || s.isEmpty
+
+  def init(dbConfig: DBConfig): Unit = {
+    System.setProperty("run.mode", System.getProperty("run.mode", "production"))
+
+    val driver = dbConfig.getJdbcDriver
+    val url = dbConfig.getJdbcURL
+    val username = dbConfig.getJdbcUsername
+    val password = dbConfig.getJdbcPassword
 
     val vendor = new StandardDBVendor(
       driver,
       url,
-      if(username.isEmpty) Empty else Full(username),
-      if(password.isEmpty) Empty else Full(password)
+      if(empty_?(username)) Empty else Full(username),
+      if(empty_?(password)) Empty else Full(password)
     )
 
     DB.defineConnectionManager(DefaultConnectionIdentifier, vendor)
+
     MapperRules.createForeignKeys_? = _ ⇒ true
+
     Schemifier.schemify(
       true,
       Schemifier.infoF _,
-      MImageListAccess,
+      MImageListRef,
       MImageList,
       MImage
     )

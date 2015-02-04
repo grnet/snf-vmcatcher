@@ -27,10 +27,10 @@ import gr.grnet.egi.vmcatcher.cmdline.helper.{URLStringConverter, NotNullValueVa
  *
  */
 @Parameters(
-  commandNames = Array("register-now"),
-  commandDescription = "Directly register the corresponding VM instance. This is helpful in debugging"
+  commandNames = Array("register-instance-now"),
+  commandDescription = "Directly register the corresponding VM image. This is helpful in debugging"
 )
-class RegisterNow {
+class RegisterImageNow {
   @Parameter(
     names = Array("-url"),
     description = "The URL from where to fetch the VM.",

@@ -17,17 +17,18 @@
 
 package gr.grnet.egi.vmcatcher.rabbit
 
-import com.rabbitmq.client._
 import java.io.Closeable
-import com.typesafe.config.Config
-import com.rabbitmq.client.AMQP.BasicProperties
 import java.nio.charset.StandardCharsets
+
+import com.rabbitmq.client.AMQP.BasicProperties
+import com.rabbitmq.client._
+import gr.grnet.egi.vmcatcher.config.RabbitMQConfig
 
 /**
  *
  */
 case class Rabbit(
-  config: Config,
+  config: RabbitMQConfig,
   f: ConnectionFactory,
   conn: Connection,
   chan: Channel,

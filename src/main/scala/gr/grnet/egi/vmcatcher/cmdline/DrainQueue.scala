@@ -27,8 +27,4 @@ import gr.grnet.egi.vmcatcher.cmdline.common.ConfDelegate
   commandNames = Array("drain-queue"),
   commandDescription = "Remove all events from the queue and do nothing with them"
 )
-class DrainQueue {
-  @ParametersDelegate
-  val confDelegate = new ConfDelegate
-  def conf = confDelegate.conf
-}
+class DrainQueue

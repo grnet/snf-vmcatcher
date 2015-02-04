@@ -36,9 +36,4 @@ import gr.grnet.egi.vmcatcher.cmdline.common.ConfDelegate
                       vhost = "/"
                     }"""
 )
-class ShowConf {
-  @ParametersDelegate
-  val confDelegate = new ConfDelegate
-
-  def conf = confDelegate.conf
-}
+class ShowConf

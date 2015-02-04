@@ -17,7 +17,9 @@
 
 package gr.grnet.egi.vmcatcher.cmdline
 
-import com.beust.jcommander.Parameter
+import com.beust.jcommander.{Parameter, ParametersDelegate}
+import gr.grnet.egi.vmcatcher.cmdline.common.ConfDelegate
+import gr.grnet.egi.vmcatcher.cmdline.helper.NotEmptyStringValidator
 
 /**
  *
@@ -29,6 +31,14 @@ class GlobalOptions {
   @Parameter(names = Array("-v"), description = "Be verbose")
   val verbose = false
 
-  @Parameter(names = Array("-working-folder"), description = "The working folder were images are downloaded and transformed")
+  @Parameter(
+    names = Array("-working-folder"),
+    description = "The working folder were images are downloaded and transformed",
+    validateWith = classOf[NotEmptyStringValidator]
+  )
   val workingFolder = "/mnt/tmp"
+
+  @ParametersDelegate
+  private[this] val confDelegate = new ConfDelegate
+  def config = confDelegate.conf
 }

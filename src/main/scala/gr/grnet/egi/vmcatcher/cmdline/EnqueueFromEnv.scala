@@ -29,10 +29,5 @@ import gr.grnet.egi.vmcatcher.cmdline.common.ConfDelegate
     " This is the original use-case and reflects how vmcatcher (the original software)" +
     " works."
 )
-class EnqueueFromEnv {
-  @ParametersDelegate
-  val confDelegate = new ConfDelegate
-
-  def conf = confDelegate.conf
-}
+class EnqueueFromEnv
 

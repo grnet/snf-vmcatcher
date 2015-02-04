@@ -30,10 +30,6 @@ import gr.grnet.egi.vmcatcher.cmdline.helper.{NotEmptyStringValidator, ImageList
 )
 class EnqueueFromImageList {
   @ParametersDelegate
-  val confDelegate = new ConfDelegate
-  def conf = confDelegate.conf
-
-  @ParametersDelegate
   val imageListUrlDelegate = new ImageListUrlDelegate
   def imageListUrl = imageListUrlDelegate.url
 

@@ -15,31 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher
+package gr.grnet.egi.vmcatcher.util
 
-import java.io.File
-
-import com.typesafe.config.{ConfigFactory, Config => TConfig}
+import com.typesafe.config.{Config => TypesafeConfig, ConfigFactory}
+import gr.grnet.egi.vmcatcher.Json
 
 import scala.collection.JavaConverters._
 
 /**
  *
  */
-object Config {
-  def ofFilePath(path: String): TConfig = {
-    val file = new File(path)
-    ConfigFactory.parseFile(file).resolve()
-  }
+object TConfig {
+  def ofString(s: String): TypesafeConfig = ConfigFactory.parseString(s).resolve()
 
-  def ofString(s: String): TConfig = ConfigFactory.parseString(s).resolve()
-
-  def toMap(config: TConfig): Map[String, String] =
+  def toMap(config: TypesafeConfig): Map[String, String] =
     config.root().unwrapped().asScala.map{ case (k, v) ⇒ (k, String.valueOf(v)) }.toMap
 
-  def toJson(config: TConfig): String = Json.jsonOfMap(toMap(config))
+  def toJson(config: TypesafeConfig): String = Json.jsonOfMap(toMap(config))
 
-  def stringMapOfFilteredFields(config: TConfig, fields: Set[String]): Map[String, String] =
+  def stringMapOfFilteredFields(config: TypesafeConfig, fields: Set[String]): Map[String, String] =
     config.root().unwrapped().
       asScala.
       filterKeys(fields).

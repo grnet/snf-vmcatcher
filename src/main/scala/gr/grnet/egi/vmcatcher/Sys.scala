@@ -27,6 +27,7 @@ import javax.net.ssl._
 import com.squareup.okhttp.Credentials
 import gr.grnet.egi.vmcatcher.event.{Event, ImageEventField}
 import gr.grnet.egi.vmcatcher.image.handler.HandlerData
+import gr.grnet.egi.vmcatcher.util.GetImage
 import okio.{Buffer, ByteString, Okio}
 import org.slf4j.Logger
 import org.zeroturnaround.exec.ProcessExecutor
