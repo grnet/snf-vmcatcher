@@ -27,7 +27,7 @@ import javax.net.ssl._
 import com.squareup.okhttp.Credentials
 import gr.grnet.egi.vmcatcher.event.{Event, ImageEventField}
 import gr.grnet.egi.vmcatcher.image.handler.HandlerData
-import gr.grnet.egi.vmcatcher.util.GetImage
+import gr.grnet.egi.vmcatcher.util.{UsernamePassword, GetImage}
 import okio.{Buffer, ByteString, Okio}
 import org.slf4j.Logger
 import org.zeroturnaround.exec.ProcessExecutor
@@ -478,30 +478,35 @@ class Sys {
     }
   }
 
-  def urlToUtf8(url: URL, tokenOpt: Option[String]): String = {
-    val urlConnection = url.openConnection()
-    for(token ← tokenOpt) {
-      // The password seems to be fixed, as described in
-      //   https://wiki.appdb.egi.eu/main:faq:how_to_subscribe_to_a_private_image_list_using_the_vmcatcher
-      // TODO Make configurable
-      val username = token
-      val password = "x-oauth-basic"
+  def downloadUtf8(url: URL, upOpt: Option[UsernamePassword]): Either[Throwable, String] = {
+    try {
+      val urlConnection = url.openConnection()
+      for(up ← upOpt) {
+        // The password seems to be fixed, as described in
+        //   https://wiki.appdb.egi.eu/main:faq:how_to_subscribe_to_a_private_image_list_using_the_vmcatcher
+        val username = up.username
+        val password = Option(up.password).getOrElse("x-oauth-basic")
 
-      val credential = Credentials.basic(username, password)
-      urlConnection.setRequestProperty("Authorization", credential)
+        val credential = Credentials.basic(username, password)
+        urlConnection.setRequestProperty("Authorization", credential)
+      }
+
+      urlConnection.connect()
+      val stream = urlConnection.getInputStream
+
+      val source = Okio.source(stream)
+      val buffer = Okio.buffer(source)
+      val str = buffer.readUtf8()
+      stream.close()
+      Right(str)
     }
-
-    urlConnection.connect()
-    val stream = urlConnection.getInputStream
-
-    val source = Okio.source(stream)
-    val buffer = Okio.buffer(source)
-    val str = buffer.readUtf8()
-    stream.close()
-    str
+    catch {
+      case t: Throwable ⇒
+        Left(t)
+    }
   }
 
-  def getRawImageList(url: URL, tokenOpt: Option[String]): String = {
+  def downloadRawImageList(url: URL, upOpt: Option[UsernamePassword]): Either[Throwable, String] = {
     ////////////////////////////////////////////////////////////
     // This is the image list JSON with a header and a footer.
     // The header is like:
@@ -529,7 +534,7 @@ class Sys {
     //
     // ------842099D61D9D967FA11C0562C70A8E03--
     ////////////////////////////////////////////////////////////
-    urlToUtf8(url, tokenOpt)
+    downloadUtf8(url, upOpt)
   }
 }
 

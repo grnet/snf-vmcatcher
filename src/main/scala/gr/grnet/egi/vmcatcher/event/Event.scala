@@ -28,6 +28,8 @@ import scala.collection.JavaConverters._
  *
  */
 sealed trait Event {
+  def originalJson: Option[String]
+
   def originator: EventOriginator
 
   def has(field: IEventField): Boolean
@@ -47,7 +49,7 @@ sealed trait Event {
  * An [[gr.grnet.egi.vmcatcher.event.Event]] produced by a map.
  * @param map
  */
-class MapEvent(val originator: EventOriginator, map: Map[String, String]) extends Event {
+class MapEvent(val originalJson: Option[String], val originator: EventOriginator, map: Map[String, String]) extends Event {
   def has(field: IEventField) = map.contains(field.name)
 
   def apply(field: IEventField, default: String = "") = map.getOrElse(field.name, default)
@@ -63,7 +65,7 @@ object Event {
   def ExistingFieldPairs = AllFieldNames.flatMap(name ⇒ SysEnv.get(name).map(value ⇒ (name, value)))
   def ExistingFields = Map(ExistingFieldPairs:_*)
 
-  def ofSysEnv: Event = new MapEvent(EventOriginator.vmcatcher_sysenv, ExistingFields)
+  def ofSysEnv: Event = new MapEvent(None, EventOriginator.vmcatcher_sysenv, ExistingFields)
 
   /**
    *
@@ -72,7 +74,7 @@ object Event {
    */
   def ofJson(json: String): Event = {
     val map = Json.stringMapOfJson(json)
-    new MapEvent(EventOriginator.vanilla_json, map)
+    new MapEvent(Some(json), EventOriginator.vanilla_json, map)
   }
 
 
@@ -85,11 +87,7 @@ object Event {
 object Events {
   import Event.fk
 
-  def ofImageListContainer(
-    json: String,
-    externalFieldsMap: Map[ExternalEventField, String]
-  ): List[Event] = {
-
+  def ofJson(json: String, externalFieldsMap: Map[ExternalEventField, String]): List[Event] = {
     /////////////////
     // `json` goes like this:
     // {
@@ -127,7 +125,7 @@ object Events {
     }
 
     val imagesConfigList = imageListConfig.getConfigList(fk("hv:images"))
-    val imageConfigList = imagesConfigList.asScala.map(_.getConfig(fk("hv:image"))).toList
+    val imageConfigList: List[TypesafeConfig] = imagesConfigList.asScala.map(_.getConfig(fk("hv:image"))).toList
 
     for {
       imageConfig ← imageConfigList
@@ -141,7 +139,7 @@ object Events {
         map { case (k, v) ⇒ (ImageEventField.ofJsonField(k).name(), v) }
 
       val map = externalMap ++ imageListMap ++ imageMap
-      val event = new MapEvent(EventOriginator.image_list_json, map)
+      val event = new MapEvent(Some(json), EventOriginator.image_list_json, map)
 
       Main.Log.info(s"event = $event")
       event

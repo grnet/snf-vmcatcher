@@ -17,53 +17,36 @@
 
 package gr.grnet.egi.vmcatcher.cmdline
 
-import java.net.URL
-
 import com.beust.jcommander.{Parameter, Parameters}
-import gr.grnet.egi.vmcatcher.cmdline.helper.{NotEmptyStringValidator, URLStringConverter}
+import gr.grnet.egi.vmcatcher.cmdline.helper.NotEmptyStringValidator
 
 /**
  *
  */
 @Parameters(
-  commandNames = Array("register-image-list"),
-  commandDescription = "Registers the image list in our database"
+  commandNames = Array("update-credentials"),
+  commandDescription = "Updates the HTTP credentials used to access a protected image list"
 )
-class RegisterImageList {
+class UpdateCredentials {
   @Parameter(
     names = Array("-name"),
-    description = "The identifier for the image list; it must be unique in the database. Use this, instead of the URL, to reference the image list instead",
+    description = "The identifier for the image list",
     required = true,
     validateWith = classOf[NotEmptyStringValidator]
   )
   val name: String = null
 
   @Parameter(
-    names = Array("-url"),
-    description = "The URL of the image list",
-    required = true,
-    validateWith = classOf[NotEmptyStringValidator],
-    converter = classOf[URLStringConverter]
-  )
-  val url: URL = null
-
-  @Parameter(
     names = Array("-username"),
-    description = "Optional username in case the image list is protected. This is usually an Access Token. See also https://wiki.appdb.egi.eu/main:faq:how_to_subscribe_to_a_private_image_list_using_the_vmcatcher",
+    description = "The username. This is usually an Access Token. See also https://wiki.appdb.egi.eu/main:faq:how_to_subscribe_to_a_private_image_list_using_the_vmcatcher",
     validateWith = classOf[NotEmptyStringValidator]
   )
   val username: String = null
 
   @Parameter(
     names = Array("-password"),
-    description = "Optional password, in case the image list is protected. See also https://wiki.appdb.egi.eu/main:faq:how_to_subscribe_to_a_private_image_list_using_the_vmcatcher",
+    description = "The password password. See also https://wiki.appdb.egi.eu/main:faq:how_to_subscribe_to_a_private_image_list_using_the_vmcatcher",
     validateWith = classOf[NotEmptyStringValidator]
   )
   val password: String = "x-oauth-basic"
-
-  @Parameter(
-    names = Array("-active"),
-    description = "Register the image list as active (true) or inactive (false). Default is true"
-  )
-  val isActive = true
 }

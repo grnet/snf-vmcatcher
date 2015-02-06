@@ -20,19 +20,17 @@ package gr.grnet.egi.vmcatcher
 import java.io.{File, IOException}
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
-import java.util.Scanner
 
 import com.beust.jcommander.ParameterException
 import gr.grnet.egi.vmcatcher.cmdline.CmdLine._
 import gr.grnet.egi.vmcatcher.cmdline._
 import gr.grnet.egi.vmcatcher.config.{Config, RabbitMQConfig}
-import gr.grnet.egi.vmcatcher.db.{MDB, MImageListRef}
 import gr.grnet.egi.vmcatcher.event._
 import gr.grnet.egi.vmcatcher.image.handler.HandlerData
 import gr.grnet.egi.vmcatcher.image.transformer.ImageTransformers
 import gr.grnet.egi.vmcatcher.queue.{QueueConnectAttempt, QueueConnectFailedAttempt, QueueConnectFirstAttempt}
 import gr.grnet.egi.vmcatcher.rabbit.{Rabbit, RabbitConnector}
-import gr.grnet.egi.vmcatcher.util.GetImage
+import gr.grnet.egi.vmcatcher.util.{GetImage, UsernamePassword}
 import org.apache.avro.io.DecoderFactory
 import org.apache.avro.specific.SpecificDatumReader
 import org.slf4j.LoggerFactory
@@ -49,6 +47,8 @@ object Main extends {
 
   final val ProgName = getClass.getName.stripSuffix("$")
   final val Log = LoggerFactory.getLogger(getClass)
+
+  lazy val vmcatcher = new StdVMCatcher(config)
 
   def beginSequence(args: Array[String]): Unit = {
     _args = args
@@ -94,15 +94,18 @@ object Main extends {
 
     // Queues
     mkcmd(CmdLine.enqueueFromEnv, do_enqueue_from_env),
-    mkcmd(CmdLine.enqueueFromImageList, do_enqueue_from_image_list),
+//    mkcmd(CmdLine.enqueueFromImageList, do_enqueue_from_image_list),
     mkcmd(CmdLine.dequeue, do_dequeue),
     mkcmd(CmdLine.drainQueue, do_drain_queue),
     mkcmd(CmdLine.testQueue, do_test_queue),
 
     // Image lists
-    mkcmd(CmdLine.registerImageList, do_register_image_list),
-    mkcmd(CmdLine.parseImageList, do_parse_image_list),
-    mkcmd(CmdLine.getImageList, do_get_image_list),
+    mkcmd(CmdLine.registerImageList,   do_register_image_list),
+    mkcmd(CmdLine.activateImageList,   do_activate_image_list),
+    mkcmd(CmdLine.deactivateImageList, do_deactivate_image_list),
+    mkcmd(CmdLine.updateCredentials,   do_update_credentials),
+//    mkcmd(CmdLine.parseImageList, do_parse_image_list),
+//    mkcmd(CmdLine.getImageList, do_get_image_list),
 
     // Images
     mkcmd(CmdLine.registerImageNow, do_register_now),
@@ -142,168 +145,140 @@ object Main extends {
     do_enqueue(connector)
   }
 
-  def parseImageListContainerJson(rawImageList: String): String = {
-    val scanner = new Scanner(rawImageList)
-    scanner.nextLine() // Ignore "MIME-Version: 1.0" first line
-    scanner.useDelimiter("boundary=\"")
-    val boundaryPart = scanner.findInLine("boundary=\"(.+?)\"")
-    val boundary = "--" + boundaryPart.substring("boundary=\"".length, boundaryPart.length - 1)
-    Log.info(s"Found boundary $boundary")
-
-    val buffer = new java.lang.StringBuilder
-
-    @tailrec def scanUntilFirstBoundary(): Unit = {
-      val nextLine = scanner.nextLine()
-      if(nextLine != boundary) scanUntilFirstBoundary()
-    }
-
-    @tailrec def scanUntilLastBoundary(): Unit = {
-      val nextLine = scanner.nextLine()
-      if(nextLine != boundary) {
-        buffer.append(nextLine + System.getProperty("line.separator"))
-        scanUntilLastBoundary()
-      }
-    }
-
-    scanUntilFirstBoundary()
-    scanUntilLastBoundary()
-
-    buffer.toString
-  }
-
   def do_register_image_list(args: RegisterImageList): Unit = {
-    val name = args.name
-    val url = args.url
-    val username = args.username
-    val password = args.password
-
-    MDB.init(config.getDbConfig)
-    MImageListRef.findByName(name) match {
-      case Some(ref) ⇒
-        ERROR(s"Image list with name '$name' already exists and points to ${ref.url.get}")
-        EXIT(10, endSequence)
-
-      case None ⇒
-        val ref = MImageListRef.create.
-          name(name).
-          url(url.toString).
-          username(username).
-          password(password).
-          saveMe()
-
-        Log.info(s"Saved $ref")
-    }
+    val upOpt = UsernamePassword.optional(args.username, args.password)
+    val ref = vmcatcher.registerImageList(args.name, args.url, args.isActive, upOpt)
+    INFO(s"Registered $ref")
   }
 
-  def do_parse_image_list(args: ParseImageList): Unit = {
-    val imageListContainerURL = args.imageListUrl
-    val token = args.token
-    val rawImageListContainer = Sys.getRawImageList(imageListContainerURL, Option(token))
-    Log.info (s"imageListContainer (URL ) = $imageListContainerURL")
-    Log.debug(s"imageListContainer (raw ) =\n$rawImageListContainer")
-    val imageListContainerJson = parseImageListContainerJson(rawImageListContainer)
-    Log.info (s"imageListContainer (json) =\n$imageListContainerJson")
-
-    val events0 = Events.ofImageListContainer(imageListContainerJson, Map())
-    INFO(s"Found ${events0.size} events")
-    if(events0.isEmpty) { return }
-
-    // Sort by size ascending and print basic info
-    val sortedEvents =
-      try events0.sortBy(_(ImageEventField.VMCATCHER_EVENT_HV_SIZE).toLong)
-      catch {
-        case e: Exception ⇒
-          Log.warn(s"Could not sort events", e)
-          events0
-      }
-
-    val miniKeys = Seq(
-      ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER,
-      ImageEventField.VMCATCHER_EVENT_AD_MPURI,
-      ImageEventField.VMCATCHER_EVENT_HV_URI,
-      ImageEventField.VMCATCHER_EVENT_HV_SIZE)
-
-    for(event ← sortedEvents) {
-      val miniMap = Map((for(key ← miniKeys) yield (key, event(key))):_*)
-      val miniInfo = miniMap.mkString("[", ", ", "]")
-      INFO(s"Found: $miniInfo")
-    }
+  def do_activate_image_list(args: ActivateImageList): Unit = {
+    val wasActive = vmcatcher.activateImageList(args.name)
+    if(wasActive) { INFO(s"Already active") }
+    else          { INFO(s"Activated") }
   }
 
-  def do_get_image_list(args: GetImageList): Unit = {
-    val url = args.url
-    val token = args.token
-    val rawImageListContainer = Sys.getRawImageList(url, Option(token))
-    Log.info (s"imageListContainer (URL ) = $url")
-    val imageListContainerJson = parseImageListContainerJson(rawImageListContainer)
-    INFO(s"imageListContainer (json) =\n$imageListContainerJson")
+  def do_deactivate_image_list(args: DeactivateImageList): Unit = {
+    val wasActive = vmcatcher.deactivateImageList(args.name)
+    if(wasActive) { INFO(s"Deactivated") }
+    else          { INFO(s"Already deactive") }
   }
 
-  def do_enqueue_from_image_list(args: EnqueueFromImageList): Unit = {
-    val imageListURL = args.imageListUrl
-    val imageIdentifier = args.imageIdentifier
-    val tokenOpt = Option(args.token)
-
-    val rawImageList = Sys.getRawImageList(imageListURL, tokenOpt)
-    Log.info(s"imageList (URL) = $imageListURL")
-    Log.info(s"imageList (raw) = $rawImageList")
-    val jsonImageList = parseImageListContainerJson(rawImageList)
-    val events0 = Events.ofImageListContainer(
-      jsonImageList,
-      //Map(ExternalEventField.VMCATCHER_X_EVENT_IMAGE_LIST_URL → imageListURL.toString)
-      Map()
-    )
-
-    events0 match {
-      case Nil ⇒
-        val errMsg = s"Could not parse events from image list"
-        ERROR(errMsg)
-        EXIT(4)
-
-      case event :: _ ⇒
-        val dcIdentifier = event(ImageListEventField.VMCATCHER_EVENT_IL_DC_IDENTIFIER)
-        val parsedMsg = s"Parsed image list dc:identifier = $dcIdentifier"
-        INFO(parsedMsg)
-        val events =
-          if(imageIdentifier eq null)
-            events0
-          else
-            events0.filter(_(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER) == imageIdentifier)
-
-        if(events.isEmpty) {
-          val errMsg = s"Image identifier $imageIdentifier not found"
-          ERROR(errMsg)
-          val identifiers = events0.map(_(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER))
-          val availableMsg = s"Available identifiers are: ${identifiers.mkString(", ")}"
-          INFO(availableMsg)
-          EXIT(3)
-        }
-
-        val matchMsg = s"Matched ${events.size} event(s)"
-        INFO(matchMsg)
-
-        val connector = RabbitConnector(config.getRabbitConfig)
-        val rabbit = connector.connect()
-
-        for {
-          event ← events
-        } {
-          val imageIdent = event(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER)
-          val image_HV_URI = event(ImageEventField.VMCATCHER_EVENT_HV_URI)
-          val image_AD_MPURI = event(ImageEventField.VMCATCHER_EVENT_AD_MPURI)
-          val eventMsg = s"Enqueueing event for dc:identifier = $imageIdent, hv:uri = $image_HV_URI, ad:mpuri = $image_AD_MPURI"
-          INFO(eventMsg)
-          Log.info(s"event (image) = $event")
-
-          rabbit.publish(event.toJson)
-        }
-
-        val enqueuedMsg = s"Enqueued ${events.size} event(s)"
-        INFO(enqueuedMsg)
-
-        rabbit.close()
-    }
+  def do_update_credentials(args: UpdateCredentials): Unit = {
+    val upOpt = UsernamePassword.optional(args.username, args.password)
+    vmcatcher.updateCredentials(args.name, upOpt)
+    if(upOpt.isDefined) { INFO(s"Credentials have been set") }
+    else                { INFO(s"Credentials have been cleared") }
   }
+
+//  def do_parse_image_list(args: ParseImageList): Unit = {
+//    val imageListContainerURL = args.imageListUrl
+//    val token = args.token
+//    val rawImageListContainer = Sys.downloadRawImageList(imageListContainerURL, Option(token))
+//    Log.info (s"imageListContainer (URL ) = $imageListContainerURL")
+//    Log.debug(s"imageListContainer (raw ) =\n$rawImageListContainer")
+//    val imageListContainerJson = parseImageListContainerJson(rawImageListContainer)
+//    Log.info (s"imageListContainer (json) =\n$imageListContainerJson")
+//
+//    val events0 = Events.ofJson(imageListContainerJson, Map())
+//    INFO(s"Found ${events0.size} events")
+//    if(events0.isEmpty) { return }
+//
+//    // Sort by size ascending and print basic info
+//    val sortedEvents =
+//      try events0.sortBy(_(ImageEventField.VMCATCHER_EVENT_HV_SIZE).toLong)
+//      catch {
+//        case e: Exception ⇒
+//          Log.warn(s"Could not sort events", e)
+//          events0
+//      }
+//
+//    val miniKeys = Seq(
+//      ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER,
+//      ImageEventField.VMCATCHER_EVENT_AD_MPURI,
+//      ImageEventField.VMCATCHER_EVENT_HV_URI,
+//      ImageEventField.VMCATCHER_EVENT_HV_SIZE)
+//
+//    for(event ← sortedEvents) {
+//      val miniMap = Map((for(key ← miniKeys) yield (key, event(key))):_*)
+//      val miniInfo = miniMap.mkString("[", ", ", "]")
+//      INFO(s"Found: $miniInfo")
+//    }
+//  }
+
+//  def do_get_image_list(args: GetImageList): Unit = {
+//    val url = args.url
+//    val token = args.token
+//    val rawImageListContainer = Sys.downloadRawImageList(url, Option(token))
+//    Log.info (s"imageListContainer (URL ) = $url")
+//    val imageListContainerJson = parseImageListContainerJson(rawImageListContainer)
+//    INFO(s"imageListContainer (json) =\n$imageListContainerJson")
+//  }
+
+//  def do_enqueue_from_image_list(args: EnqueueFromImageList): Unit = {
+//    val imageListURL = args.imageListUrl
+//    val imageIdentifier = args.imageIdentifier
+//    val tokenOpt = Option(args.token)
+//
+//    val rawText = Sys.downloadRawImageList(imageListURL, tokenOpt)
+//    Log.info(s"imageList (URL) = $imageListURL")
+//    Log.info(s"imageList (raw) = $rawText")
+//    val jsonImageList = parseImageListContainerJson(rawText)
+//    val events0 = Events.ofJson(
+//      jsonImageList,
+//      //Map(ExternalEventField.VMCATCHER_X_EVENT_IMAGE_LIST_URL → imageListURL.toString)
+//      Map()
+//    )
+//
+//    events0 match {
+//      case Nil ⇒
+//        val errMsg = s"Could not parse events from image list"
+//        ERROR(errMsg)
+//        EXIT(4)
+//
+//      case event :: _ ⇒
+//        val dcIdentifier = event(ImageListEventField.VMCATCHER_EVENT_IL_DC_IDENTIFIER)
+//        val parsedMsg = s"Parsed image list dc:identifier = $dcIdentifier"
+//        INFO(parsedMsg)
+//        val events =
+//          if(imageIdentifier eq null)
+//            events0
+//          else
+//            events0.filter(_(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER) == imageIdentifier)
+//
+//        if(events.isEmpty) {
+//          val errMsg = s"Image identifier $imageIdentifier not found"
+//          ERROR(errMsg)
+//          val identifiers = events0.map(_(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER))
+//          val availableMsg = s"Available identifiers are: ${identifiers.mkString(", ")}"
+//          INFO(availableMsg)
+//          EXIT(3)
+//        }
+//
+//        val matchMsg = s"Matched ${events.size} event(s)"
+//        INFO(matchMsg)
+//
+//        val connector = RabbitConnector(config.getRabbitConfig)
+//        val rabbit = connector.connect()
+//
+//        for {
+//          event ← events
+//        } {
+//          val imageIdent = event(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER)
+//          val image_HV_URI = event(ImageEventField.VMCATCHER_EVENT_HV_URI)
+//          val image_AD_MPURI = event(ImageEventField.VMCATCHER_EVENT_AD_MPURI)
+//          val eventMsg = s"Enqueueing event for dc:identifier = $imageIdent, hv:uri = $image_HV_URI, ad:mpuri = $image_AD_MPURI"
+//          INFO(eventMsg)
+//          Log.info(s"event (image) = $event")
+//
+//          rabbit.publish(event.toJson)
+//        }
+//
+//        val enqueuedMsg = s"Enqueued ${events.size} event(s)"
+//        INFO(enqueuedMsg)
+//
+//        rabbit.close()
+//    }
+//  }
 
   def do_dequeue_(connector: RabbitConnector, data: HandlerData): Unit = {
     def doOnce(rabbit: Rabbit): Unit = {
@@ -541,8 +516,15 @@ object Main extends {
       EXIT(1, endSequence)
     }
     else {
+      commandMap.get(command) match {
+        case None ⇒
+          throw new ParameterException(s"Unknown command $command")
+        case Some(commandf) ⇒
+          commandf()
+          EXIT(0, endSequence)
+      }
       commandMap(command)()
-      EXIT(0, endSequence)
+
     }
   }
 
@@ -550,14 +532,16 @@ object Main extends {
     try mainV(args)
     catch {
       case e: ParameterException ⇒
-        System.err.println(e.getMessage)
-        Log.error(e.getMessage)
+        ERROR(e.getMessage)
         EXIT(2, endSequence)
 
       case e: IllegalArgumentException ⇒
-        System.err.println(e.getMessage)
-        Log.error(e.getMessage)
+        ERROR(e.getMessage)
         EXIT(2, endSequence)
+
+      case e: VMCatcherException ⇒
+        System.err.println(e.msg)
+        EXIT(e.code.code, endSequence)
 
       case e: Exception ⇒
         System.err.println(e.getMessage)

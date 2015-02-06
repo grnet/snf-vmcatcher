@@ -52,7 +52,8 @@ object MDB {
       true,
       Schemifier.infoF _,
       MImageListRef,
-      MImageList,
+      MImageListAccess,
+      MCurrentImage,
       MImage
     )
   }

@@ -17,16 +17,61 @@
 
 package gr.grnet.egi.vmcatcher.db
 
-import net.liftweb.mapper.{MappedLongForeignKey, IdPK, LongKeyedMapper, LongKeyedMetaMapper}
+import net.liftweb.mapper._
 
 /**
- *
+ * A parsed image description. The respective table is used to hold the history
+ * of all parsed images.
  */
 class MImage extends LongKeyedMapper[MImage] with IdPK {
   def getSingleton = MImage
 
-  object f_imageList extends MappedLongForeignKey(this, MImageList) {
-    override def dbColumnName = "image_list_id"
+  object f_imageListAccess extends MappedLongForeignKey(this, MImageListAccess) {
+    override def dbColumnName = "image_list_access_id"
+  }
+
+  object json extends MappedText(this) {
+    override def dbColumnName = "json"
+  }
+
+  object dcIdentifier extends MappedString(this, 128) {
+    override def dbColumnName = "dc_identifier"
+  }
+
+  object dcTitle extends MappedString(this, 128) {
+    override def dbColumnName = "dc_title"
+  }
+
+  object adMpuri extends MappedString(this, 512) {
+    override def dbColumnName = "ad_mpuri"
+  }
+
+  object hvUri extends MappedString(this, 512) {
+    override def dbColumnName = "hv_uri"
+  }
+
+  object hvHypervisor extends MappedString(this, 64) {
+    override def dbColumnName = "hv_hypervisor"
+  }
+
+  object hvFormat extends MappedPoliteString(this, 64) {
+    override def dbColumnName = "hv_format"
+  }
+
+  object hvSize extends MappedLong(this) {
+    override def dbColumnName = "hv_size"
+  }
+
+  object slOs extends MappedString(this, 64) {
+    override def dbColumnName = "sl_os"
+  }
+
+  object slOsName extends MappedString(this, 64) {
+    override def dbColumnName = "sl_os_name"
+  }
+
+  object slOsVersion extends MappedString(this, 64) {
+    override def dbColumnName = "sl_os_version"
   }
 }
 
