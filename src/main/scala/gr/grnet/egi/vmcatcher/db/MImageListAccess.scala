@@ -17,6 +17,8 @@
 
 package gr.grnet.egi.vmcatcher.db
 
+import java.util.Date
+
 import net.liftweb.mapper._
 
 /**
@@ -33,6 +35,8 @@ class MImageListAccess extends LongKeyedMapper[MImageListAccess] with IdPK {
     override def dbColumnName: String = "when_accessed"
     override def dbNotNull_? : Boolean = true
     override def dbIndexed_? : Boolean = true
+
+    override def defaultValue = new Date
   }
 
   object wasRetrieved extends MappedBoolean(this) {

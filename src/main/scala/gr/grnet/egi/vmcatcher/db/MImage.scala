@@ -46,6 +46,18 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
     override def dbColumnName = "ad_mpuri"
   }
 
+  object adUserUri extends MappedString(this, 512) {
+    override def dbColumnName = "ad_user_uri"
+  }
+
+  object adUserGuid extends MappedString(this, 128) {
+    override def dbColumnName = "ad_user_guid"
+  }
+
+  object adUserFullName extends MappedString(this, 128) {
+    override def dbColumnName = "ad_user_full_name"
+  }
+
   object hvUri extends MappedString(this, 512) {
     override def dbColumnName = "hv_uri"
   }
@@ -72,6 +84,14 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
 
   object slOsVersion extends MappedString(this, 64) {
     override def dbColumnName = "sl_os_version"
+  }
+
+  object slArch extends MappedString(this, 64) {
+    override def dbColumnName = "sl_arch"
+  }
+
+  object slChecksum512 extends MappedString(this, 127 + "sha512-".length) {
+    override def dbColumnName = "sl_checksum_512"
   }
 }
 

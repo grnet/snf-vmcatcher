@@ -104,6 +104,7 @@ object Main extends {
     mkcmd(CmdLine.activateImageList,   do_activate_image_list),
     mkcmd(CmdLine.deactivateImageList, do_deactivate_image_list),
     mkcmd(CmdLine.updateCredentials,   do_update_credentials),
+    mkcmd(CmdLine.fetchImageList,      do_fetch_image_list),
 //    mkcmd(CmdLine.parseImageList, do_parse_image_list),
 //    mkcmd(CmdLine.getImageList, do_get_image_list),
 
@@ -168,6 +169,17 @@ object Main extends {
     vmcatcher.updateCredentials(args.name, upOpt)
     if(upOpt.isDefined) { INFO(s"Credentials have been set") }
     else                { INFO(s"Credentials have been cleared") }
+  }
+
+  def do_fetch_image_list(args: FetchImageList): Unit = {
+    val (ref, currentImages) = vmcatcher.fetchImageList(args.name)
+    INFO(s"Fetched image list $ref, parsed ${currentImages.size} images")
+    for {
+      currentImage ← currentImages
+      image ← currentImage.f_image.obj
+    } {
+      INFO(s"Parsed image $image")
+    }
   }
 
 //  def do_parse_image_list(args: ParseImageList): Unit = {

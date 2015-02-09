@@ -43,6 +43,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
   }
   
   import Main.Log
+  import Main.INFO
 
   protected def findImageListRefByName(name: String) = MImageListRef.findByName(name)
 
@@ -134,7 +135,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
     buffer.toString
   }
   
-  def parseImagesFromJson(ref: MImageListRef, json: String): List[MImage] = {
+  def parseImagesFromJson(ref: MImageListRef, access: MImageListAccess, json: String): List[MImage] = {
     try {
       val events = Events.ofJson(json, Map())
 
@@ -143,6 +144,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
           event ← events
         } yield {
           val image = MImage.create.
+            f_imageListAccess(access).
             json(event.originalJson.orNull).
             dcIdentifier(event(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER)).
             dcTitle     (event(ImageEventField.VMCATCHER_EVENT_DC_TITLE)).
@@ -187,13 +189,13 @@ class StdVMCatcher(config: Config) extends VMCatcher {
         // Parse json out of rawText
         val json = getImageListJsonFromRaw(rawText)
         access.saveParsed(json)
-        val images = parseImagesFromJson(ref, json)
+        val images = parseImagesFromJson(ref, access, json)
 
         (access, images)
     }
   }
 
-  def updateImages(name: String): Unit =
+  def fetchImageList(name: String): (MImageListRef, List[MCurrentImage]) =
     findImageListRefByName(name) match {
       case None ⇒
         throw new VMCatcherException(ImageListNotFound, s"Image list $name not found")
@@ -218,6 +220,8 @@ class StdVMCatcher(config: Config) extends VMCatcher {
               f_imageListAccess(access)
           }
         newCurrentImages.foreach(_.save())
+
+        (ref, newCurrentImages)
     }
 
   def currentImageList(name: String): List[MCurrentImage] =

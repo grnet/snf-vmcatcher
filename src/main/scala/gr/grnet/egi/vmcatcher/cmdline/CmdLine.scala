@@ -45,6 +45,7 @@ class CmdLine {
   val activateImageList = new ActivateImageList
   val deactivateImageList = new DeactivateImageList
   val updateCredentials = new UpdateCredentials
+  val fetchImageList = new FetchImageList
 
   val transform = new Transform
 }
@@ -79,6 +80,7 @@ object CmdLine extends CmdLine {
     jc.addCommand(CmdLine.activateImageList)
     jc.addCommand(CmdLine.deactivateImageList)
     jc.addCommand(CmdLine.updateCredentials)
+    jc.addCommand(CmdLine.fetchImageList)
     jc.addCommand(CmdLine.parseImageList)
     jc.addCommand(CmdLine.getImageList)
 

@@ -17,7 +17,7 @@
 
 package gr.grnet.egi.vmcatcher.event
 
-import com.typesafe.config.{Config ⇒ TypesafeConfig}
+import com.typesafe.config.{Config ⇒ TypesafeConfig, ConfigFactory, ConfigRenderOptions}
 import gr.grnet.egi.vmcatcher.event.EventFieldSection.{Image, ImageList}
 import gr.grnet.egi.vmcatcher.util.TConfig
 import gr.grnet.egi.vmcatcher.{Main, Json}
@@ -28,6 +28,8 @@ import scala.collection.JavaConverters._
  *
  */
 sealed trait Event {
+  def originalConfig: Option[TypesafeConfig]
+
   def originalJson: Option[String]
 
   def originator: EventOriginator
@@ -49,7 +51,12 @@ sealed trait Event {
  * An [[gr.grnet.egi.vmcatcher.event.Event]] produced by a map.
  * @param map
  */
-class MapEvent(val originalJson: Option[String], val originator: EventOriginator, map: Map[String, String]) extends Event {
+class MapEvent(
+  val originalConfig: Option[TypesafeConfig],
+  val originalJson: Option[String],
+  val originator: EventOriginator,
+  map: Map[String, String]
+) extends Event {
   def has(field: IEventField) = map.contains(field.name)
 
   def apply(field: IEventField, default: String = "") = map.getOrElse(field.name, default)
@@ -65,7 +72,7 @@ object Event {
   def ExistingFieldPairs = AllFieldNames.flatMap(name ⇒ SysEnv.get(name).map(value ⇒ (name, value)))
   def ExistingFields = Map(ExistingFieldPairs:_*)
 
-  def ofSysEnv: Event = new MapEvent(None, EventOriginator.vmcatcher_sysenv, ExistingFields)
+  def ofSysEnv: Event = new MapEvent(None, None, EventOriginator.vmcatcher_sysenv, ExistingFields)
 
   /**
    *
@@ -74,7 +81,7 @@ object Event {
    */
   def ofJson(json: String): Event = {
     val map = Json.stringMapOfJson(json)
-    new MapEvent(Some(json), EventOriginator.vanilla_json, map)
+    new MapEvent(Some(ConfigFactory.parseString(json)), Some(json), EventOriginator.vanilla_json, map)
   }
 
 
@@ -139,7 +146,13 @@ object Events {
         map { case (k, v) ⇒ (ImageEventField.ofJsonField(k).name(), v) }
 
       val map = externalMap ++ imageListMap ++ imageMap
-      val event = new MapEvent(Some(json), EventOriginator.image_list_json, map)
+      val imageJson = imageConfig.root().render(ConfigRenderOptions.concise().setFormatted(true))
+      val event = new MapEvent(
+        Some(imageConfig),
+        Some(imageJson),
+        EventOriginator.image_list_json,
+        map
+      )
 
       Main.Log.info(s"event = $event")
       event

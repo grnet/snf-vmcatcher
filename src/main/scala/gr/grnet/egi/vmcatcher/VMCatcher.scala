@@ -48,17 +48,10 @@ trait VMCatcher {
   /**
    * Fetches and updates the image definitions of the given image list (referenced by its name).
    */
-  def updateImages(name: String): Unit
+  def fetchImageList(name: String): (MImageListRef, List[MCurrentImage])
 
   /**
    * Returns the currently known image definitions for the given image list.
    */
   def currentImageList(name: String): List[MCurrentImage]
-
-//  /**
-//   * Fetches the image list description and parses the contained image descriptions.
-//   * If everything went OK, then it returns a list of the parsed image data.
-//   */
-//  def fetchImageList(name: String): List[MImage]
-
 }
