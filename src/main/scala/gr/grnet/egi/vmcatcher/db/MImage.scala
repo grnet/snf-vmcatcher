@@ -34,12 +34,8 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
     override def dbColumnName = "json"
   }
 
-  object dcIdentifier extends MappedString(this, 128) {
-    override def dbColumnName = "dc_identifier"
-  }
-
-  object dcTitle extends MappedString(this, 128) {
-    override def dbColumnName = "dc_title"
+  object envJson extends MappedText(this) {
+    override def dbColumnName = "env_json"
   }
 
   object adMpuri extends MappedString(this, 512) {
@@ -56,6 +52,14 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
 
   object adUserFullName extends MappedString(this, 128) {
     override def dbColumnName = "ad_user_full_name"
+  }
+
+  object dcIdentifier extends MappedString(this, 128) {
+    override def dbColumnName = "dc_identifier"
+  }
+
+  object dcTitle extends MappedString(this, 128) {
+    override def dbColumnName = "dc_title"
   }
 
   object hvUri extends MappedString(this, 512) {

@@ -17,12 +17,12 @@
 
 package gr.grnet.egi.vmcatcher.event;
 
-import static gr.grnet.egi.vmcatcher.event.EventFieldSection.External;
+import static gr.grnet.egi.vmcatcher.event.EnvFieldCategory.External;
 
 /**
  *
  */
-public enum ExternalEventField implements IEventField {
+public enum ExternalEnvField implements IEnvField {
     VMCATCHER_EVENT_TYPE,
     VMCATCHER_EVENT_AD_MPURI,
     VMCATCHER_EVENT_FILENAME,
@@ -31,7 +31,7 @@ public enum ExternalEventField implements IEventField {
     VMCATCHER_EVENT_VO,
     VMCATCHER_X_EVENT_IMAGE_LIST_URL; // Custom, not present in original vmcatcher
 
-    public EventFieldSection section() { return External; }
+    public EnvFieldCategory section() { return External; }
 
-    public String jsonField() { return ""; }
+    public String imageListJsonAttribute() { return ""; }
 }

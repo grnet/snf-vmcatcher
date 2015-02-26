@@ -23,7 +23,7 @@ import java.util.Scanner
 import gr.grnet.egi.vmcatcher.ErrorCode._
 import gr.grnet.egi.vmcatcher.config.Config
 import gr.grnet.egi.vmcatcher.db._
-import gr.grnet.egi.vmcatcher.event.{Events, ImageEventField}
+import gr.grnet.egi.vmcatcher.event.{ImageEvent, ImageEnvField}
 import gr.grnet.egi.vmcatcher.util.UsernamePassword
 import net.liftweb.mapper.By
 
@@ -42,8 +42,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
       throw new VMCatcherException(CannotAccessDB, s"Maybe the database is inaccessible ... ")
   }
   
-  import Main.Log
-  import Main.INFO
+  import gr.grnet.egi.vmcatcher.Main.Log
 
   protected def findImageListRefByName(name: String) = MImageListRef.findByName(name)
 
@@ -135,9 +134,9 @@ class StdVMCatcher(config: Config) extends VMCatcher {
     buffer.toString
   }
   
-  def parseImagesFromJson(ref: MImageListRef, access: MImageListAccess, json: String): List[MImage] = {
+  def parseImagesFromJson(ref: MImageListRef, access: MImageListAccess, imageListJson: String): List[MImage] = {
     try {
-      val events = Events.ofJson(json, Map())
+      val events = ImageEvent.parseImageListJson(imageListJson)
 
       val images =
         for {
@@ -145,17 +144,27 @@ class StdVMCatcher(config: Config) extends VMCatcher {
         } yield {
           val image = MImage.create.
             f_imageListAccess(access).
-            json(event.originalJson.orNull).
-            dcIdentifier(event(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER)).
-            dcTitle     (event(ImageEventField.VMCATCHER_EVENT_DC_TITLE)).
-            adMpuri     (event(ImageEventField.VMCATCHER_EVENT_AD_MPURI)).
-            hvFormat    (event(ImageEventField.VMCATCHER_EVENT_HV_FORMAT)).
-            hvHypervisor(event(ImageEventField.VMCATCHER_EVENT_HV_HYPERVISOR)).
-            hvSize      (event(ImageEventField.VMCATCHER_EVENT_HV_SIZE).toLong).
-            hvUri       (event(ImageEventField.VMCATCHER_EVENT_HV_URI)).
-            slOs        (event(ImageEventField.VMCATCHER_EVENT_SL_OS)).
-            slOsName    (event(ImageEventField.VMCATCHER_EVENT_SL_OSNAME)).
-            slOsVersion (event(ImageEventField.VMCATCHER_EVENT_SL_OSVERSION))
+            json(event.imageJsonView.json).
+            envJson(event.envFieldsView.json).
+
+            adMpuri       (event(ImageEnvField.VMCATCHER_EVENT_AD_MPURI, "")).
+            adUserFullName(event(ImageEnvField.VMCATCHER_EVENT_AD_USER_FULLNAME, "")).
+            adUserGuid    (event(ImageEnvField.VMCATCHER_EVENT_AD_USER_GUID, "")).
+            adUserUri     (event(ImageEnvField.VMCATCHER_EVENT_AD_USER_URI, "")).
+
+            dcIdentifier(event(ImageEnvField.VMCATCHER_EVENT_DC_IDENTIFIER, "")).
+            dcTitle     (event(ImageEnvField.VMCATCHER_EVENT_DC_TITLE, "")).
+
+            hvUri       (event(ImageEnvField.VMCATCHER_EVENT_HV_URI, "")).
+            hvHypervisor(event(ImageEnvField.VMCATCHER_EVENT_HV_HYPERVISOR, "")).
+            hvFormat    (event(ImageEnvField.VMCATCHER_EVENT_HV_FORMAT, "")).
+            hvSize      (event(ImageEnvField.VMCATCHER_EVENT_HV_SIZE, "-1").toLong).
+
+            slOs         (event(ImageEnvField.VMCATCHER_EVENT_SL_OS, "")).
+            slOsName     (event(ImageEnvField.VMCATCHER_EVENT_SL_OSNAME, "")).
+            slOsVersion  (event(ImageEnvField.VMCATCHER_EVENT_SL_OSVERSION, "")).
+            slArch       (event(ImageEnvField.VMCATCHER_EVENT_SL_ARCH, "")).
+            slChecksum512(event(ImageEnvField.VMCATCHER_EVENT_SL_CHECKSUM_SHA512, ""))
 
           Log.info(s"Created $image")
           image
@@ -187,9 +196,9 @@ class StdVMCatcher(config: Config) extends VMCatcher {
         val access = MImageListAccess.create.f_imageListRef(ref).saveRetrieved(rawText)
 
         // Parse json out of rawText
-        val json = getImageListJsonFromRaw(rawText)
-        access.saveParsed(json)
-        val images = parseImagesFromJson(ref, access, json)
+        val imageListJson = getImageListJsonFromRaw(rawText)
+        access.saveParsed(imageListJson)
+        val images = parseImagesFromJson(ref, access, imageListJson)
 
         (access, images)
     }

@@ -15,11 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.event;
+package gr.grnet.egi.vmcatcher.db
 
-/** Specifies a field in the `vmcatcher` event */
-public interface IEventField {
-    String name();
-    String jsonField();
-    EventFieldSection section();
+import org.junit.Test
+
+/**
+ *
+ */
+class MDBTest {
+  @Test def db(): Unit = {
+
+  }
 }

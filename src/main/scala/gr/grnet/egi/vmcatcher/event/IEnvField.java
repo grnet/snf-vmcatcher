@@ -15,14 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher.image.handler
-
-import gr.grnet.egi.vmcatcher.event.ImageEvent
+package gr.grnet.egi.vmcatcher.event;
 
 /**
+ * Specifies a field in the `vmcatcher` event.
+ * All such fields have names that resemble environment variables in a typical Unix shell (sh).
+ * An event field belongs to a {@link EnvFieldCategory}.
  *
+ * @see ImageEnvField
+ * @see ImageListEnvField
+ * @see ExternalEnvField
+ * @see EnvFieldCategory
  */
-class JustLogHandler extends DequeueHandler {
-  def handle(event: ImageEvent, data: HandlerData): Unit =
-    data.log.info(s"event = $event")
+public interface IEnvField {
+    String name();
+
+    /**
+     * Return the corresponding json attribute in an image list (which comes in JSON format)
+     */
+    String imageListJsonAttribute();
+    EnvFieldCategory section();
 }

@@ -17,14 +17,14 @@
 
 package gr.grnet.egi.vmcatcher.image.handler
 
-import gr.grnet.egi.vmcatcher.event.Event
+import gr.grnet.egi.vmcatcher.event.ImageEvent
 
 /**
  * Handles one event from the queue.
  *
  */
 trait DequeueHandler {
-  def handle(event: Event, data: HandlerData): Unit
+  def handle(event: ImageEvent, data: HandlerData): Unit
 
   override def toString: String = this.getClass.getName
 }

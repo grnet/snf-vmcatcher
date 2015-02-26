@@ -20,12 +20,12 @@ package gr.grnet.egi.vmcatcher.event;
 import java.util.HashMap;
 import java.util.Map;
 
-import static gr.grnet.egi.vmcatcher.event.EventFieldSection.Image;
+import static gr.grnet.egi.vmcatcher.event.EnvFieldCategory.Image;
 
 /**
  *
  */
-public enum ImageEventField implements IEventField {
+public enum ImageEnvField implements IEnvField {
     VMCATCHER_EVENT_DC_DESCRIPTION("dc:description"),
     VMCATCHER_EVENT_DC_IDENTIFIER("dc:identifier"),
     VMCATCHER_EVENT_DC_TITLE("dc:title"),
@@ -34,42 +34,40 @@ public enum ImageEventField implements IEventField {
     VMCATCHER_EVENT_HV_URI("hv:uri"),
     VMCATCHER_EVENT_HV_VERSION("hv:version"),
     VMCATCHER_EVENT_HV_FORMAT("hv:format"),
-//    VMCATCHER_EVENT_SL_CHECKSUM_SHA512("sl:checksum:sha512"),
-//    VMCATCHER_EVENT_SL_COMMENTS("sl:comments"),
+    VMCATCHER_EVENT_SL_CHECKSUM_SHA512("sl:checksum:sha512"),
+    VMCATCHER_EVENT_SL_COMMENTS("sl:comments"),
     VMCATCHER_EVENT_SL_OS("sl:os"),
     VMCATCHER_EVENT_SL_ARCH("sl:arch"),
     VMCATCHER_EVENT_SL_OSVERSION("sl:osversion"),
     VMCATCHER_EVENT_SL_OSNAME("sl:osname"),
-//    VMCATCHER_EVENT_AD_GROUP("ad:group"),
+    VMCATCHER_EVENT_AD_GROUP("ad:group"),
     VMCATCHER_EVENT_AD_MPURI("ad:mpuri"),
-//    VMCATCHER_EVENT_AD_USER_FULLNAME("ad:user:fullname"),
-//    VMCATCHER_EVENT_AD_USER_GUID("ad:user:guid"),
-//    VMCATCHER_EVENT_AD_USER_URI("ad:mpuri")
+    VMCATCHER_EVENT_AD_USER_FULLNAME("ad:user:fullname"),
+    VMCATCHER_EVENT_AD_USER_GUID("ad:user:guid"),
+    VMCATCHER_EVENT_AD_USER_URI("ad:user:uri"),
     ;
 
-    private static final Map<String, ImageEventField> reverseMap;
+    private static final Map<String, ImageEnvField> reverseMap;
     static {
-        reverseMap = new HashMap<String, ImageEventField>();
-        for(ImageEventField eventField: ImageEventField.values()) {
-            reverseMap.put(eventField.jsonField(), eventField);
+        reverseMap = new HashMap<String, ImageEnvField>();
+        for(ImageEnvField eventField: ImageEnvField.values()) {
+            reverseMap.put(eventField.imageListJsonAttribute(), eventField);
         }
     }
 
-    public final String jsonField;
+    public final String imageListJsonAttribute;
 
-    ImageEventField(String jsonField) {
-        this.jsonField = jsonField;
+    ImageEnvField(String imageListJsonAttribute) {
+        this.imageListJsonAttribute = imageListJsonAttribute;
     }
 
-    public EventFieldSection section() { return Image; }
+    public EnvFieldCategory section() { return Image; }
 
-    public String jsonField() { return jsonField; }
+    public String imageListJsonAttribute() { return imageListJsonAttribute; }
 
-    public static ImageEventField ofJsonField(String jsonField) {
-        return reverseMap.get(jsonField);
-    }
-
-    public static String nameForJsonField(String jsonField) {
-        return reverseMap.get(jsonField).name();
+    public static ImageEnvField ofImageListJsonAttribute(String jsonAttribute) throws IllegalArgumentException {
+        ImageEnvField field = reverseMap.get(jsonAttribute);
+        if(field != null) { return field; }
+        throw new IllegalArgumentException("Unknown json attribute '" + jsonAttribute + "'");
     }
 }

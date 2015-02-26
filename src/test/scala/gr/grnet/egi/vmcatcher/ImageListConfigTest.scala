@@ -17,7 +17,7 @@
 
 package gr.grnet.egi.vmcatcher
 
-import gr.grnet.egi.vmcatcher.event.{Events, ImageEventField}
+import gr.grnet.egi.vmcatcher.event.{ImageEvent, ImageEnvField}
 import org.junit.Test
 
 /**
@@ -80,17 +80,17 @@ class ImageListConfigTest {
       |
     """.stripMargin
   @Test def test(): Unit = {
-    Events.ofJson(data, Map())
+    ImageEvent.parseImageListJson(data)
   }
 
   @Test def test2(): Unit = {
-    val eventList = Events.ofJson(data, Map())
+    val eventList = ImageEvent.parseImageListJson(data)
     for {
       event ← eventList
     } {
-      val dcIdentifier = event(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER)
+      val dcIdentifier = event(ImageEnvField.VMCATCHER_EVENT_DC_IDENTIFIER, "")
       println(dcIdentifier)
-      println(event.toJson)
+      println(event.envFieldsView.json)
     }
   }
 }

@@ -25,9 +25,9 @@ import java.util.Locale
 import javax.net.ssl._
 
 import com.squareup.okhttp.Credentials
-import gr.grnet.egi.vmcatcher.event.{Event, ImageEventField}
+import gr.grnet.egi.vmcatcher.event.{ImageEvent, ImageEnvField}
 import gr.grnet.egi.vmcatcher.image.handler.HandlerData
-import gr.grnet.egi.vmcatcher.util.{UsernamePassword, GetImage}
+import gr.grnet.egi.vmcatcher.util.{GetImage, UsernamePassword}
 import okio.{Buffer, ByteString, Okio}
 import org.slf4j.Logger
 import org.zeroturnaround.exec.ProcessExecutor
@@ -274,12 +274,12 @@ class Sys {
 //      ROOT_PARTITION → rootPartition
     )
 
-  def newImageProperties(event: Event, users: String, rootPartition: String = "1") =
+  def newImageProperties(event: ImageEvent, users: String, rootPartition: String = "1") =
     minimumImageProperties(
-      event(ImageEventField.VMCATCHER_EVENT_SL_OS),
+      event(ImageEnvField.VMCATCHER_EVENT_SL_OS, "linux"),
       users,
       rootPartition
-    ) ++ event.toMap
+    ) ++ event.envFieldsView.map
 
   def mkImageNameToUpload(imageFile: File): String = {
     val name0 = imageFile.getName
@@ -303,7 +303,7 @@ class Sys {
     properties: Map[String, String],
     imageFile: File,
     data: HandlerData,
-    eventOpt: Option[Event]
+    eventOpt: Option[ImageEvent]
   ): RegistrationResult = {
     val log = data.log
     val imageTransformers = data.imageTransformers
@@ -335,10 +335,10 @@ class Sys {
           eventOpt match {
             case None ⇒ ""
             case Some(event) ⇒
-              val hvURI = ImageEventField.VMCATCHER_EVENT_HV_URI
-              val mpURI = ImageEventField.VMCATCHER_EVENT_AD_MPURI
-              val v1 = event(hvURI)
-              val v2 = event(mpURI)
+              val hvURI = ImageEnvField.VMCATCHER_EVENT_HV_URI
+              val mpURI = ImageEnvField.VMCATCHER_EVENT_AD_MPURI
+              val v1 = event(hvURI, "")
+              val v2 = event(mpURI, "")
 
               val mapStr = Map(hvURI → v1, mpURI → v2).mkString("{", ", ", "}")
               s" from $mapStr"
@@ -464,7 +464,7 @@ class Sys {
     properties: Map[String, String],
     url: URL,
     data: HandlerData,
-    eventOpt: Option[Event]
+    eventOpt: Option[ImageEvent]
   ): RegistrationResult = {
     val log = data.log
     val GetImage(isTemporary, imageFile) = Sys.getImage(url, data)

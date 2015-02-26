@@ -131,9 +131,9 @@ object Main extends {
   def do_show_conf(args: ShowConf): Unit = println(config.toString)
 
   def do_enqueue(connector: RabbitConnector): Unit = {
-    val event = Event.ofSysEnv
+    val event = ImageEvent.ofSysEnvFields
     Log.info(s"event (sysenv) = $event")
-    val json = event.toJson
+    val json = event.envFieldsView.json
 
     val rabbit = connector.connect()
 
@@ -191,7 +191,7 @@ object Main extends {
 //    val imageListContainerJson = parseImageListContainerJson(rawImageListContainer)
 //    Log.info (s"imageListContainer (json) =\n$imageListContainerJson")
 //
-//    val events0 = Events.ofJson(imageListContainerJson, Map())
+//    val events0 = Events.ofImageListJson(imageListContainerJson, Map())
 //    INFO(s"Found ${events0.size} events")
 //    if(events0.isEmpty) { return }
 //
@@ -235,7 +235,7 @@ object Main extends {
 //    Log.info(s"imageList (URL) = $imageListURL")
 //    Log.info(s"imageList (raw) = $rawText")
 //    val jsonImageList = parseImageListContainerJson(rawText)
-//    val events0 = Events.ofJson(
+//    val events0 = Events.ofImageListJson(
 //      jsonImageList,
 //      //Map(ExternalEventField.VMCATCHER_X_EVENT_IMAGE_LIST_URL → imageListURL.toString)
 //      Map()
@@ -282,7 +282,7 @@ object Main extends {
 //          INFO(eventMsg)
 //          Log.info(s"event (image) = $event")
 //
-//          rabbit.publish(event.toJson)
+//          rabbit.publish(event.toEventFieldJson)
 //        }
 //
 //        val enqueuedMsg = s"Enqueued ${events.size} event(s)"
@@ -298,7 +298,7 @@ object Main extends {
         rabbit.getAndAck {} { response ⇒
           val jsonMsgBytes = response.getBody
           val jsonMsg = new String(jsonMsgBytes, StandardCharsets.UTF_8)
-          val event = Event.ofJson(jsonMsg)
+          val event = ImageEvent.ofEnvFieldsJson(jsonMsg)
 
           Log.info(s"dequeueHandler = ${dequeueHandler.getClass.getName}")
           dequeueHandler.handle(event, data)
@@ -422,7 +422,7 @@ object Main extends {
           try {
             val drainedBytes = getResponse.getBody
             val drainedString = new String(drainedBytes, StandardCharsets.UTF_8)
-            val event = Event.ofJson(drainedString)
+            val event = ImageEvent.ofEnvFieldsJson(drainedString)
             Log.info(s"Drained event $count\n$event")
           }
           catch {

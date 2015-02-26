@@ -23,7 +23,9 @@ import gr.grnet.egi.vmcatcher.util.UsernamePassword
 import net.liftweb.mapper._
 
 /**
- *
+ * This is the definition of an image list inside snf-vmcatcher.
+ * It references the image list URL and provides all necessary info
+ * in order to access it.
  */
 class MImageListRef extends LongKeyedMapper[MImageListRef] with IdPK {
   def getSingleton = MImageListRef

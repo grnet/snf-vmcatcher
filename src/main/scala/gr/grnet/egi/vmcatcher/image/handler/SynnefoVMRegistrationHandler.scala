@@ -22,21 +22,21 @@ import java.net.URL
 import java.util.Locale
 
 import gr.grnet.egi.vmcatcher.Sys
-import gr.grnet.egi.vmcatcher.event.{ImageEventField, Event}
-import gr.grnet.egi.vmcatcher.event.ExternalEventField._
-import gr.grnet.egi.vmcatcher.event.ImageEventField._
+import gr.grnet.egi.vmcatcher.event.ExternalEnvField._
+import gr.grnet.egi.vmcatcher.event.ImageEnvField._
+import gr.grnet.egi.vmcatcher.event.{ImageEvent, ImageEnvField}
 
 /**
  * Registers a VM to Synnefo, using `snf-mkimage`
  *
  */
 class SynnefoVMRegistrationHandler extends DequeueHandler {
-  def expireVM(event: Event, data: HandlerData): Unit = {
+  def expireVM(event: ImageEvent, data: HandlerData): Unit = {
     // vmcatcher moves the image file to the $VMCATCHER_CACHE_DIR_EXPIRE folder
     data.log.info("Expiring VM (nothing to do)")
   }
 
-  def availableVM(event: Event, data: HandlerData): Unit = {
+  def availableVM(event: ImageEvent, data: HandlerData): Unit = {
     val log = data.log
 
     // vmcatcher has downloaded the image in $VMCATCHER_CACHE_DIR_CACHE.
@@ -44,14 +44,14 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     // the full path to the image file is $VMCATCHER_CACHE_DIR_CACHE/$VMCATCHER_EVENT_FILENAME
     log.info("Available VM")
     // image file
-    val folderPath = event(VMCATCHER_CACHE_DIR_CACHE)
+    val folderPath = event(VMCATCHER_CACHE_DIR_CACHE, "")
     log.info(s"VMCATCHER_CACHE_DIR_CACHE = $folderPath")
     if(folderPath.isEmpty) {
       log.warn("VMCATCHER_CACHE_DIR_CACHE is empty. Aborting")
       return
     }
 
-    val filename = event(VMCATCHER_EVENT_FILENAME)
+    val filename = event(VMCATCHER_EVENT_FILENAME, "")
     log.info(s"VMCATCHER_EVENT_FILENAME = $filename")
     if(filename.isEmpty) {
       log.warn("VMCATCHER_EVENT_FILENAME is empty. Aborting")
@@ -67,7 +67,7 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     log.info(s"imageFile = $imageFile")
 
     // format
-    val format = Sys.fixFormat(event(VMCATCHER_EVENT_HV_FORMAT))
+    val format = Sys.fixFormat(event(VMCATCHER_EVENT_HV_FORMAT, ""))
     log.info(s"VMCATCHER_EVENT_HV_FORMAT = $format")
     if(format.isEmpty) {
       log.warn("VMCATCHER_EVENT_HV_FORMAT is empty. Aborting")
@@ -75,7 +75,7 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     }
 
     // osfamily
-    val osfamily = event(VMCATCHER_EVENT_SL_OS)
+    val osfamily = event(VMCATCHER_EVENT_SL_OS, "")
     log.info(s"VMCATCHER_EVENT_SL_OS = $osfamily")
     if(osfamily.isEmpty) {
       log.warn("VMCATCHER_EVENT_SL_OS is empty. Aborting")
@@ -85,7 +85,7 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     val users = "root"
     val rootPartition = "1"
 
-    val vmCatcherProperties = event.toMap
+    val vmCatcherProperties = event.envFieldsView.map
     val synnefoProperties = Sys.minimumImageProperties(osfamily, users, rootPartition)
     val properties = synnefoProperties ++ vmCatcherProperties
 
@@ -98,11 +98,11 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     )
   }
 
-  def handleOther(verb: String, event: Event, data: HandlerData): Unit = {
+  def handleOther(verb: String, event: ImageEvent, data: HandlerData): Unit = {
     data.log.info(s"verb = $verb (nothing to do)")
   }
 
-  def handleVmCatcherScriptJSON(event: Event, eventType: String, data: HandlerData): Unit = {
+  def handleVmCatcherScriptJSON(event: ImageEvent, eventType: String, data: HandlerData): Unit = {
     val log = data.log
 
     log.info("#> handleVmCatcherScriptJSON")
@@ -127,13 +127,13 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     log.info("#< handleVmCatcherScriptJSON")
   }
 
-  def handleImageJSON(event: Event, data: HandlerData): Unit = {
+  def handleImageJSON(event: ImageEvent, data: HandlerData): Unit = {
     val log = data.log
-    val hvURI = event(ImageEventField.VMCATCHER_EVENT_HV_URI)
+    val hvURI = event(ImageEnvField.VMCATCHER_EVENT_HV_URI, "")
     log.info(s"#> handleImageJSON($hvURI)")
 
-    val url = new URL(event(VMCATCHER_EVENT_HV_URI))
-    val formatOpt = Some(Sys.fixFormat(event(VMCATCHER_EVENT_HV_FORMAT)))
+    val url = new URL(event(VMCATCHER_EVENT_HV_URI, ""))
+    val formatOpt = Some(Sys.fixFormat(event(VMCATCHER_EVENT_HV_FORMAT, "")))
 
     val users = "root"
     val rootPartition = "1"
@@ -151,7 +151,7 @@ class SynnefoVMRegistrationHandler extends DequeueHandler {
     log.info(s"#< handleImageJSON($hvURI)")
   }
 
-  def handle(event: Event, data: HandlerData): Unit = {
+  def handle(event: ImageEvent, data: HandlerData): Unit = {
     val sh = new JustLogHandler
     sh.handle(event, data)
 

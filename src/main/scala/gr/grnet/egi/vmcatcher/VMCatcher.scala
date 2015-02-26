@@ -23,7 +23,7 @@ import gr.grnet.egi.vmcatcher.db.{MCurrentImage, MImageListRef}
 import gr.grnet.egi.vmcatcher.util.UsernamePassword
 
 /**
- *
+ * The API of the VMCatcher.
  */
 trait VMCatcher {
   /**

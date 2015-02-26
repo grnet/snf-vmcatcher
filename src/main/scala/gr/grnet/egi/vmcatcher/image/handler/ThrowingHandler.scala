@@ -17,11 +17,11 @@
 
 package gr.grnet.egi.vmcatcher.image.handler
 
-import gr.grnet.egi.vmcatcher.event.Event
+import gr.grnet.egi.vmcatcher.event.ImageEvent
 
 /**
  *
  */
 class ThrowingHandler extends DequeueHandler {
-  def handle(event: Event, data: HandlerData): Unit = throw new Exception(s"event = $event")
+  def handle(event: ImageEvent, data: HandlerData): Unit = throw new Exception(s"event = $event")
 }
