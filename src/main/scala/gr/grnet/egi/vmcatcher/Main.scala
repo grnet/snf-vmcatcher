@@ -48,7 +48,8 @@ object Main extends {
   final val ProgName = getClass.getName.stripSuffix("$")
   final val Log = LoggerFactory.getLogger(getClass)
 
-  lazy val vmcatcher = new StdVMCatcher(config)
+  lazy val vmcatcher: VMCatcher = new StdVMCatcher(config)
+  lazy val iaas: IaaS = new KamakiBasedIaaS(config.getIaasConfig)
 
   def beginSequence(args: Array[String]): Unit = {
     _args = args
@@ -100,16 +101,20 @@ object Main extends {
     mkcmd(CmdLine.testQueue, do_test_queue),
 
     // Image lists
-    mkcmd(CmdLine.registerImageList,   do_register_image_list),
-    mkcmd(CmdLine.activateImageList,   do_activate_image_list),
-    mkcmd(CmdLine.deactivateImageList, do_deactivate_image_list),
-    mkcmd(CmdLine.updateCredentials,   do_update_credentials),
-    mkcmd(CmdLine.fetchImageList,      do_fetch_image_list),
-    mkcmd(CmdLine.listImageList,       do_list_image_list),
+    mkcmd(CmdLine.registerImageList,   do_register_image_list),   /*(N)*/
+    mkcmd(CmdLine.activateImageList,   do_activate_image_list),   /*(N)*/
+    mkcmd(CmdLine.deactivateImageList, do_deactivate_image_list), /*(N)*/
+    mkcmd(CmdLine.updateCredentials,   do_update_credentials),    /*(N)*/
+    mkcmd(CmdLine.fetchImageList,      do_fetch_image_list),      /*(N)*/
+    mkcmd(CmdLine.listImageList,       do_list_image_list),       /*(N)*/
 //    mkcmd(CmdLine.parseImageList, do_parse_image_list),
 //    mkcmd(CmdLine.getImageList, do_get_image_list),
 
     // Images
+    mkcmd(CmdLine.listRegisteredImages,       do_list_registered_images),              /*(N)*/
+
+//    mkcmd(CmdLine.checkImage,       do_check_image),              /*(N)*/
+//    mkcmd(CmdLine.registerImage,    do_register_image),           /*(N)*/
     mkcmd(CmdLine.registerImageNow, do_register_now),
 
     mkcmd(CmdLine.transform, do_transform)
@@ -193,6 +198,15 @@ object Main extends {
       dcIdentifier = image.dcIdentifier.get
     } {
       INFO(s"$id $dcIdentifier $hvUri")
+    }
+  }
+
+  def do_list_registered_images(args: ListRegisteredImages): Unit = {
+    val all = iaas.listRegisteredImages()
+    for {
+      image ← all
+    } {
+      INFO(s"$image")
     }
   }
 

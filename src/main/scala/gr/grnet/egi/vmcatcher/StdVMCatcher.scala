@@ -25,6 +25,7 @@ import gr.grnet.egi.vmcatcher.config.Config
 import gr.grnet.egi.vmcatcher.db._
 import gr.grnet.egi.vmcatcher.event.{ImageEvent, ImageEnvField}
 import gr.grnet.egi.vmcatcher.util.UsernamePassword
+import net.liftweb.common.Full
 import net.liftweb.mapper.By
 
 import scala.annotation.tailrec
@@ -36,7 +37,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
   try MDB.init(config.getDbConfig)
   catch {
     case e: NullPointerException if (e.getMessage ne null) && e.getMessage.startsWith("Looking for Connection Identifier") ⇒
-      if(config.getDbConfig.getJdbcURL.startsWith("jdbc:mysql")) {
+      if(config.getDbConfig.getJdbcURL.toString.startsWith("jdbc:mysql")) {
         throw new VMCatcherException(CannotAccessDB, s"Maybe the database is inaccessible ... Did you start MySQL?")
       }
       throw new VMCatcherException(CannotAccessDB, s"Maybe the database is inaccessible ... ")
@@ -226,7 +227,8 @@ class StdVMCatcher(config: Config) extends VMCatcher {
             MCurrentImage.create.
               f_image(image).
               f_imageListRef(ref).
-              f_imageListAccess(access)
+              f_imageListAccess(access).
+              dcIdentifier(image.dcIdentifier.get)
           }
         newCurrentImages.foreach(_.save())
 
@@ -256,4 +258,18 @@ class StdVMCatcher(config: Config) extends VMCatcher {
       case Some(ref) ⇒
         MCurrentImage.findAll(By(MCurrentImage.f_imageListRef, ref))
     }
+
+  def getImage(dcIdentifier: String): MImage = {
+    val mImageBox =
+      for {
+        mci ← MCurrentImage.find(By(MCurrentImage.dcIdentifier, dcIdentifier))
+        mi  ← mci.f_image.obj
+      } yield mi
+
+    mImageBox match {
+      case Full(mi) ⇒ mi
+      case _ ⇒
+        throw new VMCatcherException(ImageListNotFound, s"Image $dcIdentifier not found")
+    }
+  }
 }

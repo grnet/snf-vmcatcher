@@ -17,7 +17,7 @@
 
 package gr.grnet.egi.vmcatcher
 
-import java.io.File
+import java.io.{ByteArrayOutputStream, File}
 import java.net.{URL, URLConnection}
 import java.nio.file.Files
 import java.security.cert.X509Certificate
@@ -58,6 +58,24 @@ class Sys {
     val exitCode = pr.getExitValue
 
     exitCode
+  }
+
+  def execRead(log: Logger, args: String*): (Int, String) = {
+    val stdout = new ByteArrayOutputStream(4096)
+    val cmdline = args.mkString("$ ", " ", "")
+    log.info(cmdline)
+
+    val pe = new ProcessExecutor().
+      command(args:_*).
+      exitValueAny().
+      redirectOutput(stdout)
+
+    val pr = pe.execute()
+    val exitCode = pr.getExitValue
+
+    val stdoutString = stdout.toString("utf-8")
+
+    (exitCode, stdoutString)
   }
 
   def createTempFile(suffix: String, folderPath: String): File = {

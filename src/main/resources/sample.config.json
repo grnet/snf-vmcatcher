@@ -17,6 +17,7 @@
   },
 
   "iaasConfig": {
-    "cloud": "occi-test"
+    "cloud": "occi-test",
+    "container": "pithos"
   }
 }

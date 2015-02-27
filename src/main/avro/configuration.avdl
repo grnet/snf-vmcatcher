@@ -19,7 +19,8 @@ protocol VmCatcherConfig {
   }
 
   record IaaSConfig {
-    string cloud;
+    string cloud = "occi-test";
+    string container = "/images";
   }
 
   record Config {

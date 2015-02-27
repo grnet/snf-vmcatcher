@@ -39,6 +39,8 @@ class CmdLine {
   val parseImageList = new ParseImageList
   val getImageList = new GetImageList
 
+  val listRegisteredImages = new ListRegisteredImages
+
   val registerImageNow = new RegisterImageNow
 
   val registerImageList = new RegisterImageList
@@ -77,17 +79,18 @@ object CmdLine extends CmdLine {
     jc.addCommand(CmdLine.testQueue)
 
     // Image lists
-    jc.addCommand(CmdLine.registerImageList)
-    jc.addCommand(CmdLine.activateImageList)
-    jc.addCommand(CmdLine.deactivateImageList)
-    jc.addCommand(CmdLine.updateCredentials)
-    jc.addCommand(CmdLine.fetchImageList)
-    jc.addCommand(CmdLine.listImageList)
+    jc.addCommand(CmdLine.registerImageList)    /*(N)*/
+    jc.addCommand(CmdLine.activateImageList)    /*(N)*/
+    jc.addCommand(CmdLine.deactivateImageList)  /*(N)*/
+    jc.addCommand(CmdLine.updateCredentials)    /*(N)*/
+    jc.addCommand(CmdLine.fetchImageList)       /*(N)*/
+    jc.addCommand(CmdLine.listImageList)        /*(N)*/
 
     jc.addCommand(CmdLine.parseImageList)
     jc.addCommand(CmdLine.getImageList)
 
     // Images
+    jc.addCommand(CmdLine.listRegisteredImages) /*(N)*/
     jc.addCommand(CmdLine.registerImageNow)
 
 

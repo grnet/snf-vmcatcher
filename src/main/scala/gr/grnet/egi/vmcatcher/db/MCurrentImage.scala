@@ -42,6 +42,11 @@ class MCurrentImage extends LongKeyedMapper[MCurrentImage] with IdPK {
     override def dbNotNull_? = true
   }
 
+  // redundant but useful
+  object dcIdentifier extends MappedString(this, 128) {
+    override def dbColumnName = "dc_identifier"
+  }
+
   def findAllOfImageListRef(ref: MImageListRef): List[MCurrentImage] =
     MCurrentImage.findAll(By(MCurrentImage.f_imageListRef, ref))
 }

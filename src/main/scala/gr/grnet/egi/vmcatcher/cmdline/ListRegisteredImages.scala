@@ -15,21 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher;
+package gr.grnet.egi.vmcatcher.cmdline
+
+import com.beust.jcommander.Parameters
 
 /**
- *
- */
-public enum ErrorCode {
-    ImageListAlreadyRegistered(100),
-    ImageListNotFound(101),
-    CannotAccessImageList(102),
-    CannotParseImages(103),
-    CannotAccessDB(104),
-    CannotGetRegisteredImages(105),
-    ;
-
-    public final int code;
-
-    ErrorCode(int code) { this.code = code; }
-}
+  *
+  */
+@Parameters(
+   commandNames = Array("list-registered-images"),
+   commandDescription = "List the snf-vmcatcher images that have been registered with the IaaS"
+ )
+class ListRegisteredImages

@@ -59,4 +59,9 @@ trait VMCatcher {
    * Returns the currently known image definitions for the given image list.
    */
   def currentImageList(name: String): List[MCurrentImage]
+
+  /**
+   * Get the image with the given dc:identifier
+   */
+  def getImage(dcIdentifier: String): MImage
 }

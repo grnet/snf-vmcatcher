@@ -15,21 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher;
+package gr.grnet.egi.vmcatcher.cmdline
+
+import com.beust.jcommander.{Parameter, Parameters}
+import gr.grnet.egi.vmcatcher.cmdline.helper.NotEmptyStringValidator
 
 /**
  *
  */
-public enum ErrorCode {
-    ImageListAlreadyRegistered(100),
-    ImageListNotFound(101),
-    CannotAccessImageList(102),
-    CannotParseImages(103),
-    CannotAccessDB(104),
-    CannotGetRegisteredImages(105),
-    ;
-
-    public final int code;
-
-    ErrorCode(int code) { this.code = code; }
+@Parameters(
+  commandNames = Array("list-image-list"),
+  commandDescription = "List the parsed images from an image list for which fetch-image-list was previously run"
+)
+class ListImageList {
+  @Parameter(
+    names = Array("-name"),
+    description = "The identifier for the image list",
+    required = true,
+    validateWith = classOf[NotEmptyStringValidator]
+  )
+  val name: String = null
 }
