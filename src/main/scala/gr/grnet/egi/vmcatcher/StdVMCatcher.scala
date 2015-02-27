@@ -233,6 +233,21 @@ class StdVMCatcher(config: Config) extends VMCatcher {
         (ref, newCurrentImages)
     }
 
+  def listImageList(name: String): List[MImage] = {
+    findImageListRefByName(name) match {
+      case None ⇒
+        throw new VMCatcherException(ImageListNotFound, s"Image list $name not found")
+
+      case Some(ref) ⇒
+        for {
+          mci ← MCurrentImage.findAll(By(MCurrentImage.f_imageListRef, ref))
+          mi ← mci.f_image.obj
+        } yield {
+          mi
+        }
+    }
+  }
+
   def currentImageList(name: String): List[MCurrentImage] =
     findImageListRefByName(name) match {
       case None ⇒

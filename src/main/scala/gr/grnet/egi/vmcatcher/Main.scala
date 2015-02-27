@@ -105,6 +105,7 @@ object Main extends {
     mkcmd(CmdLine.deactivateImageList, do_deactivate_image_list),
     mkcmd(CmdLine.updateCredentials,   do_update_credentials),
     mkcmd(CmdLine.fetchImageList,      do_fetch_image_list),
+    mkcmd(CmdLine.listImageList,       do_list_image_list),
 //    mkcmd(CmdLine.parseImageList, do_parse_image_list),
 //    mkcmd(CmdLine.getImageList, do_get_image_list),
 
@@ -179,6 +180,19 @@ object Main extends {
       image ← currentImage.f_image.obj
     } {
       INFO(s"Parsed image $image")
+    }
+  }
+
+  def do_list_image_list(args: ListImageList): Unit = {
+    val images = vmcatcher.listImageList(args.name)
+    for {
+      image ← images
+      id = image.id.get
+      adMpuri = image.adMpuri.get
+      hvUri = image.hvUri.get
+      dcIdentifier = image.dcIdentifier.get
+    } {
+      INFO(s"$id $dcIdentifier $hvUri")
     }
   }
 
