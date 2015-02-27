@@ -14,5 +14,9 @@
     "jdbcURL": "jdbc:mysql://localhost:3306/snfvmcatcher",
     "jdbcUsername": "vmcatcher",
     "jdbcPassword": "*********"
+  },
+
+  "iaasConfig": {
+    "cloud": "occi-test"
   }
 }

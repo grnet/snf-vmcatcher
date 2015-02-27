@@ -1,7 +1,7 @@
 @namespace("gr.grnet.egi.vmcatcher.config")
 protocol VmCatcherConfig {
 
-  record RabbitMQConf {
+  record RabbitMQConfig {
     array<string> servers = ["localhost:5672"];
     string username   = "vmcatcher";
     string password   = "******";
@@ -11,15 +11,20 @@ protocol VmCatcherConfig {
     string vhost      = "/";
   }
 
-  record DBConf {
+  record DBConfig {
     string jdbcDriver;
     string jdbcURL;
     string jdbcUsername;
     string jdbcPassword;
   }
 
-  record Conf {
-    RabbitMQConf rabbitConf;
-    DBConf       dbConf;
+  record IaaSConfig {
+    string cloud;
+  }
+
+  record Config {
+    RabbitMQConfig rabbitConfig;
+    DBConfig       dbConfig;
+    IaaSConfig     iaasConfig;
   }
 }
