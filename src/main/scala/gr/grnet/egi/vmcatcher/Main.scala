@@ -204,9 +204,9 @@ object Main extends {
   def do_list_registered_images(args: ListRegisteredImages): Unit = {
     val all = iaas.listRegisteredImages()
     for {
-      image ← all
+      (id, name) ← all
     } {
-      INFO(s"$image")
+      INFO(s"$id $name")
     }
   }
 

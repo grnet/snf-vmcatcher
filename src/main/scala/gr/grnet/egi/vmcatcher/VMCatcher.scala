@@ -29,7 +29,12 @@ trait VMCatcher {
   /**
    * Registers the details of an image list.
    */
-  def registerImageList(name: String, url: URL, active: Boolean, upOpt: Option[UsernamePassword]): MImageListRef
+  def registerImageList(name: String, url: URL, isActive: Boolean, upOpt: Option[UsernamePassword]): MImageListRef
+
+  /**
+   * Returns all registered image lists.
+   */
+  def getImageLists(): List[MImageListRef]
 
   /**
    * Activates an image list, so that it will be retrieved and parsed when requested.

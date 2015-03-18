@@ -26,7 +26,7 @@ import gr.grnet.egi.vmcatcher.db._
 import gr.grnet.egi.vmcatcher.event.{ImageEvent, ImageEnvField}
 import gr.grnet.egi.vmcatcher.util.UsernamePassword
 import net.liftweb.common.Full
-import net.liftweb.mapper.By
+import net.liftweb.mapper.{Ascending, OrderBy, By}
 
 import scala.annotation.tailrec
 
@@ -68,6 +68,12 @@ class StdVMCatcher(config: Config) extends VMCatcher {
           saveMe()
     }
   }
+
+
+  def getImageLists(): List[MImageListRef] =
+    MImageListRef.findAll(
+      OrderBy(MImageListRef.name, Ascending)
+    )
 
   def activateImageList(name: String): Boolean =
     findImageListRefByName(name) match {
