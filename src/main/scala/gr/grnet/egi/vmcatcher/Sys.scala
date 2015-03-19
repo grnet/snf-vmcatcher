@@ -18,14 +18,16 @@
 package gr.grnet.egi.vmcatcher
 
 import java.io.{ByteArrayOutputStream, File}
-import java.net.{URL, URLConnection}
+import java.net.{Proxy, URL, URLConnection}
 import java.nio.file.Files
 import java.security.cert.X509Certificate
 import java.util.Locale
 import javax.net.ssl._
 
-import com.squareup.okhttp.Credentials
+import com.squareup.okhttp.Request.Builder
+import com.squareup.okhttp._
 import gr.grnet.egi.vmcatcher.event.{ImageEvent, ImageEnvField}
+import gr.grnet.egi.vmcatcher.http.{Http, HttpResponse}
 import gr.grnet.egi.vmcatcher.image.handler.HandlerData
 import gr.grnet.egi.vmcatcher.util.{GetImage, UsernamePassword}
 import okio.{Buffer, ByteString, Okio}
@@ -496,35 +498,17 @@ class Sys {
     }
   }
 
-  def downloadUtf8(url: URL, upOpt: Option[UsernamePassword]): Either[Throwable, String] = {
+  def downloadUtf8(url: URL, upOpt: Option[UsernamePassword]): Either[Throwable, HttpResponse] = {
     try {
-      val urlConnection = url.openConnection()
-      for(up ← upOpt) {
-        // The password seems to be fixed, as described in
-        //   https://wiki.appdb.egi.eu/main:faq:how_to_subscribe_to_a_private_image_list_using_the_vmcatcher
-        val username = up.username
-        val password = Option(up.password).getOrElse("x-oauth-basic")
-
-        val credential = Credentials.basic(username, password)
-        urlConnection.setRequestProperty("Authorization", credential)
-      }
-
-      urlConnection.connect()
-      val stream = urlConnection.getInputStream
-
-      val source = Okio.source(stream)
-      val buffer = Okio.buffer(source)
-      val str = buffer.readUtf8()
-      stream.close()
-      Right(str)
+      val response  = Http.GET(url, upOpt)
+      Right(response)
     }
     catch {
-      case t: Throwable ⇒
-        Left(t)
+      case t: Throwable ⇒ Left(t)
     }
   }
 
-  def downloadRawImageList(url: URL, upOpt: Option[UsernamePassword]): Either[Throwable, String] = {
+  def downloadRawImageList(url: URL, upOpt: Option[UsernamePassword]): Either[Throwable, HttpResponse] = {
     ////////////////////////////////////////////////////////////
     // This is the image list JSON with a header and a footer.
     // The header is like:

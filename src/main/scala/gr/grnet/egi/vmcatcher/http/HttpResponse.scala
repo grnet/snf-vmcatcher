@@ -15,31 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher
+package gr.grnet.egi.vmcatcher.http
 
-import java.io.File
-import java.net.URL
-import java.nio.file.{StandardCopyOption, Files}
+import com.squareup.okhttp.ResponseBody
+import okio.Okio
 
-import com.squareup.okhttp.{OkHttpClient, Request, Response}
+case class HttpResponse(
+  statusCode: Int,
+  statusText: String,
+  body: ResponseBody
+) {
+  def is2XX: Boolean = (statusCode >= 200) && (statusCode < 300)
 
-/**
- *
- */
-object Http {
-  val StdOkHttpClient = new OkHttpClient
+  lazy val getUtf8: String = {
+    val stream = body.byteStream()
 
-  def GET(url: URL): Response = {
-    val builder = new Request.Builder().url(url).get()
-    val request = builder.build()
-    val call = StdOkHttpClient.newCall(request)
-    val response = call.execute()
-    response
-  }
-
-  def downloadToFile(url: URL, file: File): Unit = {
-    val response = GET(url)
-    val input = response.body().byteStream()
-    Files.copy(input, file.toPath, StandardCopyOption.REPLACE_EXISTING)
+    val source = Okio.source(stream)
+    val buffer = Okio.buffer(source)
+    val utf8 = buffer.readUtf8()
+    stream.close()
+    utf8
   }
 }

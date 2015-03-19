@@ -178,13 +178,19 @@ object Main extends {
   }
 
   def do_fetch_image_list(args: FetchImageList): Unit = {
-    val (ref, currentImages) = vmcatcher.fetchImageList(args.name)
-    INFO(s"Fetched image list $ref, parsed ${currentImages.size} images")
-    for {
-      currentImage ← currentImages
-      image ← currentImage.f_image.obj
-    } {
-      INFO(s"Parsed image $image")
+    val (ref, access, currentImages) = vmcatcher.fetchImageList(args.name)
+
+    if(access.isOK) {
+      INFO(s"Fetched image list $ref, parsed ${currentImages.size} images")
+      for {
+        currentImage ← currentImages
+        image ← currentImage.f_image.obj
+      } {
+        INFO(s"Parsed image $image")
+      }
+    }
+    else {
+      ERROR(s"Error fetching image list $ref")
     }
   }
 

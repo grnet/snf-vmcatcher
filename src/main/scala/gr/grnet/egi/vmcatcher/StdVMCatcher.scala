@@ -24,6 +24,7 @@ import gr.grnet.egi.vmcatcher.ErrorCode._
 import gr.grnet.egi.vmcatcher.config.Config
 import gr.grnet.egi.vmcatcher.db._
 import gr.grnet.egi.vmcatcher.event.{ImageEvent, ImageEnvField}
+import gr.grnet.egi.vmcatcher.http.HttpResponse
 import gr.grnet.egi.vmcatcher.util.UsernamePassword
 import net.liftweb.common.Full
 import net.liftweb.mapper.{Ascending, OrderBy, By}
@@ -43,7 +44,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
       throw new VMCatcherException(CannotAccessDB, s"Maybe the database is inaccessible ... ")
   }
   
-  import gr.grnet.egi.vmcatcher.Main.Log
+  import gr.grnet.egi.vmcatcher.Main.{Log ⇒ log}
 
   protected def findImageListRefByName(name: String) = MImageListRef.findByName(name)
 
@@ -118,7 +119,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
     scanner.useDelimiter("boundary=\"")
     val boundaryPart = scanner.findInLine("boundary=\"(.+?)\"")
     val boundary = "--" + boundaryPart.substring("boundary=\"".length, boundaryPart.length - 1)
-    Log.info(s"Found boundary $boundary")
+    log.info(s"Found boundary $boundary")
 
     val buffer = new java.lang.StringBuilder
 
@@ -173,7 +174,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
             slArch       (event(ImageEnvField.VMCATCHER_EVENT_SL_ARCH, "")).
             slChecksum512(event(ImageEnvField.VMCATCHER_EVENT_SL_CHECKSUM_SHA512, ""))
 
-          Log.info(s"Created $image")
+          log.info(s"Created $image")
           image
         }
 
@@ -190,28 +191,43 @@ class StdVMCatcher(config: Config) extends VMCatcher {
   def accessImageList(ref: MImageListRef): (MImageListAccess, List[MImage]) = {
     val url = new URL(ref.url.get)
     val upOpt = ref.credentialsOpt
+    upOpt match {
+      case Some(UsernamePassword(username, _)) ⇒
+        log.info(s"Fetching $url with Basic Auth username = $username")
+      case None ⇒
+        log.info(s"Fetching $url")
+    }
+
     Sys.downloadRawImageList(url, upOpt) match {
       case Left(t) ⇒
+        log.error(s"Error retrieving $url", t)
         // Record the failure
-        MImageListAccess.create.f_imageListRef(ref).saveNotRetrieved()
+        MImageListAccess.createNotRetrieved(ref, t).save()
 
         val name = ref.name.get
-        throw new VMCatcherException(CannotAccessImageList, s"Cannot access image list $name at $url", t)
+        throw new VMCatcherException(CannotAccessImageList, s"Cannot access image list $name at $url [${t.getMessage}]", t)
 
-      case Right(rawText) ⇒
+      case Right(r) if !r.is2XX ⇒
+        // Record the failure
+        val access = MImageListAccess.createErrorStatus(ref, r).saveMe()
+
+        (access, Nil)
+
+      case Right(r) ⇒
         // Record the access, one step at a time
-        val access = MImageListAccess.create.f_imageListRef(ref).saveRetrieved(rawText)
+        val access = MImageListAccess.createRetrieved(ref, r)
+        // Parse json out of the response body
+        val imageListJson = getImageListJsonFromRaw(r.getUtf8)
+        access.setParsed(imageListJson)
+        access.save()
 
-        // Parse json out of rawText
-        val imageListJson = getImageListJsonFromRaw(rawText)
-        access.saveParsed(imageListJson)
         val images = parseImagesFromJson(ref, access, imageListJson)
 
         (access, images)
     }
   }
 
-  def fetchImageList(name: String): (MImageListRef, List[MCurrentImage]) =
+  def fetchImageList(name: String): (MImageListRef, MImageListAccess, List[MCurrentImage]) =
     findImageListRefByName(name) match {
       case None ⇒
         throw new VMCatcherException(ImageListNotFound, s"Image list $name not found")
@@ -220,10 +236,14 @@ class StdVMCatcher(config: Config) extends VMCatcher {
         // 1. Access the image list
         val (access, images) = accessImageList(ref)
 
+        if(images.lengthCompare(0) > 0) {
+          return (ref, access, Nil)
+        }
+
         // 2. Save new images
         images.foreach(_.save())
 
-        // 3. Update the current view
+        // 3. Update the current status of images
         val currentImages = MCurrentImage.findAllOfImageListRef(ref)
         currentImages.foreach(_.delete_!)
         val newCurrentImages =
@@ -238,7 +258,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
           }
         newCurrentImages.foreach(_.save())
 
-        (ref, newCurrentImages)
+        (ref, access, newCurrentImages)
     }
 
   def listImageList(name: String): List[MImage] = {

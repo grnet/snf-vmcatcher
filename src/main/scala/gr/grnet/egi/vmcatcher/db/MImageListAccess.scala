@@ -19,6 +19,7 @@ package gr.grnet.egi.vmcatcher.db
 
 import java.util.Date
 
+import gr.grnet.egi.vmcatcher.http.HttpResponse
 import net.liftweb.mapper._
 
 /**
@@ -49,10 +50,22 @@ class MImageListAccess extends LongKeyedMapper[MImageListAccess] with IdPK {
     override def dbNotNull_? : Boolean = true
   }
 
-  object errorMsg extends MappedPoliteString(this, 256) {
-    override def dbColumnName: String = "error_msg"
+  object httpStatusCode extends MappedInt(this) {
+    override def dbColumnName: String = "http_status_code"
+    override def dbNotNull_? : Boolean = true
   }
 
+  object httpStatusText extends MappedPoliteString(this, 64) {
+    override def dbColumnName: String = "http_status_text"
+  }
+
+  object exceptionMsg extends MappedPoliteString(this, 256) {
+    override def dbColumnName: String = "exception_msg"
+  }
+
+  /**
+   * This is the HTTP response body.
+   */
   object rawText extends MappedText(this) {
     override def dbColumnName = "raw_text"
   }
@@ -61,21 +74,45 @@ class MImageListAccess extends LongKeyedMapper[MImageListAccess] with IdPK {
     override def dbColumnName = "parsed_json"
   }
 
-  def saveRetrieved(rawText: String) =
-    this.wasRetrieved(true).rawText(rawText).saveMe()
+  def setRetrieved() =
+    this.
+      wasRetrieved(true).
+      wasParsed(false)
 
-  def saveRetrievedAndParsed(rawText: String, parsedJson: String) =
-    this.wasRetrieved(true).wasParsed(true).rawText(rawText).parsedJson(parsedJson).saveMe()
+  def setParsed(parsedJson: String) =
+    this.
+      wasParsed(true).
+      parsedJson(parsedJson)
 
-  def saveParsed(parsedJson: String) =
-    this.wasRetrieved(true).wasParsed(true).parsedJson(parsedJson).saveMe()
-
-  def saveNotRetrieved() =
-    this.wasRetrieved(false).wasParsed(false).saveMe()
-
-  def saveParsed(f: Boolean) = this.wasParsed(f).saveMe()
+  def isOK = /*wasRetrieved.get && */wasParsed.get
 }
 
 object MImageListAccess extends MImageListAccess with LongKeyedMetaMapper[MImageListAccess] {
   override def dbTableName: String = "IMAGE_LIST_ACCESS"
+
+  private def mk(ref: MImageListRef, r: HttpResponse): MImageListAccess =
+    create.
+      f_imageListRef(ref).
+      httpStatusCode(r.statusCode).
+      httpStatusText(r.statusText).
+      rawText(r.getUtf8)
+
+  def createRetrieved(ref: MImageListRef, r: HttpResponse): MImageListAccess =
+    mk(ref, r).
+      wasRetrieved(true).
+      wasParsed(false)
+
+  def createErrorStatus(ref: MImageListRef, r: HttpResponse): MImageListAccess = {
+    assert(!r.is2XX)
+    mk(ref, r).
+      wasRetrieved(false).
+      wasParsed(false)
+  }
+
+  def createNotRetrieved(ref: MImageListRef, t: Throwable): MImageListAccess =
+    create.
+      f_imageListRef(ref).
+      wasRetrieved(false).
+      wasParsed(false).
+      exceptionMsg(t.getMessage)
 }

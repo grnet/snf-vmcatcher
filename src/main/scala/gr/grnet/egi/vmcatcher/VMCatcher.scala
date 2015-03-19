@@ -19,7 +19,7 @@ package gr.grnet.egi.vmcatcher
 
 import java.net.URL
 
-import gr.grnet.egi.vmcatcher.db.{MImage, MCurrentImage, MImageListRef}
+import gr.grnet.egi.vmcatcher.db.{MImageListAccess, MImage, MCurrentImage, MImageListRef}
 import gr.grnet.egi.vmcatcher.util.UsernamePassword
 
 /**
@@ -53,7 +53,7 @@ trait VMCatcher {
   /**
    * Fetches and updates the image definitions of the given image list (referenced by its name).
    */
-  def fetchImageList(name: String): (MImageListRef, List[MCurrentImage])
+  def fetchImageList(name: String): (MImageListRef, MImageListAccess, List[MCurrentImage])
 
   /**
    * Returns the image descriptions of an image list, as they were more recently parsed.
