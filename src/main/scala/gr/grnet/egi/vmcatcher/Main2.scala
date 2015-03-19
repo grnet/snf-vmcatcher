@@ -185,14 +185,16 @@ object Main2 {
     }
   }
 
-  @Command(name = "activate", description = "Activates the image list in our database")
-  class ImageListActivate extends Global {
+  trait ImageListIdentifierOpt {
     @Arguments(
       description = "The identifier for the image list; it must be unique in the database. We use this, instead of the URL, to reference the image list instead",
       required = true
     )
     val name = ""
+  }
 
+  @Command(name = "activate", description = "Activates the image list in our database")
+  class ImageListActivate extends Global with ImageListIdentifierOpt {
     def run(): Unit = {
       val wasActive = vmcatcher.activateImageList(name)
       if(wasActive) { INFO(s"Already active") }
@@ -201,13 +203,16 @@ object Main2 {
   }
 
   @Command(name = "deactivate", description = "Deactivates the image list in our database")
-  class ImageListDeactivate extends Global {
-    @Arguments(
-      description = "The identifier for the image list; it must be unique in the database. We use this, instead of the URL, to reference the image list instead",
-      required = true
-    )
-    val name = ""
+  class ImageListDeactivate extends Global with ImageListIdentifierOpt {
+    def run(): Unit = {
+      val wasActive = vmcatcher.deactivateImageList(name)
+      if(wasActive) { INFO(s"Deactivated") }
+      else          { INFO(s"Already deactive") }
+    }
+  }
 
+  @Command(name = "credentials", description = "Updates the HTTP credentials used to access a protected image list")
+  class ImageListCredentials extends Global with ImageListIdentifierOpt {
     def run(): Unit = {
       val wasActive = vmcatcher.deactivateImageList(name)
       if(wasActive) { INFO(s"Deactivated") }
