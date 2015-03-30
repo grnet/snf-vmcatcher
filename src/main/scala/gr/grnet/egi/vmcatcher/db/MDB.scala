@@ -54,7 +54,8 @@ object MDB {
       MImageListRef,
       MImageListAccess,
       MCurrentImage,
-      MImage
+      MImage,
+      MText
     )
   }
 }

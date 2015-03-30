@@ -30,12 +30,22 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
     override def dbColumnName = "image_list_access_id"
   }
 
-  object json extends MappedText(this) {
-    override def dbColumnName = "json"
+  object f_json extends MappedLongForeignKey(this, MText) {
+    override def dbColumnName = "json_id"
   }
 
-  object envJson extends MappedText(this) {
-    override def dbColumnName = "env_json"
+  def json(text: String) = {
+    val mtextBox = MText.getOrCreate(text)
+    f_json(mtextBox)
+  }
+
+  object f_envJson extends MappedLongForeignKey(this, MText) {
+    override def dbColumnName = "env_json_id"
+  }
+
+  def envJson(text: String) = {
+    val mtextBox = MText.getOrCreate(text)
+    f_json(mtextBox)
   }
 
   object adMpuri extends MappedString(this, 512) {
@@ -94,7 +104,7 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
     override def dbColumnName = "sl_arch"
   }
 
-  object slChecksum512 extends MappedString(this, 127 + "sha512-".length) {
+  object slChecksum512 extends MappedString(this, 64 * 2 + "sha512-".length) {
     override def dbColumnName = "sl_checksum_512"
   }
 }

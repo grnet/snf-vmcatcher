@@ -64,14 +64,24 @@ class MImageListAccess extends LongKeyedMapper[MImageListAccess] with IdPK {
   }
 
   /**
-   * This is the HTTP response body.
+   * The linked text is the HTTP response body.
    */
-  object rawText extends MappedText(this) {
-    override def dbColumnName = "raw_text"
+  object f_rawText extends MappedLongForeignKey(this, MText) {
+    override def dbColumnName = "raw_text_id"
   }
 
-  object parsedJson extends MappedText(this) {
-    override def dbColumnName = "parsed_json"
+  object f_parsedJson extends MappedLongForeignKey(this, MText) {
+    override def dbColumnName = "parsed_json_id"
+  }
+
+  def parsedJson(json: String) = {
+    val rawTextBox = MText.getOrCreate(json)
+    f_parsedJson(rawTextBox)
+  }
+
+  def rawText(raw: String) = {
+    val rawTextBox = MText.getOrCreate(raw)
+    f_rawText(rawTextBox)
   }
 
   def setRetrieved() =
