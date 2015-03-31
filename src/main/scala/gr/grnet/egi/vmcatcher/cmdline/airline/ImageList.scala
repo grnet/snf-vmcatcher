@@ -125,7 +125,7 @@ object ImageList extends Program {
       val (ref, access, currentImages) = vmcatcher.fetchImageList(name)
 
       if(access.isOK) {
-        INFO(s"Fetched image list $ref, parsed ${currentImages.size} images")
+        INFO(s"Fetched image list $name, parsed ${currentImages.size} images")
         for {
           currentImage ← currentImages
           image ← currentImage.f_image.obj
@@ -134,7 +134,10 @@ object ImageList extends Program {
         }
       }
       else {
-        ERROR(s"Error fetching image list $ref")
+        val statusCode = access.httpStatusCode.get
+        val statusText = access.httpStatusText.get
+        val body = access.f_rawText.obj.map(_.textData.get).getOrElse("")
+        ERROR(s"Cannot fetch image list $name. HTTP returned status [$statusCode $statusText] and body [$body]")
       }
     }
   }
