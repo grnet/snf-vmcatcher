@@ -181,7 +181,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
       images
     }
     catch {
-      case e: Throwable ⇒
+      case e: Exception ⇒
         val name = ref.name.get
         val url = ref.url.get
         throw new VMCatcherException(CannotParseImages, s"Cannot parse images from image list $name at $url")
@@ -189,6 +189,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
   }
 
   def accessImageList(ref: MImageListRef): (MImageListAccess, List[MImage]) = {
+    val name = ref.name.get
     val url = new URL(ref.url.get)
     val upOpt = ref.credentialsOpt
     upOpt match {
@@ -204,14 +205,13 @@ class StdVMCatcher(config: Config) extends VMCatcher {
         // Record the failure
         MImageListAccess.createNotRetrieved(ref, t).save()
 
-        val name = ref.name.get
         throw new VMCatcherException(CannotAccessImageList, s"Cannot access image list $name at $url [${t.getMessage}]", t)
 
       case Right(r) if !r.is2XX ⇒
         // Record the failure
         val access = MImageListAccess.createErrorStatus(ref, r).saveMe()
-
-        (access, Nil)
+        val statusLine = r.statusLine
+        throw new VMCatcherException(CannotAccessImageList, s"Cannot access image list $name at $url [$statusLine]")
 
       case Right(r) ⇒
         // Record the access, one step at a time

@@ -27,6 +27,8 @@ case class HttpResponse(
 ) {
   def is2XX: Boolean = (statusCode >= 200) && (statusCode < 300)
 
+  lazy val statusLine = s"$statusCode $statusText"
+
   lazy val getUtf8: String = {
     val stream = body.byteStream()
 

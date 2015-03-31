@@ -19,6 +19,7 @@ package gr.grnet.egi.vmcatcher.db
 
 import java.util.Date
 
+import gr.grnet.egi.vmcatcher.util.stacktraceAsString
 import gr.grnet.egi.vmcatcher.http.HttpResponse
 import net.liftweb.mapper._
 
@@ -63,6 +64,10 @@ class MImageListAccess extends LongKeyedMapper[MImageListAccess] with IdPK {
     override def dbColumnName: String = "exception_msg"
   }
 
+  object f_stacktrace extends MappedLongForeignKey(this, MText) {
+    override def dbColumnName: String = "stacktrace_id"
+  }
+
   /**
    * The linked text is the HTTP response body.
    */
@@ -75,13 +80,13 @@ class MImageListAccess extends LongKeyedMapper[MImageListAccess] with IdPK {
   }
 
   def parsedJson(json: String) = {
-    val rawTextBox = MText.getOrCreate(json)
-    f_parsedJson(rawTextBox)
+    val rawMText = MText.getOrCreate(json)
+    f_parsedJson(rawMText)
   }
 
   def rawText(raw: String) = {
-    val rawTextBox = MText.getOrCreate(raw)
-    f_rawText(rawTextBox)
+    val rawMText = MText.getOrCreate(raw)
+    f_rawText(rawMText)
   }
 
   def setRetrieved() =
@@ -119,10 +124,15 @@ object MImageListAccess extends MImageListAccess with LongKeyedMetaMapper[MImage
       wasParsed(false)
   }
 
-  def createNotRetrieved(ref: MImageListRef, t: Throwable): MImageListAccess =
+  def createNotRetrieved(ref: MImageListRef, t: Throwable): MImageListAccess = {
+    val stacktrace = stacktraceAsString(t)
+    val mtext = MText.getOrCreate(stacktrace)
+
     create.
       f_imageListRef(ref).
+      f_stacktrace(mtext).
       wasRetrieved(false).
       wasParsed(false).
-      exceptionMsg(t.getMessage)
+      exceptionMsg(s"${t.getClass.getName}: ${t.getMessage}")
+  }
 }

@@ -35,8 +35,8 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
   }
 
   def json(text: String) = {
-    val mtextBox = MText.getOrCreate(text)
-    f_json(mtextBox)
+    val mText = MText.getOrCreate(text)
+    f_json(mText)
   }
 
   object f_envJson extends MappedLongForeignKey(this, MText) {
@@ -44,8 +44,8 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
   }
 
   def envJson(text: String) = {
-    val mtextBox = MText.getOrCreate(text)
-    f_json(mtextBox)
+    val mText = MText.getOrCreate(text)
+    f_json(mText)
   }
 
   object adMpuri extends MappedString(this, 512) {

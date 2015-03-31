@@ -67,8 +67,9 @@ object Main2 extends Program {
         EXIT(1, endSequence)
 
       case e: VMCatcherException ⇒
-        ERROR(e.getMessage)
-        EXIT(2, endSequence)
+        System.err.println(e.getMessage)
+        Log.error(s"$e", e)
+        EXIT(e.code.code, endSequence)
 
       case e: Exception ⇒
         System.err.println(e.getMessage)

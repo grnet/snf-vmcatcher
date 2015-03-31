@@ -15,22 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher;
+package gr.grnet.egi.vmcatcher
 
-/**
- *
- */
-public enum ErrorCode {
-    ImageListAlreadyRegistered(100),
-    ImageListNotFound(101),
-    CannotAccessImageList(102),
-    CannotParseImages(103),
-    CannotAccessDB(104),
-    CannotGetRegisteredImages(105),
-    UnexpectedError(106)
-    ;
+import java.io.{PrintWriter, StringWriter}
 
-    public final int code;
+package object util {
+  def stacktraceAsString(t: Throwable): String = {
+    val sw = new StringWriter(256)
+    val pw = new PrintWriter(sw)
+    t.printStackTrace(pw)
+    pw.close()
 
-    ErrorCode(int code) { this.code = code; }
+    sw.toString
+  }
 }

@@ -18,7 +18,7 @@
 package gr.grnet.egi.vmcatcher.db
 
 import gr.grnet.egi.vmcatcher.Digest
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.Full
 import net.liftweb.mapper._
 
 /**
@@ -41,18 +41,20 @@ class MText extends LongKeyedMapper[MText] with IdPK {
 object MText extends MText with LongKeyedMetaMapper[MText] {
   override def dbTableName = "TEXT_DATA"
 
-  def getOrCreate(textData: String): Box[MText] = {
+  def getOrCreate(textData: String): MText = {
     val hash = Digest.hexSha256(textData)
 
     MText.find(
       By(MText.sha256, hash)
     ) match {
-      case f @ Full(_) ⇒ f
-      case _ ⇒ Full(
+      case Full(text) ⇒
+        text
+
+      case _ ⇒
         MText.create.
         sha256(hash).
         textData(textData).
-        saveMe())
+        saveMe()
     }
   }
 }

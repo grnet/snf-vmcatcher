@@ -536,7 +536,11 @@ class Sys {
     //
     // ------842099D61D9D967FA11C0562C70A8E03--
     ////////////////////////////////////////////////////////////
-    downloadUtf8(url, upOpt)
+    try downloadUtf8(url, upOpt)
+    catch {
+      case e: Exception ⇒
+        Left(new VMCatcherException(ErrorCode.UnexpectedError, s"Unexpected error: $e", e))
+    }
   }
 }
 
