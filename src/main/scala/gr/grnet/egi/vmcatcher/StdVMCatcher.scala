@@ -23,11 +23,10 @@ import java.util.Scanner
 import gr.grnet.egi.vmcatcher.ErrorCode._
 import gr.grnet.egi.vmcatcher.config.Config
 import gr.grnet.egi.vmcatcher.db._
-import gr.grnet.egi.vmcatcher.event.{ImageEvent, ImageEnvField}
-import gr.grnet.egi.vmcatcher.http.HttpResponse
+import gr.grnet.egi.vmcatcher.event.{ImageEnvField, ImageEvent}
 import gr.grnet.egi.vmcatcher.util.UsernamePassword
 import net.liftweb.common.Full
-import net.liftweb.mapper.{Ascending, OrderBy, By}
+import net.liftweb.mapper.{Ascending, By, OrderBy}
 
 import scala.annotation.tailrec
 
@@ -44,7 +43,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
       throw new VMCatcherException(CannotAccessDB, s"Maybe the database is inaccessible ... ")
   }
   
-  import gr.grnet.egi.vmcatcher.Main.{Log ⇒ log}
+  import gr.grnet.egi.vmcatcher.Main.{Log => log}
 
   protected def findImageListRefByName(name: String) = MImageListRef.findByName(name)
 
@@ -151,6 +150,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
           event ← events
         } yield {
           val image = MImage.create.
+            f_imageListRef(ref).
             f_imageListAccess(access).
             json(event.imageJsonView.json).
             envJson(event.envFieldsView.json).
@@ -174,8 +174,10 @@ class StdVMCatcher(config: Config) extends VMCatcher {
             slArch       (event(ImageEnvField.VMCATCHER_EVENT_SL_ARCH, "")).
             slChecksum512(event(ImageEnvField.VMCATCHER_EVENT_SL_CHECKSUM_SHA512, ""))
 
+          image.uniqueID(image.computeUniqueID)
+
           log.info(s"Created $image")
-          image
+          image.saveMe()
         }
 
       images
@@ -208,12 +210,15 @@ class StdVMCatcher(config: Config) extends VMCatcher {
         throw new VMCatcherException(CannotAccessImageList, s"Cannot access image list $name at $url [${t.getMessage}]", t)
 
       case Right(r) if !r.is2XX ⇒
-        // Record the failure
-        val access = MImageListAccess.createErrorStatus(ref, r).saveMe()
         val statusLine = r.statusLine
+        log.error(s"Error [$statusLine] retrieving $url")
+        // Record the failure
+        val _ = MImageListAccess.createErrorStatus(ref, r).saveMe()
+
         throw new VMCatcherException(CannotAccessImageList, s"Cannot access image list $name at $url [$statusLine]")
 
       case Right(r) ⇒
+        log.info(s"Retrieved $url")
         // Record the access, one step at a time
         val access = MImageListAccess.createRetrieved(ref, r)
         // Parse json out of the response body
@@ -227,7 +232,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
     }
   }
 
-  def fetchImageList(name: String): (MImageListRef, MImageListAccess, List[MCurrentImage]) =
+  def fetchNewImageRevisions(name: String): (MImageListRef, MImageListAccess, List[MImageRevision]) =
     findImageListRefByName(name) match {
       case None ⇒
         throw new VMCatcherException(ImageListNotFound, s"Image list $name not found")
@@ -236,29 +241,22 @@ class StdVMCatcher(config: Config) extends VMCatcher {
         // 1. Access the image list
         val (access, images) = accessImageList(ref)
 
-        if(images.lengthCompare(0) > 0) {
+        if(images.lengthCompare(0) == 0) {
           return (ref, access, Nil)
         }
 
         // 2. Save new images
         images.foreach(_.save())
 
-        // 3. Update the current status of images
-        val currentImages = MCurrentImage.findAllOfImageListRef(ref)
-        currentImages.foreach(_.delete_!)
-        val newCurrentImages =
+        // 3. Update DB for new revisions
+        val newRevisions =
           for {
-            image ← images
+            image ← images if !MImageRevision.existsByUniqueID(image)
           } yield {
-            MCurrentImage.create.
-              f_image(image).
-              f_imageListRef(ref).
-              f_imageListAccess(access).
-              dcIdentifier(image.dcIdentifier.get)
+            image.createRevision.saveMe()
           }
-        newCurrentImages.foreach(_.save())
 
-        (ref, access, newCurrentImages)
+        (ref, access, newRevisions)
     }
 
   def listImageList(name: String): List[MImage] = {

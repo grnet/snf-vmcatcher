@@ -17,14 +17,24 @@
 
 package gr.grnet.egi.vmcatcher.db
 
+import java.util.Date
+
+import gr.grnet.egi.vmcatcher.Digest
+import net.liftweb.common.Box
 import net.liftweb.mapper._
 
 /**
  * A parsed image description. The respective table is used to hold the history
- * of all parsed images.
+ * of all parsed images, so you may find the same revision of an image multiple times.
  */
 class MImage extends LongKeyedMapper[MImage] with IdPK {
   def getSingleton = MImage
+
+  // redundant but useful
+  object f_imageListRef extends MappedLongForeignKey(this, MImageListRef) {
+    override def dbColumnName = "image_list_ref_id"
+    override def dbNotNull_? = true
+  }
 
   object f_imageListAccess extends MappedLongForeignKey(this, MImageListAccess) {
     override def dbColumnName = "image_list_access_id"
@@ -107,8 +117,38 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
   object slChecksum512 extends MappedString(this, 64 * 2 + "sha512-".length) {
     override def dbColumnName = "sl_checksum_512"
   }
+
+  object uniqueID extends MappedString(this, 32 * 2) {
+    override def dbColumnName = "unique_id"
+  }
+
+  /**
+   * The label of an image identifies the image and is stables across revisions.
+   */
+  def imageLabel = dcIdentifier.get
+  def imageRevision = adMpuri.get
+
+  /**
+   * This uniquely identifies an image revisions across all image lists.
+   */
+  def computeUniqueID = Digest.hexSha256(imageLabel + imageRevision)
+
+  def repr: String = s"""{label: "$imageLabel", revision: "$imageRevision", uniqueID: "$computeUniqueID"}"""
+
+  def createRevision: MImageRevision = {
+    MImageRevision.create.
+      dcIdentifier(this.dcIdentifier.get).
+      adMpuri(this.adMpuri.get).
+      uniqueID(this.uniqueID.get).
+      whenAccessed(this.f_imageListAccess.obj.dmap(new Date)(_.whenAccessed.get)).
+      f_imageListRef(this.f_imageListRef.obj).
+      f_imageListAccess(this.f_imageListAccess.obj).
+      f_image(this)
+  }
 }
 
 object MImage extends MImage with LongKeyedMetaMapper[MImage] {
   override def dbTableName = "IMAGE"
+
+  def findByUniqueID(uniqueID: String): Box[MImage] = MImage.find(By(MImage.uniqueID, uniqueID))
 }

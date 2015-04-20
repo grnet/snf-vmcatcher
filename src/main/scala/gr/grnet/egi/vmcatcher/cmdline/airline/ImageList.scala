@@ -21,35 +21,9 @@ import java.net.URL
 
 import gr.grnet.egi.vmcatcher.Program
 import gr.grnet.egi.vmcatcher.util.UsernamePassword
-import io.airlift.airline.{Arguments, Command, Option}
+import io.airlift.airline.{Command, Option}
 
-object ImageList extends Program {
-  trait NameArgument {
-    @Arguments(
-      description = "The identifier for the image list; it must be unique in the database. We use this, instead of the URL, to reference the image list instead",
-      required = true
-    )
-    val name = ""
-  }
-
-  trait CredentialsOpt {
-    @Option(
-      name = Array("--username"),
-      description = "Optional username in case the image list is protected. This is usually an Access Token. See also http://goo.gl/TazEI3",
-      required = false,
-      arity = 1
-    )
-    val username = ""
-
-    @Option(
-      name = Array("--password"),
-      description = "Optional password, in case the image list is protected. See also the description of --username.",
-      required = false,
-      arity = 1
-    )
-    val password = ""
-  }
-
+object ImageList extends Program with CommonOptions {
   @Command(name = "register", description = "Registers the image list in our database")
   class Register extends Global with NameArgument with CredentialsOpt {
     @Option(
@@ -75,7 +49,7 @@ object ImageList extends Program {
     }
   }
 
-  @Command(name = "ls", description = "Gets all registers image lists")
+  @Command(name = "ls", description = "Prints all registers image lists")
   class Ls extends Global {
     def run(): Unit = {
       val ils = vmcatcher.getImageLists()
@@ -122,15 +96,15 @@ object ImageList extends Program {
   @Command(name = "fetch", description = "Fetches the description of the image list and parses it to images")
   class Fetch extends Global with NameArgument {
     def run(): Unit = {
-      val (ref, access, currentImages) = vmcatcher.fetchImageList(name)
+      val (ref, access, revisions) = vmcatcher.fetchNewImageRevisions(name)
 
       if(access.isOK) {
-        INFO(s"Fetched image list $name, parsed ${currentImages.size} images")
+        INFO(s"Fetched image list $name, found ${revisions.size} new image revisions")
         for {
-          currentImage ← currentImages
-          image ← currentImage.f_image.obj
+          imageRevision ← revisions
+          image ← imageRevision.f_image.obj
         } {
-          INFO(s"Parsed image $image")
+          INFO(s"Fetched image revision ${image.repr}")
         }
       }
       else {

@@ -178,7 +178,7 @@ object Main extends {
   }
 
   def do_fetch_image_list(args: FetchImageList): Unit = {
-    val (ref, access, currentImages) = vmcatcher.fetchImageList(args.name)
+    val (ref, access, currentImages) = vmcatcher.fetchNewImageRevisions(args.name)
 
     if(access.isOK) {
       INFO(s"Fetched image list $ref, parsed ${currentImages.size} images")

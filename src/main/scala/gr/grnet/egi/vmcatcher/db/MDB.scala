@@ -21,16 +21,21 @@ import gr.grnet.egi.vmcatcher.config.DBConfig
 import net.liftweb.common.{Empty, Full}
 import net.liftweb.db.StandardDBVendor
 import net.liftweb.mapper.{DB, MapperRules, Schemifier}
-import net.liftweb.util.DefaultConnectionIdentifier
+import net.liftweb.util.{Props, DefaultConnectionIdentifier}
+import org.slf4j.LoggerFactory
 
 /**
  *
  */
 object MDB {
+  final val log = LoggerFactory.getLogger(getClass)
+
   def empty_?(s: String) = (s eq null) || s.isEmpty
 
   def init(dbConfig: DBConfig): Unit = {
     System.setProperty("run.mode", System.getProperty("run.mode", "production"))
+    val runMode = Props.mode
+    log.info(s"Running in mode: $runMode")
 
     val driver = dbConfig.getJdbcDriver
     val url = dbConfig.getJdbcURL
@@ -55,6 +60,7 @@ object MDB {
       MImageListAccess,
       MCurrentImage,
       MImage,
+      MImageRevision,
       MText
     )
   }
