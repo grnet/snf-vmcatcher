@@ -34,7 +34,12 @@ trait VMCatcher {
   /**
    * Returns all registered image lists.
    */
-  def getImageLists(): List[MImageListRef]
+  def listImageLists(): List[MImageListRef]
+
+  /**
+   * Lists the image revisions of an image list (which has the given name).
+   */
+  def listImageRevisions(name: String): List[MImageRevision]
 
   /**
    * Activates an image list, so that it will be retrieved and parsed when requested.

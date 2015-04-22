@@ -70,49 +70,51 @@ class StdVMCatcher(config: Config) extends VMCatcher {
   }
 
 
-  def getImageLists(): List[MImageListRef] =
+  def listImageLists(): List[MImageListRef] =
     MImageListRef.findAll(
       OrderBy(MImageListRef.name, Ascending)
     )
 
-  def activateImageList(name: String): Boolean =
+  private def forImageListOfName[T](name: String)(f: (MImageListRef) ⇒ T): T =
     findImageListRefByName(name) match {
       case None ⇒
         throw new VMCatcherException(ImageListNotFound, s"Image list $name not found")
-
       case Some(ref) ⇒
-        val previousStatus = ref.isActive.get
-        ref.activate()
-        previousStatus
+        f(ref)
+    }
+
+  def listImageRevisions(name: String): List[MImageRevision] =
+    forImageListOfName(name) { ref ⇒
+      val revisions = ref.listRevisions()
+      revisions
+    }
+
+  def activateImageList(name: String): Boolean =
+    forImageListOfName(name) { ref ⇒
+      val previousStatus = ref.isActive.get
+      ref.activate()
+      previousStatus
     }
 
   def deactivateImageList(name: String): Boolean =
-    findImageListRefByName(name) match {
-      case None ⇒
-        throw new VMCatcherException(ImageListNotFound, s"Image list $name not found")
-
-      case Some(ref) ⇒
-        val previousStatus = ref.isActive.get
-        ref.deactivate()
-        previousStatus
+    forImageListOfName(name) { ref ⇒
+      val previousStatus = ref.isActive.get
+      ref.deactivate()
+      previousStatus
     }
 
   def updateCredentials(name: String, upOpt: Option[UsernamePassword]): Unit =
-    findImageListRefByName(name) match {
-      case None ⇒
-        throw new VMCatcherException(ImageListNotFound, s"Image list $name not found")
+    forImageListOfName(name) { ref ⇒
+      upOpt match {
+        case None ⇒
+          ref.username(null).password(null).save()
 
-      case Some(ref) ⇒
-        upOpt match {
-          case None ⇒
-            ref.username(null).password(null).save()
-
-          case Some(UsernamePassword(username, password)) ⇒
-            ref.username(username).password(password).save()
-        }
+        case Some(UsernamePassword(username, password)) ⇒
+          ref.username(username).password(password).save()
+      }
     }
 
-  def getImageListJsonFromRaw(rawText: String): String = {
+  private def getImageListJsonFromRaw(rawText: String): String = {
     val scanner = new Scanner(rawText)
     scanner.nextLine() // Ignore "MIME-Version: 1.0" first line
     scanner.useDelimiter("boundary=\"")
@@ -141,7 +143,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
     buffer.toString
   }
   
-  def parseImagesFromJson(ref: MImageListRef, access: MImageListAccess, imageListJson: String): List[MImage] = {
+  private def parseImagesFromJson(ref: MImageListRef, access: MImageListAccess, imageListJson: String): List[MImage] = {
     try {
       val events = ImageEvent.parseImageListJson(imageListJson)
 
@@ -190,7 +192,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
     }
   }
 
-  def accessImageList(ref: MImageListRef): (MImageListAccess, List[MImage]) = {
+  private def accessImageList(ref: MImageListRef): (MImageListAccess, List[MImage]) = {
     val name = ref.name.get
     val url = new URL(ref.url.get)
     val upOpt = ref.credentialsOpt
@@ -233,18 +235,14 @@ class StdVMCatcher(config: Config) extends VMCatcher {
   }
 
   def fetchNewImageRevisions(name: String): (MImageListRef, MImageListAccess, List[MImageRevision]) =
-    findImageListRefByName(name) match {
-      case None ⇒
-        throw new VMCatcherException(ImageListNotFound, s"Image list $name not found")
+    forImageListOfName(name) { ref ⇒
+      // 1. Access the image list
+      val (access, images) = accessImageList(ref)
 
-      case Some(ref) ⇒
-        // 1. Access the image list
-        val (access, images) = accessImageList(ref)
-
-        if(images.lengthCompare(0) == 0) {
-          return (ref, access, Nil)
-        }
-
+      if(images.lengthCompare(0) == 0) {
+        (ref, access, Nil)
+      }
+      else {
         // 2. Save new images
         images.foreach(_.save())
 
@@ -257,30 +255,23 @@ class StdVMCatcher(config: Config) extends VMCatcher {
           }
 
         (ref, access, newRevisions)
+      }
     }
 
   def listImageList(name: String): List[MImage] = {
-    findImageListRefByName(name) match {
-      case None ⇒
-        throw new VMCatcherException(ImageListNotFound, s"Image list $name not found")
-
-      case Some(ref) ⇒
-        for {
-          mci ← MCurrentImage.findAll(By(MCurrentImage.f_imageListRef, ref))
-          mi ← mci.f_image.obj
-        } yield {
-          mi
-        }
+    forImageListOfName(name) { ref ⇒
+      for {
+        mci ← MCurrentImage.findAll(By(MCurrentImage.f_imageListRef, ref))
+        mi ← mci.f_image.obj
+      } yield {
+        mi
+      }
     }
   }
 
   def currentImageList(name: String): List[MCurrentImage] =
-    findImageListRefByName(name) match {
-      case None ⇒
-        throw new VMCatcherException(ImageListNotFound, s"Image list $name not found")
-
-      case Some(ref) ⇒
-        MCurrentImage.findAll(By(MCurrentImage.f_imageListRef, ref))
+    forImageListOfName(name) { ref ⇒
+      MCurrentImage.findAll(By(MCurrentImage.f_imageListRef, ref))
     }
 
   def getImage(dcIdentifier: String): MImage = {

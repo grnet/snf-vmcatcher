@@ -77,6 +77,9 @@ class MImageListRef extends LongKeyedMapper[MImageListRef] with IdPK {
   def deactivate() = this.isActive(false).saveMe()
 
   def newAccess() = MImageListAccess.create.f_imageListRef(this).whenAccessed(new Date)
+
+  def listRevisions(): List[MImageRevision] =
+    MImageRevision.findAll(By(MImageRevision.f_imageListRef, this))
 }
 
 object MImageListRef extends MImageListRef with LongKeyedMetaMapper[MImageListRef] {

@@ -49,10 +49,10 @@ object ImageList extends Program with CommonOptions {
     }
   }
 
-  @Command(name = "ls", description = "Prints all registers image lists")
-  class Ls extends Global {
+  @Command(name = "show-all", description = "Prints the known image lists")
+  class ShowAll extends Global {
     def run(): Unit = {
-      val ils = vmcatcher.getImageLists()
+      val ils = vmcatcher.listImageLists()
       val nameLengths = ils.map(_.name.get.length)
       val maxNameLen = nameLengths.foldLeft(0)(_ max _)
 
@@ -72,6 +72,14 @@ object ImageList extends Program with CommonOptions {
 
         INFO(s"$name$nameSlack $when $isActive$isActiveSlack $username $url")
       }
+    }
+  }
+
+  @Command(name = "ls", description = "Prints the images of an image list (the most recent version of each image)")
+  class Ls extends Global with NameArgument {
+    def run(): Unit = {
+      val revisions = vmcatcher.listImageRevisions(name)
+      revisions.foreach(println)
     }
   }
 

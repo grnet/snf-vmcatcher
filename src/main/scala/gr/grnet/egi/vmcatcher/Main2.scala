@@ -40,12 +40,17 @@ object Main2 extends Program {
       withDescription("Actions related to an image list").
       withCommands(
         classOf[ImageList.Register],
+        classOf[ImageList.ShowAll],
         classOf[ImageList.Ls],
         classOf[ImageList.Activate],
         classOf[ImageList.Deactivate],
         classOf[ImageList.Credentials],
         classOf[ImageList.Fetch]
       )
+
+    val image = builder.withGroup("image")
+    image.
+      withDescription("Actions related to an image")
 
     builder.build()
   }

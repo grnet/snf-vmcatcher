@@ -31,6 +31,10 @@ class MImageRevision extends LongKeyedMapper[MImageRevision] with IdPK {
     override def dbNotNull_? = true
   }
 
+  object isActive extends MappedBoolean(this) {
+    override def dbColumnName: String = "is_active"
+  }
+
   /**
    * The full path of the locally downloaded image file.
    * The image file is assumed to be transient.
@@ -54,7 +58,6 @@ class MImageRevision extends LongKeyedMapper[MImageRevision] with IdPK {
     override def dbColumnName: String = "when_transformed"
   }
 
-
   /**
    * When the image was successfully uploaded to the IaaS.
    */
@@ -62,10 +65,23 @@ class MImageRevision extends LongKeyedMapper[MImageRevision] with IdPK {
     override def dbColumnName: String = "when_uploaded"
   }
 
+  /**
+   * The URL of the uploaded image on the IaaS.
+   */
+  object uploadURL extends MappedPoliteString(this, 256) {
+    override def dbColumnName: String = "upload_url"
+  }
+
+  /**
+   * The exception message, if any exception was thrown.
+   */
   object exceptionMsg extends MappedPoliteString(this, 256) {
     override def dbColumnName: String = "exception_msg"
   }
 
+  /**
+   * The exception stacktrace, if any exception was thrown.
+   */
   object f_stacktrace extends MappedLongForeignKey(this, MText) {
     override def dbColumnName: String = "stacktrace_id"
   }
