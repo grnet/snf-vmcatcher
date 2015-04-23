@@ -135,4 +135,14 @@ object MImageListAccess extends MImageListAccess with LongKeyedMetaMapper[MImage
       wasParsed(false).
       exceptionMsg(s"${t.getClass.getName}: ${t.getMessage}")
   }
+
+  def findAllByRefName(name: String): List[MImageListAccess] = {
+    for {
+      ref ← MImageListRef.find(By(MImageListRef.name, name)).toList
+      access ← findAll(
+        By(MImageListAccess.f_imageListRef, ref),
+        OrderBy(MImageListAccess.whenAccessed, Descending)
+      )
+    } yield access
+  }
 }

@@ -45,9 +45,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
   
   import gr.grnet.egi.vmcatcher.Main.{Log => log}
 
-  protected def findImageListRefByName(name: String) = MImageListRef.findByName(name)
-
-  def saveImageList(ref: MImageListRef): MImageListRef = ref.saveMe()
+  def findImageListRefByName(name: String) = MImageListRef.findByName(name)
 
   def registerImageList(
     name: String, 
@@ -75,7 +73,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
       OrderBy(MImageListRef.name, Ascending)
     )
 
-  private def forImageListOfName[T](name: String)(f: (MImageListRef) ⇒ T): T =
+  def forImageListRefByName[T](name: String)(f: (MImageListRef) ⇒ T): T =
     findImageListRefByName(name) match {
       case None ⇒
         throw new VMCatcherException(ImageListNotFound, s"Image list $name not found")
@@ -84,27 +82,27 @@ class StdVMCatcher(config: Config) extends VMCatcher {
     }
 
   def listImageRevisions(name: String): List[MImageRevision] =
-    forImageListOfName(name) { ref ⇒
+    forImageListRefByName(name) { ref ⇒
       val revisions = ref.listRevisions()
       revisions
     }
 
   def activateImageList(name: String): Boolean =
-    forImageListOfName(name) { ref ⇒
+    forImageListRefByName(name) { ref ⇒
       val previousStatus = ref.isActive.get
       ref.activate()
       previousStatus
     }
 
   def deactivateImageList(name: String): Boolean =
-    forImageListOfName(name) { ref ⇒
+    forImageListRefByName(name) { ref ⇒
       val previousStatus = ref.isActive.get
       ref.deactivate()
       previousStatus
     }
 
   def updateCredentials(name: String, upOpt: Option[UsernamePassword]): Unit =
-    forImageListOfName(name) { ref ⇒
+    forImageListRefByName(name) { ref ⇒
       upOpt match {
         case None ⇒
           ref.username(null).password(null).save()
@@ -235,7 +233,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
   }
 
   def fetchNewImageRevisions(name: String): (MImageListRef, MImageListAccess, List[MImageRevision]) =
-    forImageListOfName(name) { ref ⇒
+    forImageListRefByName(name) { ref ⇒
       // 1. Access the image list
       val (access, images) = accessImageList(ref)
 
@@ -259,7 +257,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
     }
 
   def listImageList(name: String): List[MImage] = {
-    forImageListOfName(name) { ref ⇒
+    forImageListRefByName(name) { ref ⇒
       for {
         mci ← MCurrentImage.findAll(By(MCurrentImage.f_imageListRef, ref))
         mi ← mci.f_image.obj
@@ -270,7 +268,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
   }
 
   def currentImageList(name: String): List[MCurrentImage] =
-    forImageListOfName(name) { ref ⇒
+    forImageListRefByName(name) { ref ⇒
       MCurrentImage.findAll(By(MCurrentImage.f_imageListRef, ref))
     }
 

@@ -120,6 +120,12 @@ class MImageRevision extends LongKeyedMapper[MImageRevision] with IdPK {
     override def dbColumnName = "unique_id"
   }
 
+  /**
+   * The label of an image identifies the image and is stables across revisions.
+   */
+  def imageLabel = dcIdentifier.get
+  def imageRevision = adMpuri.get
+
   def findAllOfImageListRef(ref: MImageListRef): List[MImageRevision] =
     MImageRevision.findAll(By(MImageRevision.f_imageListRef, ref))
 }
@@ -128,7 +134,12 @@ object MImageRevision extends MImageRevision with LongKeyedMetaMapper[MImageRevi
   override def dbTableName = "IMAGE_REVISION"
 
   def findByUniqueID(uniqueID: String): Box[MImageRevision] = MImageRevision.find(By(MImageRevision.uniqueID, uniqueID))
+  
+  def findAllByUniqueIDPrefix(uniqueID: String): List[MImageRevision] =
+    MImageRevision.findAll(Like(MImageRevision.uniqueID, uniqueID))
+  
   def findByUniqueID(mimage: MImage): Box[MImageRevision] = findByUniqueID(mimage.uniqueID.get)
+  
   def existsByUniqueID(mimage: MImage): Boolean = this.findByUniqueID(mimage).isDefined
 }
 

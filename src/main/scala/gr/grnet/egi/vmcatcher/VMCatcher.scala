@@ -37,6 +37,17 @@ trait VMCatcher {
   def listImageLists(): List[MImageListRef]
 
   /**
+   * Finds the image list with the given name.
+   */
+  def findImageListRefByName(name: String): Option[MImageListRef]
+
+  /**
+   * Applies a function to an [[MImageListRef]] that is looked up by name.
+   * If no such [[MImageListRef]] exists, throws a [[VMCatcherException]].
+   */
+  def forImageListRefByName[T](name: String)(f: (MImageListRef) ⇒ T): T
+
+  /**
    * Lists the image revisions of an image list (which has the given name).
    */
   def listImageRevisions(name: String): List[MImageRevision]

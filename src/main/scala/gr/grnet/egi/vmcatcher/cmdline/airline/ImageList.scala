@@ -20,6 +20,7 @@ package gr.grnet.egi.vmcatcher.cmdline.airline
 import java.net.URL
 
 import gr.grnet.egi.vmcatcher.Program
+import gr.grnet.egi.vmcatcher.db.MImageListAccess
 import gr.grnet.egi.vmcatcher.util.UsernamePassword
 import io.airlift.airline.{Command, Option}
 
@@ -75,11 +76,40 @@ object ImageList extends Program with CommonOptions {
     }
   }
 
+  @Command(name = "show-access", description = "Prints the JSON definition of the latest image list access")
+  class ShowAccess extends Global with NameArgument {
+    def run(): Unit = {
+      vmcatcher.forImageListRefByName(name) { _ ⇒
+        val accesses = MImageListAccess.findAllByRefName(name)
+        for {
+          access ← accesses
+        } {
+          val whenAccessed = access.whenAccessed.get
+          val isOK = access.isOK
+          val isOKStr = if (isOK) "true " else "false"
+          val statusCode = access.httpStatusCode.get
+
+          INFO(s"$whenAccessed $isOKStr $statusCode")
+        }
+      }
+    }
+  }
+
   @Command(name = "ls", description = "Prints the images of an image list (the most recent version of each image)")
   class Ls extends Global with NameArgument {
     def run(): Unit = {
       val revisions = vmcatcher.listImageRevisions(name)
-      revisions.foreach(println)
+      if(revisions.lengthCompare(0) == 0) { return }
+
+      for {
+        imageRev ← revisions
+      } {
+        val hash = imageRev.uniqueID.get
+        val label = imageRev.imageLabel
+        val rev = imageRev.imageRevision
+
+        INFO(s"$hash $label $rev")
+      }
     }
   }
 

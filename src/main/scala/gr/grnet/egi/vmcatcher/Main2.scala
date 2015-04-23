@@ -41,6 +41,7 @@ object Main2 extends Program {
       withCommands(
         classOf[ImageList.Register],
         classOf[ImageList.ShowAll],
+        classOf[ImageList.ShowAccess],
         classOf[ImageList.Ls],
         classOf[ImageList.Activate],
         classOf[ImageList.Deactivate],
