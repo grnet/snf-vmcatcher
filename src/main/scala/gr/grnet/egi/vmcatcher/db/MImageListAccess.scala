@@ -141,7 +141,7 @@ object MImageListAccess extends MImageListAccess with LongKeyedMetaMapper[MImage
       ref ← MImageListRef.find(By(MImageListRef.name, name)).toList
       access ← findAll(
         By(MImageListAccess.f_imageListRef, ref),
-        OrderBy(MImageListAccess.whenAccessed, Descending)
+        OrderBy(MImageListAccess.whenAccessed, Ascending)
       )
     } yield access
   }
