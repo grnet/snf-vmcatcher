@@ -88,8 +88,14 @@ object ImageList extends Program with CommonOptions {
           val isOK = access.isOK
           val isOKStr = if (isOK) "true " else "false"
           val statusCode = access.httpStatusCode.get
+          val msg = if (!isOK) {
+            val xmsg = scala.Option(access.exceptionMsg.get).getOrElse("")
+            val body = access.f_rawText.obj.map(_.textData.get).openOr("")
 
-          INFO(s"$whenAccessed $isOKStr $statusCode")
+            if (!xmsg.isEmpty) xmsg else body
+          } else ""
+
+          INFO(s"$whenAccessed $isOKStr $statusCode $msg")
         }
       }
     }
