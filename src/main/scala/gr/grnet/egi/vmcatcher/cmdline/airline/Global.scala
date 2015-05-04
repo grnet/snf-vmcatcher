@@ -27,12 +27,15 @@ import gr.grnet.egi.vmcatcher.config.Config
 import io.airlift.airline.{Command, HelpOption, Option, OptionType}
 import org.apache.avro.io.DecoderFactory
 import org.apache.avro.specific.SpecificDatumReader
+import org.slf4j.LoggerFactory
 
 /**
  *
  */
 @Command(name = "", description = "")
 trait Global extends Runnable {
+  final val log = LoggerFactory.getLogger(getClass)
+
   @Inject
   val helpOption: HelpOption = null
 
@@ -63,6 +66,8 @@ trait Global extends Runnable {
 
     reader.read(instance, validatingDecoder)
   }
+
+  lazy val iaasConfig = config.getIaasConfig
 
   lazy val vmcatcher: VMCatcher = new StdVMCatcher(config)
   lazy val iaas: IaaS = new KamakiBasedIaaS(config.getIaasConfig)

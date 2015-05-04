@@ -19,7 +19,7 @@ package gr.grnet.egi.vmcatcher
 
 import java.util.Locale
 
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import gr.grnet.egi.vmcatcher.config.IaaSConfig
 import org.slf4j.LoggerFactory
 
@@ -34,11 +34,40 @@ trait IaaS {
    * Each image is described by the pair of its UUID and name.
    */
   def listRegisteredImages(): List[(String, String)]
+
+  def listImages(): (List[Config], List[Config])
 }
 
 class KamakiBasedIaaS(config: IaaSConfig) extends IaaS {
   final val log = LoggerFactory.getLogger(getClass)
   val cloud = config.getCloud
+
+
+  def listImages() = {
+    val (exitCode, stdout) = Sys.execRead(log,
+      "kamaki",
+      "--cloud", cloud,
+      "image", "list",
+      "--details",
+      "--output-format", "json"
+    )
+
+    if(exitCode != 0) {
+      throw new VMCatcherException(ErrorCode.CannotGetRegisteredImages, s"Could not get registered images from IaaS")
+    }
+
+    val jsonObj = s"""{"k":$stdout}"""
+    val config = ConfigFactory.parseString(jsonObj)
+    val list = config.getConfigList("k").asScala.toList
+    val (fromVmCatcher, other) = list.partition { c ⇒
+      c.hasPath("properties") &&
+        c.getConfig("properties").root().keySet().asScala.
+          map(_.toLowerCase(Locale.ENGLISH)).
+          exists(_.startsWith("vmcatcher_"))
+    }
+
+    (fromVmCatcher, other)
+  }
 
   def listRegisteredImages(): List[(String, String)] = {
     val (exitCode, stdout) = Sys.execRead(log,

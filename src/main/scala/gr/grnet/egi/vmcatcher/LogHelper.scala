@@ -22,42 +22,16 @@ import org.slf4j.LoggerFactory
 /**
  *
  */
-trait Program {
-  type Cmd = Runnable
-
-  val t0 = System.currentTimeMillis()
-  var _args = Array[String]()
-  lazy val argsDebugStr = _args.mkString(" ")
-
-  final val ProgName = getClass.getName.stripSuffix("$")
-  final val Log = LoggerFactory.getLogger(getClass)
-
-  def beginSequence(args: Array[String]): Unit = {
-    _args = args
-    Log.info("=" * 30)
-    Log.info(s"BEGIN snf-vmcatcher ($t0) [$argsDebugStr]")
-  }
-
-  def endSequence(): Unit = {
-    val t1 = System.currentTimeMillis()
-    val dtms = t1 - t0
-    Log.info(s"END snf-vmcatcher ($dtms ms) [$argsDebugStr]")
-    Log.info("=" * 30)
-  }
-
+trait LogHelper {
+  final val log = LoggerFactory.getLogger(getClass)
+  
   def ERROR(s: String): Unit = {
     System.err.println(s)
-    Log.error(s)
+    log.error(s)
   }
 
   def INFO(s: String): Unit = {
     System.err.println(s)
-    Log.info(s)
-  }
-
-  def EXIT(status: Int, alsoDo: () ⇒ Any = () ⇒ ()): Nothing = {
-    Log.warn(s"Exiting with status $status")
-    alsoDo()
-    sys.exit(status)
+    log.info(s)
   }
 }

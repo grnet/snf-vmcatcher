@@ -19,12 +19,12 @@ package gr.grnet.egi.vmcatcher.cmdline.airline
 
 import java.net.URL
 
-import gr.grnet.egi.vmcatcher.Program
+import gr.grnet.egi.vmcatcher.LogHelper
 import gr.grnet.egi.vmcatcher.db.MImageListAccess
 import gr.grnet.egi.vmcatcher.util.UsernamePassword
 import io.airlift.airline.{Command, Option}
 
-object ImageList extends Program with CommonOptions {
+object ImageList extends LogHelper with CommonOptions {
   @Command(name = "register", description = "Registers the image list in our database")
   class Register extends Global with NameArgument with CredentialsOpt {
     @Option(

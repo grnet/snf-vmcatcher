@@ -24,12 +24,34 @@ import io.airlift.airline.help.Help
 /**
  *
  */
-object Main2 extends Program {
+object Main2 extends LogHelper {
+  val t0 = System.currentTimeMillis()
+  var _args = Array[String]()
+  lazy val argsDebugStr = _args.mkString(" ")
 
+  final val ProgName = getClass.getName.stripSuffix("$")
 
+  def beginSequence(args: Array[String]): Unit = {
+    _args = args
+    log.info("=" * 30)
+    log.info(s"BEGIN snf-vmcatcher ($t0) [$argsDebugStr]")
+  }
 
-  def makeCli: Cli[Cmd] = {
-    val builder = Cli.builder[Cmd](getClass.getCanonicalName.dropRight(1))
+  def endSequence(): Unit = {
+    val t1 = System.currentTimeMillis()
+    val dtms = t1 - t0
+    log.info(s"END snf-vmcatcher ($dtms ms) [$argsDebugStr]")
+    log.info("=" * 30)
+  }
+
+  def EXIT(status: Int): Nothing = {
+    log.warn(s"Exiting with status $status")
+    endSequence()
+    sys.exit(status)
+  }
+
+  def makeCli: Cli[Runnable] = {
+    val builder = Cli.builder[Runnable](getClass.getCanonicalName.dropRight(1))
 
     builder.
       withCommand(classOf[Global]).
@@ -53,15 +75,26 @@ object Main2 extends Program {
     image.
       withDescription("Actions related to an image")
 
+    val iaas = builder.withGroup("iaas")
+    iaas.
+      withDescription("Actions related to the IaaS where images are uploaded/registered").
+      withCommands(
+        classOf[gr.grnet.egi.vmcatcher.cmdline.airline.IaaS.Describe],
+        classOf[gr.grnet.egi.vmcatcher.cmdline.airline.IaaS.Ls]
+      )
+
     builder.build()
   }
 
   def main(args: Array[String]): Unit = {
+    beginSequence(args)
+
     val cli = makeCli
 
     try {
       val command = cli.parse(args: _*)
       command.run()
+      EXIT(0)
     }
     catch {
       case e @ (_:ParseCommandMissingException |
@@ -70,24 +103,24 @@ object Main2 extends Program {
                 _:ParseArgumentsUnexpectedException |
                 _:ParseArgumentsMissingException) ⇒
         ERROR(e.getMessage)
-        EXIT(1, endSequence)
+        EXIT(1)
 
       case e: VMCatcherException ⇒
         System.err.println(e.getMessage)
-        Log.error(s"$e", e)
-        EXIT(e.code.code, endSequence)
+        log.error(s"$e", e)
+        EXIT(e.code.code)
 
       case e: Exception ⇒
         System.err.println(e.getMessage)
-        Log.error("", e)
+        log.error("", e)
         e.printStackTrace(System.err)
-        EXIT(3, endSequence)
+        EXIT(3)
 
       case e: Throwable ⇒
         System.err.println(e.getMessage)
-        Log.error("", e)
+        log.error("", e)
         e.printStackTrace(System.err)
-        EXIT(4, endSequence)
+        EXIT(4)
     }
   }
 }
