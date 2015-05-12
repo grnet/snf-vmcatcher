@@ -29,7 +29,7 @@ import net.liftweb.mapper._
 class MImageListAccess extends LongKeyedMapper[MImageListAccess] with IdPK {
   def getSingleton = MImageListAccess
 
-  object f_imageListRef extends MappedLongForeignKey(this, MImageListRef) {
+  object f_imageListRef extends MappedLongForeignKey(this, MImageList) {
     override def dbColumnName = "image_list_ref_id"
   }
 
@@ -100,45 +100,45 @@ class MImageListAccess extends LongKeyedMapper[MImageListAccess] with IdPK {
       parsedJson(parsedJson)
 
   def isOK = /*wasRetrieved.get && */wasParsed.get
+
+  def setException(t: Throwable) =
+    this.
+      f_stacktrace(MText.getOrCreate(t)).
+      exceptionMsg(s"${t.getClass.getName}: ${t.getMessage}")
 }
 
 object MImageListAccess extends MImageListAccess with LongKeyedMetaMapper[MImageListAccess] {
   override def dbTableName: String = "IMAGE_LIST_ACCESS"
 
-  private def mk(ref: MImageListRef, r: HttpResponse): MImageListAccess =
+  private def mk(ref: MImageList, r: HttpResponse): MImageListAccess =
     create.
       f_imageListRef(ref).
       httpStatusCode(r.statusCode).
       httpStatusText(r.statusText).
       rawText(r.getUtf8)
 
-  def createRetrieved(ref: MImageListRef, r: HttpResponse): MImageListAccess =
+  def createRetrieved(ref: MImageList, r: HttpResponse): MImageListAccess =
     mk(ref, r).
       wasRetrieved(true).
       wasParsed(false)
 
-  def createErrorStatus(ref: MImageListRef, r: HttpResponse): MImageListAccess = {
+  def createErrorStatus(ref: MImageList, r: HttpResponse): MImageListAccess = {
     assert(!r.is2XX)
     mk(ref, r).
       wasRetrieved(false).
       wasParsed(false)
   }
 
-  def createNotRetrieved(ref: MImageListRef, t: Throwable): MImageListAccess = {
-    val stacktrace = stacktraceAsString(t)
-    val mtext = MText.getOrCreate(stacktrace)
-
+  def createNotRetrieved(ref: MImageList, t: Throwable): MImageListAccess =
     create.
       f_imageListRef(ref).
-      f_stacktrace(mtext).
       wasRetrieved(false).
       wasParsed(false).
-      exceptionMsg(s"${t.getClass.getName}: ${t.getMessage}")
-  }
+      setException(t)
 
   def findAllByRefName(name: String): List[MImageListAccess] = {
     for {
-      ref ← MImageListRef.find(By(MImageListRef.name, name)).toList
+      ref ← MImageList.find(By(MImageList.name, name)).toList
       access ← findAll(
         By(MImageListAccess.f_imageListRef, ref),
         OrderBy(MImageListAccess.whenAccessed, Ascending)

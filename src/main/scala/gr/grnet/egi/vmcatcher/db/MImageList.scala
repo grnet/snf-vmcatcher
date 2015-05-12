@@ -27,8 +27,8 @@ import net.liftweb.mapper._
  * It references the image list URL and provides all necessary info
  * in order to access it.
  */
-class MImageListRef extends LongKeyedMapper[MImageListRef] with IdPK {
-  def getSingleton = MImageListRef
+class MImageList extends LongKeyedMapper[MImageList] with IdPK {
+  def getSingleton = MImageList
 
   object whenRegistered extends MappedDateTime(this) {
     override def dbColumnName: String = "when_registered"
@@ -78,12 +78,19 @@ class MImageListRef extends LongKeyedMapper[MImageListRef] with IdPK {
 
   def newAccess() = MImageListAccess.create.f_imageListRef(this).whenAccessed(new Date)
 
-  def listRevisions(): List[MImageRevision] =
-    MImageRevision.findAll(By(MImageRevision.f_imageListRef, this))
+  def listImages(): List[MImage] =
+    MImage.findAll(By(MImage.f_imageListRef, this), OrderBy(MImage.whenAccessed, Ascending))
+
+  def listLatestImages(): List[MImage] =
+    MImage.findAll(
+      By(MImage.f_imageListRef, this),
+      By(MImage.isLatest, true),
+      OrderBy(MImage.whenAccessed, Ascending)
+    )
 }
 
-object MImageListRef extends MImageListRef with LongKeyedMetaMapper[MImageListRef] {
-  override def dbTableName = "IMAGE_LIST_REF"
+object MImageList extends MImageList with LongKeyedMetaMapper[MImageList] {
+  override def dbTableName = "IMAGE_LIST"
 
-  def findByName(name: String) = MImageListRef.find(By(MImageListRef.name, name)).toOption
+  def findByName(name: String) = MImageList.find(By(MImageList.name, name)).toOption
 }

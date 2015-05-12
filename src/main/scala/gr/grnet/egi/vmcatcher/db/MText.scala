@@ -18,6 +18,7 @@
 package gr.grnet.egi.vmcatcher.db
 
 import gr.grnet.egi.vmcatcher.Digest
+import gr.grnet.egi.vmcatcher.util._
 import net.liftweb.common.Full
 import net.liftweb.mapper._
 
@@ -57,6 +58,8 @@ object MText extends MText with LongKeyedMetaMapper[MText] {
         saveMe()
     }
   }
+
+  def getOrCreate(t: Throwable): MText = getOrCreate(stacktraceAsString(t))
 }
 
 

@@ -95,7 +95,6 @@ object Main extends {
 
     // Queues
     mkcmd(CmdLine.enqueueFromEnv, do_enqueue_from_env),
-//    mkcmd(CmdLine.enqueueFromImageList, do_enqueue_from_image_list),
     mkcmd(CmdLine.dequeue, do_dequeue),
     mkcmd(CmdLine.drainQueue, do_drain_queue),
     mkcmd(CmdLine.testQueue, do_test_queue),
@@ -106,9 +105,6 @@ object Main extends {
     mkcmd(CmdLine.deactivateImageList, do_deactivate_image_list), /*(N)*/
     mkcmd(CmdLine.updateCredentials,   do_update_credentials),    /*(N)*/
     mkcmd(CmdLine.fetchImageList,      do_fetch_image_list),      /*(N)*/
-    mkcmd(CmdLine.listImageList,       do_list_image_list),       /*(N)*/
-//    mkcmd(CmdLine.parseImageList, do_parse_image_list),
-//    mkcmd(CmdLine.getImageList, do_get_image_list),
 
     // Images
     mkcmd(CmdLine.listRegisteredImages,       do_list_registered_images),              /*(N)*/
@@ -178,32 +174,18 @@ object Main extends {
   }
 
   def do_fetch_image_list(args: FetchImageList): Unit = {
-    val (ref, access, currentImages) = vmcatcher.fetchNewImageRevisions(args.name)
+    val ImageListFetchResult(imageList, access, _, newLatest) = vmcatcher.fetchImageList(args.name)
 
     if(access.isOK) {
-      INFO(s"Fetched image list $ref, parsed ${currentImages.size} images")
+      INFO(s"Fetched image list $imageList, parsed ${newLatest.size} images")
       for {
-        currentImage ← currentImages
-        image ← currentImage.f_image.obj
+        image ← newLatest
       } {
         INFO(s"Parsed image $image")
       }
     }
     else {
-      ERROR(s"Error fetching image list $ref")
-    }
-  }
-
-  def do_list_image_list(args: ListImageList): Unit = {
-    val images = vmcatcher.listImageList(args.name)
-    for {
-      image ← images
-      id = image.id.get
-      adMpuri = image.adMpuri.get
-      hvUri = image.hvUri.get
-      dcIdentifier = image.dcIdentifier.get
-    } {
-      INFO(s"$id $dcIdentifier $hvUri")
+      ERROR(s"Error fetching image list $imageList")
     }
   }
 
@@ -215,116 +197,6 @@ object Main extends {
       INFO(s"$id $name")
     }
   }
-
-//  def do_parse_image_list(args: ParseImageList): Unit = {
-//    val imageListContainerURL = args.imageListUrl
-//    val token = args.token
-//    val rawImageListContainer = Sys.downloadRawImageList(imageListContainerURL, Option(token))
-//    Log.info (s"imageListContainer (URL ) = $imageListContainerURL")
-//    Log.debug(s"imageListContainer (raw ) =\n$rawImageListContainer")
-//    val imageListContainerJson = parseImageListContainerJson(rawImageListContainer)
-//    Log.info (s"imageListContainer (json) =\n$imageListContainerJson")
-//
-//    val events0 = Events.ofImageListJson(imageListContainerJson, Map())
-//    INFO(s"Found ${events0.size} events")
-//    if(events0.isEmpty) { return }
-//
-//    // Sort by size ascending and print basic info
-//    val sortedEvents =
-//      try events0.sortBy(_(ImageEventField.VMCATCHER_EVENT_HV_SIZE).toLong)
-//      catch {
-//        case e: Exception ⇒
-//          Log.warn(s"Could not sort events", e)
-//          events0
-//      }
-//
-//    val miniKeys = Seq(
-//      ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER,
-//      ImageEventField.VMCATCHER_EVENT_AD_MPURI,
-//      ImageEventField.VMCATCHER_EVENT_HV_URI,
-//      ImageEventField.VMCATCHER_EVENT_HV_SIZE)
-//
-//    for(event ← sortedEvents) {
-//      val miniMap = Map((for(key ← miniKeys) yield (key, event(key))):_*)
-//      val miniInfo = miniMap.mkString("[", ", ", "]")
-//      INFO(s"Found: $miniInfo")
-//    }
-//  }
-
-//  def do_get_image_list(args: GetImageList): Unit = {
-//    val url = args.url
-//    val token = args.token
-//    val rawImageListContainer = Sys.downloadRawImageList(url, Option(token))
-//    Log.info (s"imageListContainer (URL ) = $url")
-//    val imageListContainerJson = parseImageListContainerJson(rawImageListContainer)
-//    INFO(s"imageListContainer (json) =\n$imageListContainerJson")
-//  }
-
-//  def do_enqueue_from_image_list(args: EnqueueFromImageList): Unit = {
-//    val imageListURL = args.imageListUrl
-//    val imageIdentifier = args.imageIdentifier
-//    val tokenOpt = Option(args.token)
-//
-//    val rawText = Sys.downloadRawImageList(imageListURL, tokenOpt)
-//    Log.info(s"imageList (URL) = $imageListURL")
-//    Log.info(s"imageList (raw) = $rawText")
-//    val jsonImageList = parseImageListContainerJson(rawText)
-//    val events0 = Events.ofImageListJson(
-//      jsonImageList,
-//      //Map(ExternalEventField.VMCATCHER_X_EVENT_IMAGE_LIST_URL → imageListURL.toString)
-//      Map()
-//    )
-//
-//    events0 match {
-//      case Nil ⇒
-//        val errMsg = s"Could not parse events from image list"
-//        ERROR(errMsg)
-//        EXIT(4)
-//
-//      case event :: _ ⇒
-//        val dcIdentifier = event(ImageListEventField.VMCATCHER_EVENT_IL_DC_IDENTIFIER)
-//        val parsedMsg = s"Parsed image list dc:identifier = $dcIdentifier"
-//        INFO(parsedMsg)
-//        val events =
-//          if(imageIdentifier eq null)
-//            events0
-//          else
-//            events0.filter(_(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER) == imageIdentifier)
-//
-//        if(events.isEmpty) {
-//          val errMsg = s"Image identifier $imageIdentifier not found"
-//          ERROR(errMsg)
-//          val identifiers = events0.map(_(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER))
-//          val availableMsg = s"Available identifiers are: ${identifiers.mkString(", ")}"
-//          INFO(availableMsg)
-//          EXIT(3)
-//        }
-//
-//        val matchMsg = s"Matched ${events.size} event(s)"
-//        INFO(matchMsg)
-//
-//        val connector = RabbitConnector(config.getRabbitConfig)
-//        val rabbit = connector.connect()
-//
-//        for {
-//          event ← events
-//        } {
-//          val imageIdent = event(ImageEventField.VMCATCHER_EVENT_DC_IDENTIFIER)
-//          val image_HV_URI = event(ImageEventField.VMCATCHER_EVENT_HV_URI)
-//          val image_AD_MPURI = event(ImageEventField.VMCATCHER_EVENT_AD_MPURI)
-//          val eventMsg = s"Enqueueing event for dc:identifier = $imageIdent, hv:uri = $image_HV_URI, ad:mpuri = $image_AD_MPURI"
-//          INFO(eventMsg)
-//          Log.info(s"event (image) = $event")
-//
-//          rabbit.publish(event.toEventFieldJson)
-//        }
-//
-//        val enqueuedMsg = s"Enqueued ${events.size} event(s)"
-//        INFO(enqueuedMsg)
-//
-//        rabbit.close()
-//    }
-//  }
 
   def do_dequeue_(connector: RabbitConnector, data: HandlerData): Unit = {
     def doOnce(rabbit: Rabbit): Unit = {

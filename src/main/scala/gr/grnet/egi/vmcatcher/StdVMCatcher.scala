@@ -43,22 +43,22 @@ class StdVMCatcher(config: Config) extends VMCatcher {
       throw new VMCatcherException(CannotAccessDB, s"Maybe the database is inaccessible ... ")
   }
   
-  import gr.grnet.egi.vmcatcher.Main.{Log => log}
+  import gr.grnet.egi.vmcatcher.Main.{Log ⇒ log}
 
-  def findImageListRefByName(name: String) = MImageListRef.findByName(name)
+  def findImageListRefByName(name: String) = MImageList.findByName(name)
 
   def registerImageList(
     name: String, 
     url: URL,
     isActive: Boolean,
     upOpt: Option[UsernamePassword]
-  ): MImageListRef = {
+  ): MImageList = {
     findImageListRefByName(name) match {
       case Some(_) ⇒
         throw new VMCatcherException(ImageListAlreadyRegistered, s"Image list $name already registered")
 
       case None ⇒
-        MImageListRef.create.
+        MImageList.create.
           name(name).
           url(url.toExternalForm).
           isActive(isActive).
@@ -68,41 +68,31 @@ class StdVMCatcher(config: Config) extends VMCatcher {
   }
 
 
-  def listImageLists(): List[MImageListRef] =
-    MImageListRef.findAll(
-      OrderBy(MImageListRef.name, Ascending)
+  def listImageLists(): List[MImageList] =
+    MImageList.findAll(
+      OrderBy(MImageList.name, Ascending)
     )
 
-  def forImageListRefByName[T](name: String)(f: (MImageListRef) ⇒ T): T =
-    findImageListRefByName(name) match {
-      case None ⇒
-        throw new VMCatcherException(ImageListNotFound, s"Image list $name not found")
-      case Some(ref) ⇒
-        f(ref)
-    }
+  def listImages(name: String) = forImageListByName(name)(_.listImages())
 
-  def listImageRevisions(name: String): List[MImageRevision] =
-    forImageListRefByName(name) { ref ⇒
-      val revisions = ref.listRevisions()
-      revisions
-    }
+  def listLatestImages(name: String) = forImageListByName(name)(_.listLatestImages())
 
   def activateImageList(name: String): Boolean =
-    forImageListRefByName(name) { ref ⇒
+    forImageListByName(name) { ref ⇒
       val previousStatus = ref.isActive.get
       ref.activate()
       previousStatus
     }
 
   def deactivateImageList(name: String): Boolean =
-    forImageListRefByName(name) { ref ⇒
+    forImageListByName(name) { ref ⇒
       val previousStatus = ref.isActive.get
       ref.deactivate()
       previousStatus
     }
 
   def updateCredentials(name: String, upOpt: Option[UsernamePassword]): Unit =
-    forImageListRefByName(name) { ref ⇒
+    forImageListByName(name) { ref ⇒
       upOpt match {
         case None ⇒
           ref.username(null).password(null).save()
@@ -141,7 +131,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
     buffer.toString
   }
   
-  private def parseImagesFromJson(ref: MImageListRef, access: MImageListAccess, imageListJson: String): List[MImage] = {
+  private def parseImagesFromJson(ref: MImageList, access: MImageListAccess, imageListJson: String): List[MImage] = {
     try {
       val events = ImageEvent.parseImageListJson(imageListJson)
 
@@ -152,6 +142,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
           val image = MImage.create.
             f_imageListRef(ref).
             f_imageListAccess(access).
+            whenAccessed(access.whenAccessed.get).
             json(event.imageJsonView.json).
             envJson(event.envFieldsView.json).
 
@@ -183,14 +174,15 @@ class StdVMCatcher(config: Config) extends VMCatcher {
       images
     }
     catch {
+      case e: VMCatcherException ⇒ throw e
       case e: Exception ⇒
         val name = ref.name.get
         val url = ref.url.get
-        throw new VMCatcherException(CannotParseImages, s"Cannot parse images from image list $name at $url")
+        throw new VMCatcherException(CannotParseImages, s"Cannot parse images from image list $name at $url", e)
     }
   }
 
-  private def accessImageList(ref: MImageListRef): (MImageListAccess, List[MImage]) = {
+  private def accessImageList(ref: MImageList): (MImageListAccess, List[MImage]) = {
     val name = ref.name.get
     val url = new URL(ref.url.get)
     val upOpt = ref.credentialsOpt
@@ -221,64 +213,51 @@ class StdVMCatcher(config: Config) extends VMCatcher {
         log.info(s"Retrieved $url")
         // Record the access, one step at a time
         val access = MImageListAccess.createRetrieved(ref, r)
-        // Parse json out of the response body
-        val imageListJson = getImageListJsonFromRaw(r.getUtf8)
-        access.setParsed(imageListJson)
-        access.save()
 
-        val images = parseImagesFromJson(ref, access, imageListJson)
+        try {
+          // Parse json out of the response body
+          val imageListJson = getImageListJsonFromRaw(r.getUtf8)
+          access.setParsed(imageListJson)
+          log.info(s"Parsed image list JSON from raw text at $url")
+          access.save()
 
-        (access, images)
+          val images = parseImagesFromJson(ref, access, imageListJson)
+
+          (access, images)
+        }
+        catch {
+          case e: VMCatcherException ⇒
+            access.setException(e.getCause).saveMe()
+            throw e
+        }
     }
   }
 
-  def fetchNewImageRevisions(name: String): (MImageListRef, MImageListAccess, List[MImageRevision]) =
-    forImageListRefByName(name) { ref ⇒
+  def fetchImageList(name: String): ImageListFetchResult =
+    forImageListByName(name) { imageList ⇒
       // 1. Access the image list
-      val (access, images) = accessImageList(ref)
+      val (imageListAccess, images) = accessImageList(imageList)
+
+      // 2. Query for pre-existing images for this image list
+      val preExistingImages = imageList.listLatestImages()
+
+      def result = ImageListFetchResult(imageList, imageListAccess, preExistingImages, images)
 
       if(images.lengthCompare(0) == 0) {
-        (ref, access, Nil)
+        return result
       }
-      else {
-        // 2. Save new images
-        images.foreach(_.save())
 
-        // 3. Update DB for new revisions
-        val newRevisions =
-          for {
-            image ← images if !MImageRevision.existsByUniqueID(image)
-          } yield {
-            image.createRevision.saveMe()
-          }
+      // 3. Mark those images as "not latest"
+      preExistingImages.foreach(_.isLatest(false).save())
 
-        (ref, access, newRevisions)
-      }
-    }
+      // 4. Save the new "latest" images
+      images.foreach(_.isLatest(true).save())
 
-  def listImageList(name: String): List[MImage] = {
-    forImageListRefByName(name) { ref ⇒
-      for {
-        mci ← MCurrentImage.findAll(By(MCurrentImage.f_imageListRef, ref))
-        mi ← mci.f_image.obj
-      } yield {
-        mi
-      }
-    }
-  }
-
-  def currentImageList(name: String): List[MCurrentImage] =
-    forImageListRefByName(name) { ref ⇒
-      MCurrentImage.findAll(By(MCurrentImage.f_imageListRef, ref))
+      result
     }
 
   def getImage(dcIdentifier: String): MImage = {
-    val mImageBox =
-      for {
-        mci ← MCurrentImage.find(By(MCurrentImage.dcIdentifier, dcIdentifier))
-        mi  ← mci.f_image.obj
-      } yield mi
-
+    val mImageBox = MImage.find(By(MImage.dcIdentifier, dcIdentifier))
     mImageBox match {
       case Full(mi) ⇒ mi
       case _ ⇒

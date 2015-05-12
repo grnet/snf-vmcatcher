@@ -24,16 +24,24 @@ import net.liftweb.common.Box
 import net.liftweb.mapper._
 
 /**
- * A parsed image description. The respective table is used to hold the history
- * of all parsed images, so you may find the same revision of an image multiple times.
+ * Provides information about an image. This includes information regarding the
+ *   a) parsed image data from its JSON description and
+ *   b) image registration status, as far as the IaaS is concerned.
  */
 class MImage extends LongKeyedMapper[MImage] with IdPK {
   def getSingleton = MImage
 
   // redundant but useful
-  object f_imageListRef extends MappedLongForeignKey(this, MImageListRef) {
+  object f_imageListRef extends MappedLongForeignKey(this, MImageList) {
     override def dbColumnName = "image_list_ref_id"
     override def dbNotNull_? = true
+  }
+
+  // redundant but useful
+  object whenAccessed extends MappedDateTime(this) {
+    override def dbColumnName: String = "when_accessed"
+    override def dbNotNull_? : Boolean = true
+    override def dbIndexed_? : Boolean = true
   }
 
   object f_imageListAccess extends MappedLongForeignKey(this, MImageListAccess) {
@@ -135,20 +143,87 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
 
   def repr: String = s"""{label: "$imageLabel", revision: "$imageRevision", uniqueID: "$computeUniqueID"}"""
 
-  def createRevision: MImageRevision = {
-    MImageRevision.create.
-      dcIdentifier(this.dcIdentifier.get).
-      adMpuri(this.adMpuri.get).
-      uniqueID(this.uniqueID.get).
-      whenAccessed(this.f_imageListAccess.obj.dmap(new Date)(_.whenAccessed.get)).
-      f_imageListRef(this.f_imageListRef.obj).
-      f_imageListAccess(this.f_imageListAccess.obj).
-      f_image(this)
+  object isActive extends MappedBoolean(this) {
+    override def dbColumnName: String = "is_active"
   }
+
+  /**
+   * This is true iff the image was defined in the latest image list access.
+   */
+  object isLatest extends MappedBoolean(this) {
+    override def dbColumnName: String = "is_latest"
+  }
+
+  /**
+   * The full path of the locally downloaded image file.
+   * The image file is assumed to be transient.
+   */
+  object originalFile extends MappedPoliteString(this, 256) {
+    override def dbColumnName: String = "original_file"
+  }
+
+  /**
+   * The full path of the transformed image file that has been uploaded to the IaaS.
+   * This file is transient.
+   */
+  object transformedFile extends MappedPoliteString(this, 256) {
+    override def dbColumnName: String = "transformed_file"
+  }
+
+  /**
+   * When the image was transformed to a format understood by the target IaaS
+   * (currently the raw format for Synnefo).
+   */
+  object whenTransformed extends MappedDateTime(this) {
+    override def dbColumnName: String = "when_transformed"
+  }
+
+  /**
+   * When the image was successfully uploaded to the IaaS.
+   */
+  object whenUploaded extends MappedDateTime(this) {
+    override def dbColumnName: String = "when_uploaded"
+  }
+
+  /**
+   * The URL of the uploaded image on the IaaS.
+   */
+  object uploadURL extends MappedPoliteString(this, 256) {
+    override def dbColumnName: String = "upload_url"
+  }
+
+  /**
+   * The ID that the uploaded image has in the IaaS.
+   * For Synnefo this is a UUID of 36 chars.
+   */
+  object uploadID extends MappedString(this, 36) {
+    override def dbColumnName: String = "upload_id"
+  }
+
+  /**
+   * The exception message, if any exception was thrown.
+   */
+  object exceptionMsg extends MappedPoliteString(this, 256) {
+    override def dbColumnName: String = "exception_msg"
+  }
+
+  /**
+   * The exception stacktrace, if any exception was thrown.
+   */
+  object f_stacktrace extends MappedLongForeignKey(this, MText) {
+    override def dbColumnName: String = "stacktrace_id"
+  }
+
+  def findAllOfImageListRef(ref: MImageList): List[MImage] =
+    MImage.findAll(By(MImage.f_imageListRef, ref))
 }
 
 object MImage extends MImage with LongKeyedMetaMapper[MImage] {
   override def dbTableName = "IMAGE"
 
   def findByUniqueID(uniqueID: String): Box[MImage] = MImage.find(By(MImage.uniqueID, uniqueID))
+
+  def findAllByUniqueIDPrefix(uniqueID: String): List[MImage] = MImage.findAll(Like(MImage.uniqueID, uniqueID))
+
+  def existsByUniqueID(uniqueID: String): Boolean = this.findByUniqueID(uniqueID).isDefined
 }

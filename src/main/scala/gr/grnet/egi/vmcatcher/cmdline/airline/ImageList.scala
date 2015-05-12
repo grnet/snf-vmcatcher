@@ -19,7 +19,7 @@ package gr.grnet.egi.vmcatcher.cmdline.airline
 
 import java.net.URL
 
-import gr.grnet.egi.vmcatcher.LogHelper
+import gr.grnet.egi.vmcatcher.{ImageListFetchResult, LogHelper}
 import gr.grnet.egi.vmcatcher.db.MImageListAccess
 import gr.grnet.egi.vmcatcher.util.UsernamePassword
 import io.airlift.airline.{Command, Option}
@@ -79,7 +79,7 @@ object ImageList extends LogHelper with CommonOptions {
   @Command(name = "show-access", description = "Prints the JSON definition of the latest image list access")
   class ShowAccess extends Global with NameArgument {
     def run(): Unit = {
-      vmcatcher.forImageListRefByName(name) { _ ⇒
+      vmcatcher.forImageListByName(name) { _ ⇒
         val accesses = MImageListAccess.findAllByRefName(name)
         for {
           access ← accesses
@@ -104,15 +104,15 @@ object ImageList extends LogHelper with CommonOptions {
   @Command(name = "ls", description = "Prints the images of an image list (the most recent version of each image)")
   class Ls extends Global with NameArgument {
     def run(): Unit = {
-      val revisions = vmcatcher.listImageRevisions(name)
-      if(revisions.lengthCompare(0) == 0) { return }
+      val images = vmcatcher.listImages(name)
+      if(images.lengthCompare(0) == 0) { return }
 
       for {
-        imageRev ← revisions
+        image ← images
       } {
-        val hash = imageRev.uniqueID.get
-        val label = imageRev.imageLabel
-        val rev = imageRev.imageRevision
+        val hash = image.uniqueID.get
+        val label = image.imageLabel
+        val rev = image.imageRevision
 
         INFO(s"$hash $label $rev")
       }
@@ -140,13 +140,12 @@ object ImageList extends LogHelper with CommonOptions {
   @Command(name = "fetch", description = "Fetches the description of the image list and parses it to images")
   class Fetch extends Global with NameArgument {
     def run(): Unit = {
-      val (ref, access, revisions) = vmcatcher.fetchNewImageRevisions(name)
+      val ImageListFetchResult(_, access, _, newLatest) = vmcatcher.fetchImageList(name)
 
       if(access.isOK) {
-        INFO(s"Fetched image list $name, found ${revisions.size} new image revisions")
+        INFO(s"Fetched image list $name, found ${newLatest.size} new image newLatest")
         for {
-          imageRevision ← revisions
-          image ← imageRevision.f_image.obj
+          image ← newLatest
         } {
           INFO(s"Fetched image revision ${image.repr}")
         }

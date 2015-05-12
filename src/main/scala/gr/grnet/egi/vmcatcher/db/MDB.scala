@@ -56,11 +56,9 @@ object MDB {
     Schemifier.schemify(
       true,
       Schemifier.infoF _,
-      MImageListRef,
+      MImageList,
       MImageListAccess,
-      MCurrentImage,
       MImage,
-      MImageRevision,
       MText
     )
   }

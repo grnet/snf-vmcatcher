@@ -31,7 +31,6 @@ class CmdLine {
   val showConf = new ShowConf
 
   val enqueueFromEnv = new EnqueueFromEnv
-  val enqueueFromImageList = new EnqueueFromImageList
   val dequeue = new Dequeue
   val drainQueue = new DrainQueue
   val testQueue = new TestQueue
@@ -48,7 +47,6 @@ class CmdLine {
   val deactivateImageList = new DeactivateImageList
   val updateCredentials = new UpdateCredentials
   val fetchImageList = new FetchImageList
-  val listImageList = new ListImageList
 
   val transform = new Transform
 }
@@ -73,7 +71,6 @@ object CmdLine extends CmdLine {
 
     // Queues
     jc.addCommand(CmdLine.enqueueFromEnv)
-    jc.addCommand(CmdLine.enqueueFromImageList)
     jc.addCommand(CmdLine.dequeue)
     jc.addCommand(CmdLine.drainQueue)
     jc.addCommand(CmdLine.testQueue)
@@ -84,7 +81,6 @@ object CmdLine extends CmdLine {
     jc.addCommand(CmdLine.deactivateImageList)  /*(N)*/
     jc.addCommand(CmdLine.updateCredentials)    /*(N)*/
     jc.addCommand(CmdLine.fetchImageList)       /*(N)*/
-    jc.addCommand(CmdLine.listImageList)        /*(N)*/
 
     jc.addCommand(CmdLine.parseImageList)
     jc.addCommand(CmdLine.getImageList)

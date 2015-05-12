@@ -19,6 +19,7 @@ package gr.grnet.egi.vmcatcher
 
 import java.net.URL
 
+import gr.grnet.egi.vmcatcher.ErrorCode._
 import gr.grnet.egi.vmcatcher.db._
 import gr.grnet.egi.vmcatcher.util.UsernamePassword
 
@@ -29,28 +30,40 @@ trait VMCatcher {
   /**
    * Registers the details of an image list.
    */
-  def registerImageList(name: String, url: URL, isActive: Boolean, upOpt: Option[UsernamePassword]): MImageListRef
+  def registerImageList(name: String, url: URL, isActive: Boolean, upOpt: Option[UsernamePassword]): MImageList
 
   /**
    * Returns all registered image lists.
    */
-  def listImageLists(): List[MImageListRef]
+  def listImageLists(): List[MImageList]
 
   /**
    * Finds the image list with the given name.
    */
-  def findImageListRefByName(name: String): Option[MImageListRef]
+  def findImageListRefByName(name: String): Option[MImageList]
 
   /**
-   * Applies a function to an [[MImageListRef]] that is looked up by name.
-   * If no such [[MImageListRef]] exists, throws a [[VMCatcherException]].
+   * Applies a function to an [[MImageList]] that is looked up by name.
+   * If no such [[MImageList]] exists, throws a [[VMCatcherException]].
    */
-  def forImageListRefByName[T](name: String)(f: (MImageListRef) ⇒ T): T
+  def forImageListByName[T](name: String)(f: (MImageList) ⇒ T): T =
+    findImageListRefByName(name) match {
+      case None ⇒
+        throw new VMCatcherException(ImageListNotFound, s"Image list $name not found")
+      case Some(ref) ⇒
+        f(ref)
+    }
 
   /**
-   * Lists the image revisions of an image list (which has the given name).
+   * Lists all the images known to have been specified in the image list of the given name.
    */
-  def listImageRevisions(name: String): List[MImageRevision]
+  def listImages(name: String): List[MImage]
+
+  /**
+   * Lists the latest images from the image list of the given name.
+   * Latest means that they where parsed from the latest image list JSON accessed.
+   */
+  def listLatestImages(name: String): List[MImage]
 
   /**
    * Activates an image list, so that it will be retrieved and parsed when requested.
@@ -70,20 +83,12 @@ trait VMCatcher {
    * Fetches and updates the image definitions of the given image list (referenced by its name).
    * Returns any new image revisions.
    */
-  def fetchNewImageRevisions(name: String): (MImageListRef, MImageListAccess, List[MImageRevision])
-
-  /**
-   * Returns the image descriptions of an image list, as they were more recently parsed.
-   */
-  def listImageList(name: String): List[MImage]
-
-  /**
-   * Returns the currently known image definitions for the given image list.
-   */
-  def currentImageList(name: String): List[MCurrentImage]
-
-  /**
-   * Get the image with the given dc:identifier
-   */
-  def getImage(dcIdentifier: String): MImage
+  def fetchImageList(name: String): ImageListFetchResult
 }
+
+case class ImageListFetchResult(
+  imageList: MImageList,
+  imageListAccess: MImageListAccess,
+  oldLatestImages: List[MImage],
+  images: List[MImage]
+)
