@@ -52,7 +52,7 @@
     <scala.minor.version>7</scala.minor.version>
     <scala.version>${scala.major.version}.${scala.minor.version}</scala.version>
 
-    <lift.version>3.0-M5-1</lift.version>
+    <lift.version>3.0-M6</lift.version>
     <jackson.version>2.5.4</jackson.version>
     <avro.version>1.7.7</avro.version>
     <mysql.driver.version>5.1.34</mysql.driver.version>
