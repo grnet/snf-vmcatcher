@@ -20,7 +20,7 @@ package gr.grnet.egi.vmcatcher.event;
 /**
  *
  */
-public enum EventOriginator {
+public enum EventOrigin {
     vmcatcher_sysenv,
     image_list_json,
     vanilla_json
