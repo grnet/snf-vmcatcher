@@ -19,10 +19,10 @@ package gr.grnet.egi.vmcatcher.cmdline.airline
 
 import java.net.URL
 
-import gr.grnet.egi.vmcatcher.{ImageListFetchResult, LogHelper}
+import com.github.rvesse.airline._
 import gr.grnet.egi.vmcatcher.db.MImageListAccess
 import gr.grnet.egi.vmcatcher.util.UsernamePassword
-import io.airlift.airline.{Command, Option}
+import gr.grnet.egi.vmcatcher.{ImageListFetchResult, LogHelper}
 
 object ImageList extends LogHelper with CommonOptions {
   @Command(name = "register", description = "Registers the image list in our database")

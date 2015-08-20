@@ -17,7 +17,7 @@
 
 package gr.grnet.egi.vmcatcher.cmdline.airline
 
-import io.airlift.airline.{Option, Arguments}
+import com.github.rvesse.airline.{Arguments, Option}
 
 trait CommonOptions {
   trait NameArgument {

@@ -17,9 +17,10 @@
 
 package gr.grnet.egi.vmcatcher
 
+import com.github.rvesse.airline.Cli
+import com.github.rvesse.airline.help.Help
+import com.github.rvesse.airline.parser._
 import gr.grnet.egi.vmcatcher.cmdline.airline.{Global, ImageList}
-import io.airlift.airline._
-import io.airlift.airline.help.Help
 
 /**
  *

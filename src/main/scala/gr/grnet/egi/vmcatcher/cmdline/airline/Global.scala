@@ -22,9 +22,9 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import javax.inject.Inject
 
+import com.github.rvesse.airline._
 import gr.grnet.egi.vmcatcher._
 import gr.grnet.egi.vmcatcher.config.Config
-import io.airlift.airline.{Command, HelpOption, Option, OptionType}
 import org.apache.avro.io.DecoderFactory
 import org.apache.avro.specific.SpecificDatumReader
 import org.slf4j.LoggerFactory

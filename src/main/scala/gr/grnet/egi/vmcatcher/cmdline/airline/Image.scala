@@ -17,8 +17,7 @@
 
 package gr.grnet.egi.vmcatcher.cmdline.airline
 
-import io.airlift.airline.Command
-import io.airlift.airline.Option
+import com.github.rvesse.airline._
 
 object Image {
   @Command(name = "activate", description = "Activate a specific image")

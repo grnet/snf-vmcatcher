@@ -19,9 +19,10 @@ package gr.grnet.egi.vmcatcher.cmdline.airline
 
 import java.util.Locale
 
-import com.typesafe.config.{ConfigRenderOptions, ConfigValueFactory, Config}
+import com.github.rvesse.airline._
+import com.typesafe.config.{Config, ConfigRenderOptions, ConfigValueFactory}
 import gr.grnet.egi.vmcatcher.LogHelper
-import io.airlift.airline.{Option, Command}
+
 import scala.collection.JavaConverters._
 
 object IaaS extends LogHelper {
