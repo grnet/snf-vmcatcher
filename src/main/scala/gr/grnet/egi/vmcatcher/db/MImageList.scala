@@ -76,14 +76,14 @@ class MImageList extends LongKeyedMapper[MImageList] with IdPK {
   def activate()   = this.isActive(true).saveMe()
   def deactivate() = this.isActive(false).saveMe()
 
-  def newAccess() = MImageListAccess.create.f_imageListRef(this).whenAccessed(new Date)
+  def newAccess() = MImageListAccess.create.f_imageList(this).whenAccessed(new Date)
 
   def listImages(): List[MImage] =
-    MImage.findAll(By(MImage.f_imageListRef, this), OrderBy(MImage.whenAccessed, Ascending))
+    MImage.findAll(By(MImage.f_imageList, this), OrderBy(MImage.whenAccessed, Ascending))
 
   def listLatestImages(): List[MImage] =
     MImage.findAll(
-      By(MImage.f_imageListRef, this),
+      By(MImage.f_imageList, this),
       By(MImage.isLatest, true),
       OrderBy(MImage.whenAccessed, Ascending)
     )

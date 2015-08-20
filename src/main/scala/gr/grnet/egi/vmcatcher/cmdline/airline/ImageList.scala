@@ -107,14 +107,13 @@ object ImageList extends LogHelper with CommonOptions {
       val images = vmcatcher.listImages(name)
       if(images.lengthCompare(0) == 0) { return }
 
-      for {
-        image ← images
-      } {
-        val hash = image.uniqueID.get
-        val label = image.imageLabel
-        val rev = image.imageRevision
+      if(images.nonEmpty) {
+        INFO("IDENTIFIER REVISION")
+      }
+      for { image ← images } {
+        val (ident, rev) = image.identifierAndRevision
 
-        INFO(s"$hash $label $rev")
+        INFO(s"$ident $rev")
       }
     }
   }
@@ -143,11 +142,11 @@ object ImageList extends LogHelper with CommonOptions {
       val ImageListFetchResult(_, access, _, newLatest) = vmcatcher.fetchImageList(name)
 
       if(access.isOK) {
-        INFO(s"Fetched image list $name, found ${newLatest.size} new image newLatest")
+        INFO(s"Fetched image list $name, found ${newLatest.size} new image(s)")
         for {
           image ← newLatest
         } {
-          INFO(s"Fetched image revision ${image.repr}")
+          INFO(s"Fetched identifier:revision ${image.repr}")
         }
       }
       else {

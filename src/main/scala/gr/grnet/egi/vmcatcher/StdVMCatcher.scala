@@ -140,7 +140,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
           event ← events
         } yield {
           val image = MImage.create.
-            f_imageListRef(ref).
+            f_imageList(ref).
             f_imageListAccess(access).
             whenAccessed(access.whenAccessed.get).
             json(event.imageJsonView.json).
@@ -166,7 +166,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
             slArch       (event(ImageEnvField.VMCATCHER_EVENT_SL_ARCH, "")).
             slChecksum512(event(ImageEnvField.VMCATCHER_EVENT_SL_CHECKSUM_SHA512, ""))
 
-          image.uniqueID(image.computeUniqueID)
+          image.revision(image.computeRevision)
 
           log.info(s"Created $image")
           image.saveMe()
@@ -213,7 +213,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
       case Right(r) ⇒
         log.info(s"Retrieved $url")
         // Record the access, one step at a time
-        val access = MImageListAccess.createRetrieved(ref, r)
+        val access = MImageListAccess.createRetrieved(ref, r) // in memory but not saved to DB yet
 
         try {
           // Parse json out of the response body

@@ -19,7 +19,6 @@ package gr.grnet.egi.vmcatcher.db
 
 import java.util.Date
 
-import gr.grnet.egi.vmcatcher.util.stacktraceAsString
 import gr.grnet.egi.vmcatcher.http.HttpResponse
 import net.liftweb.mapper._
 
@@ -29,8 +28,8 @@ import net.liftweb.mapper._
 class MImageListAccess extends LongKeyedMapper[MImageListAccess] with IdPK {
   def getSingleton = MImageListAccess
 
-  object f_imageListRef extends MappedLongForeignKey(this, MImageList) {
-    override def dbColumnName = "image_list_ref_id"
+  object f_imageList extends MappedLongForeignKey(this, MImageList) {
+    override def dbColumnName = "image_list_id"
   }
 
   object whenAccessed extends MappedDateTime(this) {
@@ -112,7 +111,7 @@ object MImageListAccess extends MImageListAccess with LongKeyedMetaMapper[MImage
 
   private def mk(ref: MImageList, r: HttpResponse): MImageListAccess =
     create.
-      f_imageListRef(ref).
+      f_imageList(ref).
       httpStatusCode(r.statusCode).
       httpStatusText(r.statusText).
       rawText(r.getUtf8)
@@ -131,7 +130,7 @@ object MImageListAccess extends MImageListAccess with LongKeyedMetaMapper[MImage
 
   def createNotRetrieved(ref: MImageList, t: Throwable): MImageListAccess =
     create.
-      f_imageListRef(ref).
+      f_imageList(ref).
       wasRetrieved(false).
       wasParsed(false).
       setException(t)
@@ -140,7 +139,7 @@ object MImageListAccess extends MImageListAccess with LongKeyedMetaMapper[MImage
     for {
       ref ← MImageList.find(By(MImageList.name, name)).toList
       access ← findAll(
-        By(MImageListAccess.f_imageListRef, ref),
+        By(MImageListAccess.f_imageList, ref),
         OrderBy(MImageListAccess.whenAccessed, Ascending)
       )
     } yield access

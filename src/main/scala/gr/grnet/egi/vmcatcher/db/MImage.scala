@@ -17,7 +17,8 @@
 
 package gr.grnet.egi.vmcatcher.db
 
-import java.util.Date
+import java.net.URI
+import java.util.Locale
 
 import gr.grnet.egi.vmcatcher.event.EventOrigin
 import net.liftweb.mapper._
@@ -31,8 +32,8 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
   def getSingleton = MImage
 
   // redundant but useful
-  object f_imageListRef extends MappedLongForeignKey(this, MImageList) {
-    override def dbColumnName = "image_list_ref_id"
+  object f_imageList extends MappedLongForeignKey(this, MImageList) {
+    override def dbColumnName = "image_list_id"
     override def dbNotNull_? = true
   }
 
@@ -73,6 +74,32 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
 
   object adMpuri extends MappedString(this, 512) {
     override def dbColumnName = "ad_mpuri"
+  }
+
+  /**
+   * The revision of the image. This is extracted from "ad:mpuri" attribute
+   */
+  object revision extends MappedString(this, 128) {
+    override def dbColumnName = "revision"
+  }
+
+  def computeRevision = {
+    // fullRevURI:  https://appdb.egi.eu/store/vo/image/38d42ca1-f4e9-5b5c-98de-37eb2d26301a:604/
+    // path:        /store/vo/image/38d42ca1-f4e9-5b5c-98de-37eb2d26301a:604/
+    // imageLabel:  38d42ca1-f4e9-5b5c-98de-37eb2d26301a
+    // revision:    604
+    val fullRevURI = new URI(adMpuri.get)
+    val path = fullRevURI.getPath
+    val identifier = dcIdentifier.get
+    path.indexOf(identifier) match {
+      case -1 ⇒
+        adMpuri.get
+      case labelIndex ⇒
+        val revStartIndex = labelIndex + identifier.length + 1
+        val rev = path.substring(revStartIndex).filter(_ != '/') // stripSuffix("/")
+
+        rev
+    }
   }
 
   object adUserUri extends MappedString(this, 512) {
@@ -131,22 +158,12 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
     override def dbColumnName = "sl_checksum_512"
   }
 
-  object uniqueID extends MappedString(this, 32 * 2) {
-    override def dbColumnName = "unique_id"
+  def identifierAndRevision = (dcIdentifier.get, revision.get)
+
+  def repr: String = {
+    val (name, revision) = identifierAndRevision
+    s"$name:$revision"
   }
-
-  /**
-   * The label of an image identifies the image and is stables across revisions.
-   */
-  def imageLabel = dcIdentifier.get
-  def imageRevision = adMpuri.get
-
-  /**
-   * This uniquely identifies an image revisions across all image lists.
-   */
-  def computeUniqueID = Digest.hexSha256(imageLabel + imageRevision)
-
-  def repr: String = s"""{label: "$imageLabel", revision: "$imageRevision", uniqueID: "$computeUniqueID"}"""
 
   object isActive extends MappedBoolean(this) {
     override def dbColumnName: String = "is_active"
@@ -220,15 +237,9 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
   }
 
   def findAllOfImageListRef(ref: MImageList): List[MImage] =
-    MImage.findAll(By(MImage.f_imageListRef, ref))
+    MImage.findAll(By(MImage.f_imageList, ref))
 }
 
 object MImage extends MImage with LongKeyedMetaMapper[MImage] {
   override def dbTableName = "IMAGE"
-
-  def findByUniqueID(uniqueID: String): Box[MImage] = MImage.find(By(MImage.uniqueID, uniqueID))
-
-  def findAllByUniqueIDPrefix(uniqueID: String): List[MImage] = MImage.findAll(Like(MImage.uniqueID, uniqueID))
-
-  def existsByUniqueID(uniqueID: String): Boolean = this.findByUniqueID(uniqueID).isDefined
 }
