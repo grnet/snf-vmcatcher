@@ -19,8 +19,7 @@ package gr.grnet.egi.vmcatcher.db
 
 import java.util.Date
 
-import gr.grnet.egi.vmcatcher.Digest
-import net.liftweb.common.Box
+import gr.grnet.egi.vmcatcher.event.EventOrigin
 import net.liftweb.mapper._
 
 /**
@@ -64,6 +63,12 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
   def envJson(text: String) = {
     val mText = MText.getOrCreate(text)
     f_envJson(mText)
+  }
+
+  object eventOrigin extends MappedString(this, EventOrigin.values().map(_.name().length).max) {
+    override def dbColumnName = "event_origin"
+
+    def apply(eo: EventOrigin): MImage = this(eo.name().toLowerCase(Locale.ENGLISH))
   }
 
   object adMpuri extends MappedString(this, 512) {

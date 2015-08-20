@@ -145,6 +145,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
             whenAccessed(access.whenAccessed.get).
             json(event.imageJsonView.json).
             envJson(event.envFieldsView.json).
+            eventOrigin(event.origin).
 
             adMpuri       (event(ImageEnvField.VMCATCHER_EVENT_AD_MPURI, "")).
             adUserFullName(event(ImageEnvField.VMCATCHER_EVENT_AD_USER_FULLNAME, "")).

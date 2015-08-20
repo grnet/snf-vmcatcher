@@ -23,8 +23,8 @@ import gr.grnet.egi.vmcatcher.util.TConfig
 import scala.collection.JavaConverters._
 
 case class ImageView(config: Config) {
-  lazy val json = ImageView.getJson(config)
-  lazy val map  = ImageView.getStringMap(config)
+  lazy val json: String = ImageView.getJson(config)
+  lazy val map: Map[String, String] = ImageView.getStringMap(config)
 
   def has(key: String): Boolean = map.contains(key)
   def apply(key: String, default: String): String = map.getOrElse(key, default)
@@ -44,7 +44,7 @@ object ImageView {
  * Provides two views of the image event and convenient methods to obtain the contained fields.
  */
 case class ImageEvent(
-  originator: EventOriginator,
+  origin: EventOrigin,
   envFieldsView: ImageView,
   imageJsonView: ImageView
 ) {
@@ -95,7 +95,7 @@ object ImageEvent {
     val fromImageJson = ImageView(ConfigFactory.parseMap(jsonValuesFieldsMap.asJava))
 
     ImageEvent(
-      originator = EventOriginator.vmcatcher_sysenv,
+      origin = EventOrigin.vmcatcher_sysenv,
       envFieldsView = fromEnvFields,
       imageJsonView = fromImageJson
     )
@@ -116,7 +116,7 @@ object ImageEvent {
     val fromImageJson = ImageView(ConfigFactory.parseMap(jsonValuesFieldsMap.asJava))
 
     ImageEvent(
-      originator = EventOriginator.vmcatcher_sysenv,
+      origin = EventOrigin.vmcatcher_sysenv,
       envFieldsView = fromEnvFields,
       imageJsonView = fromImageJson
     )
@@ -140,13 +140,11 @@ object ImageEvent {
     val fromEnvFields = ImageView(ConfigFactory.parseMap(envFieldsMap.asJava))
 
     ImageEvent(
-      originator = EventOriginator.image_list_json,
+      origin = EventOrigin.image_list_json,
       envFieldsView = fromEnvFields,
       imageJsonView = fromImageJson
     )
   }
-
-  def ofImageJson(json: String): ImageEvent = ofImageJsonConfig(ConfigFactory.parseString(json))
 
   def parseImageListJson(imageListJson: String): List[ImageEvent] = {
     /////////////////
