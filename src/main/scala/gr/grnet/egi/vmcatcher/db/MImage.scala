@@ -63,7 +63,7 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
 
   def envJson(text: String) = {
     val mText = MText.getOrCreate(text)
-    f_json(mText)
+    f_envJson(mText)
   }
 
   object adMpuri extends MappedString(this, 512) {
