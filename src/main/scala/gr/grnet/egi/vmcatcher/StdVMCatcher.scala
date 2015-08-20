@@ -227,7 +227,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
           (access, images)
         }
         catch {
-          case e: VMCatcherException ⇒
+          case e: Exception ⇒
             access.setException(e.getCause).saveMe()
             throw e
         }
