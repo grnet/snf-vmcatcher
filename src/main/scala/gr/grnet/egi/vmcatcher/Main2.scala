@@ -63,7 +63,7 @@ object Main2 extends LogHelper {
       withDescription("Actions related to an image list").
       withCommands(
         classOf[ImageList.Register],
-        classOf[ImageList.ShowAll],
+        classOf[ImageList.ShowLists],
         classOf[ImageList.ShowAccess],
         classOf[ImageList.Ls],
         classOf[ImageList.Activate],

@@ -50,8 +50,8 @@ object ImageList extends LogHelper with CommonOptions {
     }
   }
 
-  @Command(name = "show-all", description = "Prints the known image lists")
-  class ShowAll extends Global {
+  @Command(name = "show-lists", description = "Show the known image lists")
+  class ShowLists extends Global {
     def run(): Unit = {
       val ils = vmcatcher.listImageLists()
       val nameLengths = ils.map(_.name.get.length)
