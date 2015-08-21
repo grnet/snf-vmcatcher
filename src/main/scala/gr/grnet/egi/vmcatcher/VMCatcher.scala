@@ -60,12 +60,6 @@ trait VMCatcher {
   def listImages(name: String): List[MImage]
 
   /**
-   * Lists the latest images from the image list of the given name.
-   * Latest means that they where parsed from the latest image list JSON accessed.
-   */
-  def listLatestImages(name: String): List[MImage]
-
-  /**
    * Activates an image list, so that it will be retrieved and parsed when requested.
    * Returns the previous activation status.
    */
@@ -89,6 +83,8 @@ trait VMCatcher {
 case class ImageListFetchResult(
   imageList: MImageList,
   imageListAccess: MImageListAccess,
-  oldLatestImages: List[MImage],
   images: List[MImage]
-)
+) {
+  
+  def newImages = images.filter(_.isOriginal.get)
+}

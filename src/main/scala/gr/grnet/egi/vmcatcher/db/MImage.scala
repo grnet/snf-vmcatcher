@@ -108,6 +108,8 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
 
   object adUserGuid extends MappedString(this, 128) {
     override def dbColumnName = "ad_user_guid"
+
+    override def dbIndexed_? = true
   }
 
   object adUserFullName extends MappedString(this, 128) {
@@ -116,6 +118,8 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
 
   object dcIdentifier extends MappedString(this, 128) {
     override def dbColumnName = "dc_identifier"
+
+    override def dbIndexed_? = true
   }
 
   object dcTitle extends MappedString(this, 128) {
@@ -140,10 +144,18 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
 
   object slOs extends MappedString(this, 64) {
     override def dbColumnName = "sl_os"
+
+    override def dbIndexed_? = true
+
+    override def apply(s: String) = super.apply(if(s eq null) null else s.toLowerCase(Locale.ENGLISH))
   }
 
   object slOsName extends MappedString(this, 64) {
     override def dbColumnName = "sl_os_name"
+
+    override def dbIndexed_? = true
+
+    override def apply(s: String) = super.apply(if(s eq null) null else s.toLowerCase(Locale.ENGLISH))
   }
 
   object slOsVersion extends MappedString(this, 64) {
@@ -156,6 +168,10 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
 
   object slChecksum512 extends MappedString(this, 64 * 2 + "sha512-".length) {
     override def dbColumnName = "sl_checksum_512"
+
+    override def dbIndexed_? = true
+
+    override def apply(s: String) = super.apply(if(s eq null) null else s.toLowerCase(Locale.ENGLISH))
   }
 
   def identifierAndRevision = (dcIdentifier.get, revision.get)
@@ -169,11 +185,10 @@ class MImage extends LongKeyedMapper[MImage] with IdPK {
     override def dbColumnName: String = "is_active"
   }
 
-  /**
-   * This is true iff the image was defined in the latest image list access.
-   */
-  object isLatest extends MappedBoolean(this) {
-    override def dbColumnName: String = "is_latest"
+  object isOriginal extends MappedBoolean(this) {
+    override def dbColumnName: String = "is_original"
+
+    override def dbIndexed_? = true
   }
 
   /**

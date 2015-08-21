@@ -174,19 +174,7 @@ object Main extends {
   }
 
   def do_fetch_image_list(args: FetchImageList): Unit = {
-    val ImageListFetchResult(imageList, access, _, newLatest) = vmcatcher.fetchImageList(args.name)
-
-    if(access.isOK) {
-      INFO(s"Fetched image list $imageList, parsed ${newLatest.size} images")
-      for {
-        image ← newLatest
-      } {
-        INFO(s"Parsed image $image")
-      }
-    }
-    else {
-      ERROR(s"Error fetching image list $imageList")
-    }
+    val _ = vmcatcher.fetchImageList(args.name)
   }
 
   def do_list_registered_images(args: ListRegisteredImages): Unit = {

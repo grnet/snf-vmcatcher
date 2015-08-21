@@ -139,14 +139,16 @@ object ImageList extends LogHelper with CommonOptions {
   @Command(name = "fetch", description = "Fetches the description of the image list and parses it to images")
   class Fetch extends Global with NameArgument {
     def run(): Unit = {
-      val ImageListFetchResult(_, access, _, newLatest) = vmcatcher.fetchImageList(name)
+      val result = vmcatcher.fetchImageList(name)
+      val access = result.imageListAccess
+      val newImages = result.newImages
 
       if(access.isOK) {
-        INFO(s"Fetched image list $name, found ${newLatest.size} new image(s)")
+        INFO(s"Fetched image list $name, found ${newImages.size} new image(s)")
         for {
-          image ← newLatest
+          image ← newImages
         } {
-          INFO(s"Fetched identifier:revision ${image.repr}")
+          INFO(s"Fetched image (identifier:revision) ${image.repr}")
         }
       }
       else {

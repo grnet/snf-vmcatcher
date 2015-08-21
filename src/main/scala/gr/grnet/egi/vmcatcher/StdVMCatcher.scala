@@ -75,8 +75,6 @@ class StdVMCatcher(config: Config) extends VMCatcher {
 
   def listImages(name: String) = forImageListByName(name)(_.listImages())
 
-  def listLatestImages(name: String) = forImageListByName(name)(_.listLatestImages())
-
   def activateImageList(name: String): Boolean =
     forImageListByName(name) { ref ⇒
       val previousStatus = ref.isActive.get
@@ -130,7 +128,9 @@ class StdVMCatcher(config: Config) extends VMCatcher {
 
     buffer.toString
   }
-  
+
+  // Parses images from JSON. The returned records are not saved to disk
+  // and in particular their `isOriginal` field has not been set to an explicit value.
   private def parseImagesFromJson(ref: MImageList, access: MImageListAccess, imageListJson: String): List[MImage] = {
     try {
       val events = ImageEvent.parseImageListJson(imageListJson)
@@ -168,8 +168,9 @@ class StdVMCatcher(config: Config) extends VMCatcher {
 
           image.revision(image.computeRevision)
 
-          log.info(s"Created $image")
-          image.saveMe()
+          log.info(s"Created record for image ${image.repr}")
+
+          image
         }
 
       images
@@ -183,7 +184,7 @@ class StdVMCatcher(config: Config) extends VMCatcher {
     }
   }
 
-  private def accessImageList(ref: MImageList): (MImageListAccess, List[MImage]) = {
+  private def accessAndSaveImages(ref: MImageList): (MImageListAccess, List[MImage]) = {
     val name = ref.name.get
     val url = new URL(ref.url.get)
     val upOpt = ref.credentialsOpt
@@ -224,6 +225,24 @@ class StdVMCatcher(config: Config) extends VMCatcher {
 
           val images = parseImagesFromJson(ref, access, imageListJson)
 
+          for { image ← images } {
+            // Some images may be duplicates, we need to discover the originals.
+            // The combination of (ad:mpuri, sl:checksum:sha512) is assumed unique across images and image lists
+            val originalBox =
+              MImage.find(
+                By(MImage.slChecksum512, image.slChecksum512.get),
+                By(MImage.isOriginal, true),
+                By(MImage.adMpuri, image.adMpuri.get)
+              )
+
+            for { original ← originalBox } {
+              log.info(s"Found original image ${original.repr}")
+            }
+
+            image.isOriginal(!originalBox.isDefined)
+            image.save()
+          }
+
           (access, images)
         }
         catch {
@@ -236,23 +255,11 @@ class StdVMCatcher(config: Config) extends VMCatcher {
 
   def fetchImageList(name: String): ImageListFetchResult =
     forImageListByName(name) { imageList ⇒
-      // 1. Access the image list
-      val (imageListAccess, images) = accessImageList(imageList)
+      // Access the image list and fetch the current images.
+      // Note that some images may be the same as in previous fetches
+      val (imageListAccess, images) = accessAndSaveImages(imageList)
 
-      // 2. Query for pre-existing images for this image list
-      val preExistingImages = imageList.listLatestImages()
-
-      def result = ImageListFetchResult(imageList, imageListAccess, preExistingImages, images)
-
-      if(images.lengthCompare(0) == 0) {
-        return result
-      }
-
-      // 3. Mark those images as "not latest"
-      preExistingImages.foreach(_.isLatest(false).save())
-
-      // 4. Save the new "latest" images
-      images.foreach(_.isLatest(true).save())
+      val result = ImageListFetchResult(imageList, imageListAccess, images)
 
       result
     }
