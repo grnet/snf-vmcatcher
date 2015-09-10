@@ -17,14 +17,13 @@
 
 package gr.grnet.egi.vmcatcher.cmdline.airline
 
-import java.net.URL
-
 import com.github.rvesse.airline._
-import gr.grnet.egi.vmcatcher.db.MImageListAccess
-import gr.grnet.egi.vmcatcher.util.UsernamePassword
-import gr.grnet.egi.vmcatcher.{ImageListFetchResult, LogHelper}
+import gr.grnet.egi.vmcatcher.LogHelper
+import gr.grnet.egi.vmcatcher.shell.Shell
 
 object ImageList extends LogHelper with CommonOptions {
+
+  /** Registers the image list in our database. */
   @Command(name = "register", description = "Registers the image list in our database")
   class Register extends Global with NameArgument with CredentialsOpt {
     @Option(
@@ -43,130 +42,55 @@ object ImageList extends LogHelper with CommonOptions {
     )
     val activate = true
 
-    def run(): Unit = {
-      val upOpt = UsernamePassword.optional(username, password)
-      val ref = vmcatcher.registerImageList(name, new URL(url), activate, upOpt)
-      INFO(s"Registered $ref")
-    }
+    def run(): Unit =
+      Shell.ImageList.register(
+        vmcatcher = vmcatcher,
+        username = username,
+        password = password,
+        name = name,
+        url = url,
+        activate = activate
+      )
   }
 
   @Command(name = "show-lists", description = "Show the known image lists")
   class ShowLists extends Global {
-    def run(): Unit = {
-      val ils = vmcatcher.listImageLists()
-      val nameLengths = ils.map(_.name.get.length)
-      val maxNameLen = nameLengths.foldLeft(0)(_ max _)
-
-      if(ils.nonEmpty) {
-        INFO(s"NAME DATE TIME ACTIVE HTTP_USERNAME URL")
-      }
-
-      for(il ← ils) {
-        val name = il.name.get
-        val when = il.whenRegistered.get
-        val isActive = il.isActive.get
-        val username = il.username.get
-        val url = il.url.get
-
-        val nameSlack = " " * (maxNameLen - name.length)
-        val isActiveSlack = if(isActive) "  " else " "
-
-        INFO(s"$name$nameSlack $when $isActive$isActiveSlack $username $url")
-      }
-    }
+    def run(): Unit = Shell.ImageList.showLists(vmcatcher)
   }
 
   @Command(name = "show-access", description = "Prints the JSON definition of the latest image list access")
   class ShowAccess extends Global with NameArgument {
-    def run(): Unit = {
-      vmcatcher.forImageListByName(name) { _ ⇒
-        val accesses = MImageListAccess.findAllByRefName(name)
-        for {
-          access ← accesses
-        } {
-          val whenAccessed = access.whenAccessed.get
-          val isOK = access.isOK
-          val isOKStr = if (isOK) "true " else "false"
-          val statusCode = access.httpStatusCode.get
-          val msg = if (!isOK) {
-            val xmsg = scala.Option(access.exceptionMsg.get).getOrElse("")
-            val body = access.f_rawText.obj.map(_.textData.get).openOr("")
-
-            if (!xmsg.isEmpty) xmsg else body
-          } else ""
-
-          INFO(s"$whenAccessed $isOKStr $statusCode $msg")
-        }
-      }
-    }
+    def run(): Unit = Shell.ImageList.showAccess(vmcatcher, name)
   }
 
   @Command(name = "ls", description = "Prints the images of an image list (the most recent version of each image)")
   class Ls extends Global with NameArgument {
-    def run(): Unit = {
-      val images = vmcatcher.listImages(name)
-      if(images.lengthCompare(0) == 0) { return }
-
-      if(images.nonEmpty) {
-        INFO("IDENTIFIER REVISION")
-      }
-      for { image ← images } {
-        val (ident, rev) = image.identifierAndRevision
-
-        INFO(s"$ident $rev")
-      }
-    }
+    def run(): Unit = Shell.ImageList.ls(vmcatcher, name)
   }
 
   @Command(name = "activate", description = "Activates the image list in our database")
   class Activate extends Global with NameArgument {
-    def run(): Unit = {
-      val wasActive = vmcatcher.activateImageList(name)
-      if(wasActive) { INFO(s"Already active") }
-      else          { INFO(s"Activated") }
-    }
+    def run(): Unit = Shell.ImageList.activate(vmcatcher, name)
   }
 
   @Command(name = "deactivate", description = "Deactivates the image list in our database")
   class Deactivate extends Global with NameArgument {
-    def run(): Unit = {
-      val wasActive = vmcatcher.deactivateImageList(name)
-      if(wasActive) { INFO(s"Deactivated") }
-      else          { INFO(s"Already deactive") }
-    }
+    def run(): Unit = Shell.ImageList.deactivate(vmcatcher, name)
   }
 
   @Command(name = "fetch", description = "Fetches the description of the image list and parses it to images")
   class Fetch extends Global with NameArgument {
-    def run(): Unit = {
-      val result = vmcatcher.fetchImageList(name)
-      val access = result.imageListAccess
-      val newImages = result.newImages
-
-      if(access.isOK) {
-        INFO(s"Fetched image list $name, found ${newImages.size} new image(s)")
-        for {
-          image ← newImages
-        } {
-          INFO(s"Fetched image (identifier:revision) ${image.repr}")
-        }
-      }
-      else {
-        val statusCode = access.httpStatusCode.get
-        val statusText = access.httpStatusText.get
-        val body = access.f_rawText.obj.map(_.textData.get).getOrElse("")
-        ERROR(s"Cannot fetch image list $name. HTTP returned status [$statusCode $statusText] and body [$body]")
-      }
-    }
+    def run(): Unit = Shell.ImageList.fetch(vmcatcher, name)
   }
 
   @Command(name = "credentials", description = "Updates the HTTP credentials used to access a protected image list")
   class Credentials extends Global with NameArgument with CredentialsOpt {
-    def run(): Unit = {
-      val upOpt = UsernamePassword.optional(username, password)
-      vmcatcher.updateCredentials(name, upOpt)
-      if(upOpt.isDefined) { INFO(s"Credentials have been set") }
-      else                { INFO(s"Credentials have been cleared") }
-    }
+    def run(): Unit =
+      Shell.ImageList.credentials(
+        vmcatcher = vmcatcher,
+        username = username,
+        password = password,
+        name = name
+      )
   }
 }

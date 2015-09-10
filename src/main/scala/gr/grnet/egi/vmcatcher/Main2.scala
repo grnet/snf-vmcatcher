@@ -52,7 +52,7 @@ object Main2 extends LogHelper {
   }
 
   def makeCli: Cli[Runnable] = {
-    val builder = Cli.builder[Runnable](getClass.getCanonicalName.dropRight(1))
+    val builder = Cli.builder[Runnable](getClass.getCanonicalName.dropRight(1)) // dropRight(1) throws away '$'
 
     builder.
       withCommand(classOf[Global]).

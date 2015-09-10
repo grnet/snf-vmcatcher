@@ -46,6 +46,7 @@ trait Global extends Runnable {
   )
   val path = "./config.json"
 
+  /** Lazily parses the configuration file. */
   lazy val config: Config = {
     val file = new File(path)
     if(!file.exists()) {
