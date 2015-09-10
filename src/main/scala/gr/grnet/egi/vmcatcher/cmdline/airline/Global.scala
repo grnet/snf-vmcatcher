@@ -23,7 +23,8 @@ import java.nio.file.Files
 import javax.inject.Inject
 
 import com.github.rvesse.airline._
-import gr.grnet.egi.vmcatcher._
+import gr.grnet.egi.vmcatcher.api.impl.{KamakiBasedIaaS, StdVMCatcher}
+import gr.grnet.egi.vmcatcher.api.{IaaS, VMCatcher}
 import gr.grnet.egi.vmcatcher.config.Config
 import org.apache.avro.io.DecoderFactory
 import org.apache.avro.specific.SpecificDatumReader

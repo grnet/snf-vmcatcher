@@ -15,12 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher
+package gr.grnet.egi.vmcatcher.api
 
 import java.net.URL
 
 import gr.grnet.egi.vmcatcher.ErrorCode._
-import gr.grnet.egi.vmcatcher.db._
+import gr.grnet.egi.vmcatcher.VMCatcherException
+import gr.grnet.egi.vmcatcher.db.{MImage, MImageList}
 import gr.grnet.egi.vmcatcher.util.UsernamePassword
 
 /**
@@ -78,13 +79,4 @@ trait VMCatcher {
    * Returns any new image revisions.
    */
   def fetchImageList(name: String): ImageListFetchResult
-}
-
-case class ImageListFetchResult(
-  imageList: MImageList,
-  imageListAccess: MImageListAccess,
-  images: List[MImage]
-) {
-  
-  def newImages = images.filter(_.isOriginal.get)
 }

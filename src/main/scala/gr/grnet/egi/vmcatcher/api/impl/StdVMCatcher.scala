@@ -15,16 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher
+package gr.grnet.egi.vmcatcher.api.impl
 
 import java.net.URL
 import java.util.Scanner
 
 import gr.grnet.egi.vmcatcher.ErrorCode._
+import gr.grnet.egi.vmcatcher.api.{ImageListFetchResult, VMCatcher}
 import gr.grnet.egi.vmcatcher.config.Config
 import gr.grnet.egi.vmcatcher.db._
 import gr.grnet.egi.vmcatcher.event.{ImageEnvField, ImageEvent}
 import gr.grnet.egi.vmcatcher.util.UsernamePassword
+import gr.grnet.egi.vmcatcher.{Sys, VMCatcherException}
 import net.liftweb.common.Full
 import net.liftweb.mapper.{Ascending, By, OrderBy}
 

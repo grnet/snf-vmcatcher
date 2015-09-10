@@ -22,6 +22,8 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
 import com.beust.jcommander.ParameterException
+import gr.grnet.egi.vmcatcher.api.impl.{StdVMCatcher, KamakiBasedIaaS}
+import gr.grnet.egi.vmcatcher.api.{IaaS, VMCatcher}
 import gr.grnet.egi.vmcatcher.cmdline.CmdLine._
 import gr.grnet.egi.vmcatcher.cmdline._
 import gr.grnet.egi.vmcatcher.config.{Config, RabbitMQConfig}

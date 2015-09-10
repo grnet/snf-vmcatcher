@@ -21,15 +21,16 @@ import java.net.URL
 import java.util.Locale
 
 import com.typesafe.config.{Config, ConfigRenderOptions, ConfigValueFactory}
+import gr.grnet.egi.vmcatcher.api.{IaaS, VMCatcher}
 import gr.grnet.egi.vmcatcher.db.MImageListAccess
 import gr.grnet.egi.vmcatcher.util.UsernamePassword
-import gr.grnet.egi.vmcatcher.{IaaS, LogHelper, VMCatcher}
+import gr.grnet.egi.vmcatcher.LogHelper
 
 import scala.collection.JavaConverters._
 
 /**
  * The Shell implements the CLI commands.
- * Some are directly delegated to [[gr.grnet.egi.vmcatcher.VMCatcher VMCatcher]] and others may need extra business logic.
+ * Some are directly delegated to [[VMCatcher VMCatcher]] and others may need extra business logic.
  * One thing the [[gr.grnet.egi.vmcatcher.shell.Shell Shell]] does is to communicate the outcome using `stderr` or `stdout`
  * accordingly.
  *

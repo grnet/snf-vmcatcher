@@ -15,28 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package gr.grnet.egi.vmcatcher
+package gr.grnet.egi.vmcatcher.api
+package impl
 
 import java.util.Locale
 
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.ConfigFactory
 import gr.grnet.egi.vmcatcher.config.IaaSConfig
+import gr.grnet.egi.vmcatcher.{ErrorCode, Sys, VMCatcherException}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
-
-/**
- *
- */
-trait IaaS {
-  /**
-   * Returns a list of the images that have been registered by snf-vmcatcher.
-   * Each image is described by the pair of its UUID and name.
-   */
-  def listRegisteredImages(): List[(String, String)]
-
-  def listImages(): (List[Config], List[Config])
-}
 
 class KamakiBasedIaaS(config: IaaSConfig) extends IaaS {
   final val log = LoggerFactory.getLogger(getClass)
