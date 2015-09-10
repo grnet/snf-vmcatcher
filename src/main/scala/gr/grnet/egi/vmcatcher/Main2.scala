@@ -20,7 +20,7 @@ package gr.grnet.egi.vmcatcher
 import com.github.rvesse.airline.Cli
 import com.github.rvesse.airline.help.Help
 import com.github.rvesse.airline.parser._
-import gr.grnet.egi.vmcatcher.cmdline.airline.{Global, ImageList}
+import gr.grnet.egi.vmcatcher.cli.airline.{Global, ImageList}
 
 /**
  *
@@ -80,8 +80,8 @@ object Main2 extends LogHelper {
     iaas.
       withDescription("Actions related to the IaaS where images are uploaded/registered").
       withCommands(
-        classOf[gr.grnet.egi.vmcatcher.cmdline.airline.IaaS.Describe],
-        classOf[gr.grnet.egi.vmcatcher.cmdline.airline.IaaS.Ls]
+        classOf[gr.grnet.egi.vmcatcher.cli.airline.IaaS.Describe],
+        classOf[gr.grnet.egi.vmcatcher.cli.airline.IaaS.Ls]
       )
 
     builder.build()
