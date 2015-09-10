@@ -17,22 +17,14 @@
 
 package gr.grnet.egi.vmcatcher.cmdline.airline
 
-import java.util.Locale
-
 import com.github.rvesse.airline._
-import com.typesafe.config.{Config, ConfigRenderOptions, ConfigValueFactory}
 import gr.grnet.egi.vmcatcher.LogHelper
-
-import scala.collection.JavaConverters._
+import gr.grnet.egi.vmcatcher.shell.Shell
 
 object IaaS extends LogHelper {
   @Command(name = "describe", description = "Give a high-level descriptions of registered images")
   class Describe extends Global {
-    def run(): Unit = {
-      val (fromVmCatcher, otherImages) = iaas.listImages()
-      INFO(s"Found ${fromVmCatcher.size} snf-vmcatcher registered images")
-      INFO(s"Found ${otherImages.size}         other registered images")
-    }
+    def run(): Unit = Shell.IaaS.describe(iaas)
   }
 
   @Command(name = "ls", description = "List registered images")
@@ -45,41 +37,6 @@ object IaaS extends LogHelper {
     )
     val vmCatcherOnly = false
 
-    def lsImage(config: Config): Unit = {
-      val id = config.getString("id")
-      val updated_at = config.getString("updated_at")
-      val size = config.getString("size")
-      val properties = config.getConfig("properties")
-      val propertiesRoot = properties.root()
-      val vmcatcherPropsMap =
-        propertiesRoot.asScala.filter { case (k, v) ⇒
-            k.toLowerCase(Locale.ENGLISH).startsWith("vmcatcher_")
-        }. map { case (k, v) ⇒
-          val vv = String.valueOf(propertiesRoot.get(k).unwrapped())
-          k → vv
-        }
-
-      val vmcatcherPropsConfig = ConfigValueFactory.fromAnyRef(vmcatcherPropsMap.asJava)
-      val jsonVmcatcherProps = vmcatcherPropsConfig.render(ConfigRenderOptions.concise())
-
-      INFO(s"$id $updated_at $size $jsonVmcatcherProps")
-    }
-
-    def lsImages(images: List[Config]): Unit = {
-      INFO(s"IAAS_UUID IAAS_UPDATED_AT SIZE JSON_PROPERTIES")
-      images.foreach(lsImage)
-    }
-
-    def run(): Unit = {
-      val (fromVmCatcher, otherImages) = iaas.listImages()
-      INFO(s"Found ${fromVmCatcher.size} snf-vmcatcher registered images")
-      lsImages(fromVmCatcher)
-
-      if(!vmCatcherOnly) {
-        INFO("")
-        INFO(s"Found ${otherImages.size}         other registered images")
-        lsImages(otherImages)
-      }
-    }
+    def run(): Unit = Shell.IaaS.ls(iaas = iaas, vmCatcherOnly = vmCatcherOnly)
   }
 }
