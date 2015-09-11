@@ -25,7 +25,7 @@ import org.slf4j.Logger
  */
 case class HandlerData(
   log: Logger,
-  kamakiCloud: String,
+  kamakiCloud: String, // The name of "cloud" used for the IaaS operations. This the name used e.g. by kamaki
   imageTransformers: ImageTransformers,
   insecureSSL: Boolean,
   workingFolder: String

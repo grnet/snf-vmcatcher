@@ -337,19 +337,19 @@ object Main extends {
   }
 
   def do_transform(args: Transform): Unit = {
-    val imageURL = args.url
+    val url = args.url
     val insecureSSL = args.insecureSSL
     val workingFolder = CmdLine.globalOptions.workingFolder
     val data = HandlerData(Log, "", ImageTransformers, insecureSSL, workingFolder)
-    val GetImage(isTemporary, imageFile) = Sys.getImage(imageURL, data)
+    val GetImage(isTemporary, imageFile) = Sys.getImage(url, data)
 
     try {
       val tramsformedFileOpt = ImageTransformers.transform(None, imageFile, workingFolder)
       for {
         transformedFile ← tramsformedFileOpt
       } {
-        Log.info(s"do_transform(): Transformed $imageURL to $transformedFile.")
-        System.out.println(s"Transformed $imageURL to $transformedFile. Do not forget to delete the temporary file.")
+        Log.info(s"do_transform(): Transformed $url to $transformedFile.")
+        System.out.println(s"Transformed $url to $transformedFile. Do not forget to delete the temporary file.")
         System.out.println(s"$transformedFile")
       }
     }

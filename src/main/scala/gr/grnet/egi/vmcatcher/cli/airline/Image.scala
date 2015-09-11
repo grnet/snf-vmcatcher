@@ -18,18 +18,17 @@
 package gr.grnet.egi.vmcatcher.cli.airline
 
 import com.github.rvesse.airline._
+import gr.grnet.egi.vmcatcher.cli.airline.CommonOptions.{ImageURLOption, InsecureSSLOption, WorkingFolderOption}
+import gr.grnet.egi.vmcatcher.cli.shell.Shell
 
 object Image {
-  @Command(name = "activate", description = "Activate a specific image")
-  class Activate extends Global {
-    @Option(
-      name = Array("--hash"),
-      description = ""
-    )
-    val hash = ""
-
-    def run(): Unit = {
-
-    }
+  @Command(name = "transform", description = "Transform a VM image to raw format.")
+  class Transform extends Global with ImageURLOption with InsecureSSLOption with WorkingFolderOption {
+    def run(): Unit =
+      Shell.Image.transform(
+        url = url,
+        insecureSSL = insecureSSL,
+        workingFolder = workingFolder
+      )
   }
 }

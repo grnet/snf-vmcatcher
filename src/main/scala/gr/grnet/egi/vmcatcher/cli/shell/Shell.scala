@@ -22,9 +22,12 @@ import java.util.Locale
 
 import com.typesafe.config.{Config, ConfigRenderOptions, ConfigValueFactory}
 import gr.grnet.egi.vmcatcher.api.{IaaS, VMCatcher}
+import gr.grnet.egi.vmcatcher.cli.CmdLine
 import gr.grnet.egi.vmcatcher.db.MImageListAccess
-import gr.grnet.egi.vmcatcher.util.UsernamePassword
-import gr.grnet.egi.vmcatcher.LogHelper
+import gr.grnet.egi.vmcatcher.image.handler.HandlerData
+import gr.grnet.egi.vmcatcher.image.transformer.ImageTransformers
+import gr.grnet.egi.vmcatcher.util.{GetImage, UsernamePassword}
+import gr.grnet.egi.vmcatcher.{Sys, LogHelper}
 
 import scala.collection.JavaConverters._
 
@@ -80,6 +83,30 @@ object Shell extends LogHelper {
         INFO("")
         INFO(s"Found ${otherImages.size} other registered images")
         lsImages(otherImages)
+      }
+    }
+  }
+
+  object Image {
+    def transform(url: String, insecureSSL: Boolean, workingFolder: String): Unit = {
+      val data = HandlerData(log, "", ImageTransformers, insecureSSL, workingFolder)
+      val GetImage(isTemporary, imageFile) = Sys.getImage(url, data)
+
+      try {
+        val tramsformedFileOpt = ImageTransformers.transform(None, imageFile, workingFolder)
+        for {
+          transformedFile ← tramsformedFileOpt
+        } {
+          INFO(s"do_transform(): Transformed $url to $transformedFile.")
+          INFO(s"Transformed $url to $transformedFile. Do not forget to delete the temporary file.")
+          INFO(s"$transformedFile")
+        }
+      }
+      finally {
+        if(isTemporary){
+          INFO(s"do_transform(): Deleting temporary $imageFile")
+          imageFile.delete()
+        }
       }
     }
   }

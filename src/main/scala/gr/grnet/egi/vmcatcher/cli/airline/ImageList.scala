@@ -18,14 +18,13 @@
 package gr.grnet.egi.vmcatcher.cli.airline
 
 import com.github.rvesse.airline._
-import gr.grnet.egi.vmcatcher.LogHelper
+import gr.grnet.egi.vmcatcher.cli.airline.CommonOptions.{CredentialsOption, ImageListNameArg}
 import gr.grnet.egi.vmcatcher.cli.shell.Shell
 
-object ImageList extends LogHelper with CommonOptions {
-
+object ImageList {
   /** Registers the image list in our database. */
   @Command(name = "register", description = "Registers the image list in our database")
-  class Register extends Global with NameArgument with CredentialsOpt {
+  class Register extends Global with CredentialsOption with ImageListNameArg {
     @Option(
       name = Array("--url"),
       description = "The URL of the image list",
@@ -59,32 +58,32 @@ object ImageList extends LogHelper with CommonOptions {
   }
 
   @Command(name = "show-access", description = "Prints the JSON definition of the latest image list access")
-  class ShowAccess extends Global with NameArgument {
+  class ShowAccess extends Global with ImageListNameArg {
     def run(): Unit = Shell.ImageList.showAccess(vmcatcher, name)
   }
 
   @Command(name = "ls", description = "Prints the images of an image list (the most recent version of each image)")
-  class Ls extends Global with NameArgument {
+  class Ls extends Global with ImageListNameArg {
     def run(): Unit = Shell.ImageList.ls(vmcatcher, name)
   }
 
   @Command(name = "activate", description = "Activates the image list in our database")
-  class Activate extends Global with NameArgument {
+  class Activate extends Global with ImageListNameArg {
     def run(): Unit = Shell.ImageList.activate(vmcatcher, name)
   }
 
   @Command(name = "deactivate", description = "Deactivates the image list in our database")
-  class Deactivate extends Global with NameArgument {
+  class Deactivate extends Global with ImageListNameArg {
     def run(): Unit = Shell.ImageList.deactivate(vmcatcher, name)
   }
 
   @Command(name = "fetch", description = "Fetches the description of the image list and parses it to images")
-  class Fetch extends Global with NameArgument {
+  class Fetch extends Global with ImageListNameArg {
     def run(): Unit = Shell.ImageList.fetch(vmcatcher, name)
   }
 
   @Command(name = "credentials", description = "Updates the HTTP credentials used to access a protected image list")
-  class Credentials extends Global with NameArgument with CredentialsOpt {
+  class Credentials extends Global with ImageListNameArg with CredentialsOption {
     def run(): Unit =
       Shell.ImageList.credentials(
         vmcatcher = vmcatcher,

@@ -18,7 +18,7 @@
 package gr.grnet.egi.vmcatcher
 
 import java.io.{ByteArrayOutputStream, File}
-import java.net.{Proxy, URL, URLConnection}
+import java.net.{URI, Proxy, URL, URLConnection}
 import java.nio.file.Files
 import java.security.cert.X509Certificate
 import java.util.Locale
@@ -478,6 +478,8 @@ class Sys {
         GetImage(isTemporary = true, file = imageFile)
     }
   }
+
+  def getImage(url: String, data: HandlerData): GetImage = getImage(URI.create(url).toURL, data)
 
   def downloadAndPublishImageFile(
     formatOpt: Option[String],

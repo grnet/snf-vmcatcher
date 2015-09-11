@@ -20,7 +20,7 @@ package gr.grnet.egi.vmcatcher
 import com.github.rvesse.airline.Cli
 import com.github.rvesse.airline.help.Help
 import com.github.rvesse.airline.parser._
-import gr.grnet.egi.vmcatcher.cli.airline.{Global, ImageList}
+import gr.grnet.egi.vmcatcher.cli.airline.{Image, Global, ImageList}
 
 /**
  *
@@ -74,7 +74,10 @@ object Main2 extends LogHelper {
 
     val image = builder.withGroup("image")
     image.
-      withDescription("Actions related to an image")
+      withDescription("Actions related to an image").
+      withCommands(
+        classOf[Image.Transform]
+      )
 
     val iaas = builder.withGroup("iaas")
     iaas.

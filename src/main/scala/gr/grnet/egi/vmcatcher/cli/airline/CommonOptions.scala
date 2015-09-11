@@ -19,8 +19,11 @@ package gr.grnet.egi.vmcatcher.cli.airline
 
 import com.github.rvesse.airline.{Arguments, Option}
 
-trait CommonOptions {
-  trait NameArgument {
+/**
+ * Defines some common options as reusable traits.
+ */
+object CommonOptions {
+  trait ImageListNameArg {
     @Arguments(
       description = "The identifier for the image list; it must be unique in the database. We use this, instead of the URL, to reference the image list instead",
       required = true
@@ -28,7 +31,45 @@ trait CommonOptions {
     val name = ""
   }
 
-  trait CredentialsOpt {
+  trait InsecureSSLOption {
+    @Option(
+      name = Array("--insecure-ssl", "--insecure-SSL", "-k"),
+      description = "If set [to true], SSL validation errors are ignored." +
+                    " This might be useful for images that are behind self-signed SSL certificates." +
+                    " Use at your own risk !"
+    )
+    val insecureSSL = false
+  }
+
+  trait WorkingFolderOption {
+    @Option(
+      name = Array("--working-folder"),
+      description = "The working folder were images are downloaded and transformed"
+    )
+    val workingFolder = "/mnt/tmp"
+  }
+
+  trait ImageListURLOption {
+    @Option(
+      name = Array("--url"),
+      description = "The URL of the image list",
+      required = true,
+      arity = 1
+    )
+    val url = ""
+  }
+
+  trait ImageURLOption {
+    @Option(
+      name = Array("--url"),
+      description = "The URL of the image",
+      required = true,
+      arity = 1
+    )
+    val url = ""
+  }
+
+  trait CredentialsOption {
     @Option(
       name = Array("--username"),
       description = "Optional username in case the image list is protected. This is usually an Access Token. See also http://goo.gl/TazEI3",
